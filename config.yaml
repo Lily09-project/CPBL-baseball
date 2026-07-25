@@ -1,0 +1,10 @@
+project:
+  name: CPBL 中職資料分析平台
+  default_mode: api
+data:
+  processed_dir: data/processed
+  raw_dir: data/raw
+api:
+  cpbl_base_url: https://www.cpbl.com.tw
+  timeout_seconds: 20
+  fallback_reason: "api mode: 使用 CPBL 官方 /player、/standings/season、/stats/recordallaction"

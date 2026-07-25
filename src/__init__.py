@@ -1,0 +1,2 @@
+"""CPBL analytics dashboard package."""
+

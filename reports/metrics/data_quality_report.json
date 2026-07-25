@@ -1,0 +1,132 @@
+{
+  "mode": "api",
+  "fallback_reason": "api mode: 使用 CPBL 官方 /player、/standings/season、/stats/recordallaction",
+  "generated_at": "2026-07-25T20:17:28+08:00",
+  "files": {
+    "teams.csv": {
+      "row_count": 6,
+      "missing_ratio": {
+        "season": 0.0,
+        "team": 0.0,
+        "games": 0.0,
+        "wins": 0.0,
+        "losses": 0.0,
+        "ties": 0.0,
+        "win_pct": 0.0,
+        "runs_scored": 0.0,
+        "runs_allowed": 0.0,
+        "run_diff": 0.0,
+        "home_wins": 0.0,
+        "home_losses": 0.0,
+        "away_wins": 0.0,
+        "away_losses": 0.0,
+        "recent_wins": 0.0,
+        "recent_losses": 0.0,
+        "games_behind": 0.0,
+        "streak": 0.0,
+        "source_note": 0.0,
+        "momentum_score": 0.0
+      }
+    },
+    "roster.csv": {
+      "row_count": 450,
+      "missing_ratio": {
+        "season": 0.0,
+        "player_id": 0.0,
+        "player_name": 0.0,
+        "team": 0.0,
+        "roster_status": 0.0,
+        "profile_url": 0.0,
+        "source_note": 0.0
+      }
+    },
+    "batters_scored.csv": {
+      "row_count": 167,
+      "missing_ratio": {
+        "season": 0.0,
+        "player_name": 0.0,
+        "team": 0.0,
+        "position": 0.0,
+        "pa": 0.0,
+        "ab": 0.0,
+        "hits": 0.0,
+        "doubles": 0.0,
+        "triples": 0.0,
+        "home_runs": 0.0,
+        "walks": 0.0,
+        "strikeouts": 0.0,
+        "stolen_bases": 0.0,
+        "batting_average": 0.0,
+        "obp": 0.0,
+        "slg": 0.0,
+        "ops": 0.0,
+        "iso": 0.0,
+        "bb_rate": 0.0,
+        "k_rate": 0.0,
+        "hr_rate": 0.0,
+        "bb_k_ratio": 0.0,
+        "source_note": 0.0,
+        "player_id": 0.0,
+        "contact_score": 0.0,
+        "power_score": 0.0,
+        "discipline_score": 0.0,
+        "hitter_value_score": 0.0,
+        "player_value_score": 0.0,
+        "player_type": 0.0
+      }
+    },
+    "pitchers_scored.csv": {
+      "row_count": 145,
+      "missing_ratio": {
+        "season": 0.0,
+        "player_name": 0.0,
+        "team": 0.0,
+        "role": 0.0,
+        "innings_pitched": 0.0,
+        "earned_runs": 0.0,
+        "hits_allowed": 0.0,
+        "walks": 0.0,
+        "strikeouts": 0.0,
+        "home_runs_allowed": 0.0,
+        "era": 0.0,
+        "whip": 0.0,
+        "k_bb_ratio": 0.0,
+        "k_rate": 0.0,
+        "bb_rate": 0.0,
+        "hr_allowed_rate": 0.0,
+        "source_note": 0.0,
+        "player_id": 0.0,
+        "run_prevention_score": 0.0,
+        "strikeout_score": 0.0,
+        "command_score": 0.0,
+        "pitcher_value_score": 0.0,
+        "player_value_score": 0.0,
+        "player_type": 0.0
+      }
+    },
+    "players_scored.csv": {
+      "row_count": 451,
+      "missing_ratio": {
+        "season": 0.0,
+        "player_id": 0.0,
+        "player_name": 0.0,
+        "team": 0.0,
+        "roster_status": 0.0,
+        "profile_url": 0.0022,
+        "source_note": 0.0,
+        "player_type": 0.0,
+        "role_or_position": 0.0,
+        "player_value_score": 0.0
+      }
+    }
+  },
+  "available_team_count": 6,
+  "available_player_count": 451,
+  "available_hitter_count": 167,
+  "available_pitcher_count": 145,
+  "official_roster_count": 450,
+  "player_summary_count": 451,
+  "model_status": "official-derived scoring ready",
+  "quality_status": "pass",
+  "warnings": []
+}
