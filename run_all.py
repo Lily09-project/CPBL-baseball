@@ -13,6 +13,8 @@ def main() -> None:
     fallback_reason = "api mode: 使用 CPBL 官方 /player、/standings/season、/stats/recordallaction"
     outputs = preprocess(mode=args.mode)
     report = generate_data_quality_report(mode=args.mode, fallback_reason=fallback_reason)
+    if report["quality_status"] == "failed":
+        raise RuntimeError("資料品質檢查失敗，停止啟動前端。")
     print("processed files:")
     for name, path in outputs.items():
         print(f"- {name}: {path}")

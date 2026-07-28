@@ -9,6 +9,20 @@ import pandas as pd
 from src.utils import ensure_dirs, project_path
 
 REQUIRED_FILES = ["teams.csv", "roster.csv", "batters_scored.csv", "pitchers_scored.csv", "players_scored.csv"]
+REQUIRED_COLUMNS = {
+    "teams.csv": {"season", "team", "wins", "losses", "win_pct"},
+    "roster.csv": {"season", "player_id", "player_name", "team"},
+    "batters_scored.csv": {"season", "player_id", "player_name", "team", "obp", "slg", "ops"},
+    "pitchers_scored.csv": {"season", "player_id", "player_name", "team", "era", "whip", "k_bb_ratio"},
+    "players_scored.csv": {"season", "player_id", "player_name", "team", "player_type", "player_value_score"},
+}
+UNIQUE_ID_FILES = {"roster.csv", "batters_scored.csv", "pitchers_scored.csv", "players_scored.csv"}
+RANGE_RULES = {
+    "teams.csv": {"win_pct": (0.0, 1.0)},
+    "players_scored.csv": {"player_value_score": (0.0, 100.0)},
+    "batters_scored.csv": {"player_value_score": (0.0, 100.0)},
+    "pitchers_scored.csv": {"player_value_score": (0.0, 100.0)},
+}
 
 
 def _missing_ratio(df: pd.DataFrame) -> dict[str, float]:
@@ -44,9 +58,25 @@ def generate_data_quality_report(mode: str = "api", fallback_reason: str = "CPBL
             continue
         df = pd.read_csv(csv_path)
         report["files"][csv_path.name] = {"row_count": int(len(df)), "missing_ratio": _missing_ratio(df)}
+        missing_columns = sorted(REQUIRED_COLUMNS[file_name] - set(df.columns))
+        if missing_columns:
+            warnings.append(f"{file_name} missing required columns: {', '.join(missing_columns)}")
+            failed = True
         if len(df) == 0:
             warnings.append(f"{csv_path.name} is empty")
             failed = True
+        if file_name in UNIQUE_ID_FILES and "player_id" in df.columns:
+            duplicate_count = int(df["player_id"].duplicated().sum())
+            if duplicate_count:
+                warnings.append(f"{file_name} has {duplicate_count} duplicate player_id rows")
+                failed = True
+        for column, (minimum, maximum) in RANGE_RULES.get(file_name, {}).items():
+            if column not in df.columns:
+                continue
+            numeric = pd.to_numeric(df[column], errors="coerce").dropna()
+            if not numeric.empty and ((numeric < minimum) | (numeric > maximum)).any():
+                warnings.append(f"{file_name}.{column} contains values outside {minimum}..{maximum}")
+                failed = True
         if csv_path.name == "teams.csv" and "team" in df:
             report["available_team_count"] = int(df["team"].nunique())
         if csv_path.name == "roster.csv" and "player_id" in df:

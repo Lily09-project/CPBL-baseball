@@ -83,17 +83,22 @@ def test_data_quality_uses_complete_official_output_set(monkeypatch, tmp_path):
     processed.mkdir(parents=True)
     (tmp_path / "reports" / "metrics").mkdir(parents=True)
 
-    pd.DataFrame([{"team": "測試隊"}]).to_csv(processed / "teams.csv", index=False)
+    pd.DataFrame([{"season": 2026, "team": "測試隊", "wins": 1, "losses": 0, "win_pct": 1.0}]).to_csv(processed / "teams.csv", index=False)
     pd.DataFrame(
         [
-            {"player_id": "A01", "player_name": "打者甲", "team": "測試隊"},
-            {"player_id": "P01", "player_name": "投手乙", "team": "測試隊"},
-            {"player_id": "R01", "player_name": "名單丙", "team": "測試隊"},
+            {"season": 2026, "player_id": "A01", "player_name": "打者甲", "team": "測試隊"},
+            {"season": 2026, "player_id": "P01", "player_name": "投手乙", "team": "測試隊"},
+            {"season": 2026, "player_id": "R01", "player_name": "名單丙", "team": "測試隊"},
         ]
     ).to_csv(processed / "roster.csv", index=False)
-    pd.DataFrame([{"player_id": "A01"}]).to_csv(processed / "batters_scored.csv", index=False)
-    pd.DataFrame([{"player_id": "P01"}]).to_csv(processed / "pitchers_scored.csv", index=False)
-    pd.DataFrame([{"player_id": "A01"}, {"player_id": "P01"}, {"player_id": "R01"}, {"player_id": "BAT9999"}]).to_csv(
+    pd.DataFrame([{"season": 2026, "player_id": "A01", "player_name": "打者甲", "team": "測試隊", "obp": 0.3, "slg": 0.4, "ops": 0.7}]).to_csv(processed / "batters_scored.csv", index=False)
+    pd.DataFrame([{"season": 2026, "player_id": "P01", "player_name": "投手乙", "team": "測試隊", "era": 3.0, "whip": 1.2, "k_bb_ratio": 2.0}]).to_csv(processed / "pitchers_scored.csv", index=False)
+    pd.DataFrame([
+        {"season": 2026, "player_id": "A01", "player_name": "打者甲", "team": "測試隊", "player_type": "打者", "player_value_score": 70.0},
+        {"season": 2026, "player_id": "P01", "player_name": "投手乙", "team": "測試隊", "player_type": "投手", "player_value_score": 80.0},
+        {"season": 2026, "player_id": "R01", "player_name": "名單丙", "team": "測試隊", "player_type": "名單", "player_value_score": 0.0},
+        {"season": 2026, "player_id": "BAT9999", "player_name": "成績表丁", "team": "測試隊", "player_type": "打者", "player_value_score": 66.0},
+    ]).to_csv(
         processed / "players_scored.csv", index=False
     )
     monkeypatch.setattr("src.data_quality.project_path", lambda *parts: tmp_path.joinpath(*parts))
@@ -109,6 +114,29 @@ def test_data_quality_uses_complete_official_output_set(monkeypatch, tmp_path):
     assert "generated_at" in report
     assert set(report["files"]) == {"teams.csv", "roster.csv", "batters_scored.csv", "pitchers_scored.csv", "players_scored.csv"}
     assert "optional_empty_files" not in report
+
+
+def test_data_quality_fails_for_schema_duplicate_and_range_errors(monkeypatch, tmp_path):
+    processed = tmp_path / "data" / "processed"
+    processed.mkdir(parents=True)
+    (tmp_path / "reports" / "metrics").mkdir(parents=True)
+    pd.DataFrame([{"season": 2026, "team": "測試隊", "wins": 1, "losses": 0, "win_pct": 1.5}]).to_csv(
+        processed / "teams.csv", index=False
+    )
+    pd.DataFrame([
+        {"season": 2026, "player_id": "A01", "player_name": "甲", "team": "測試隊"},
+        {"season": 2026, "player_id": "A01", "player_name": "甲", "team": "測試隊"},
+    ]).to_csv(processed / "roster.csv", index=False)
+    for name in ["batters_scored.csv", "pitchers_scored.csv", "players_scored.csv"]:
+        pd.DataFrame([{"player_id": "A01"}]).to_csv(processed / name, index=False)
+    monkeypatch.setattr("src.data_quality.project_path", lambda *parts: tmp_path.joinpath(*parts))
+
+    report = generate_data_quality_report(mode="api", fallback_reason="test")
+
+    assert report["quality_status"] == "failed"
+    assert any("missing required columns" in warning for warning in report["warnings"])
+    assert any("duplicate player_id" in warning for warning in report["warnings"])
+    assert any("outside" in warning for warning in report["warnings"])
 
 
 def test_official_player_summary_matches_roster_and_stats_union():

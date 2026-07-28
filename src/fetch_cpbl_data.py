@@ -8,6 +8,8 @@ from typing import Any
 
 import pandas as pd
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from src.utils import ensure_dirs, project_path, safe_divide
 
@@ -169,6 +171,25 @@ def fetch_text(session: requests.Session, url: str, timeout: int) -> str:
     response = session.get(url, timeout=timeout)
     response.raise_for_status()
     return response.text
+
+
+def build_cpbl_session(retries: int = 3) -> requests.Session:
+    retry_policy = Retry(
+        total=retries,
+        connect=retries,
+        read=retries,
+        status=retries,
+        backoff_factor=0.5,
+        status_forcelist=(429, 500, 502, 503, 504),
+        allowed_methods=frozenset({"GET", "POST"}),
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(max_retries=retry_policy)
+    session = requests.Session()
+    session.headers.update(DEFAULT_HEADERS)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
 
 
 def fetch_roster(session: requests.Session, timeout: int = 20) -> pd.DataFrame:
@@ -397,8 +418,7 @@ def normalize_pitchers(raw: pd.DataFrame, roster: pd.DataFrame) -> pd.DataFrame:
 
 def fetch_cpbl_official_data(timeout: int = 20) -> dict[str, pd.DataFrame]:
     ensure_dirs()
-    session = requests.Session()
-    session.headers.update(DEFAULT_HEADERS)
+    session = build_cpbl_session()
     roster = fetch_roster(session, timeout=timeout)
     teams = fetch_standings(session, timeout=timeout)
     batting_raw = fetch_recordall(session, position="01", sortby="02", timeout=timeout)

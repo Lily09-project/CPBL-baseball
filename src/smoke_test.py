@@ -5,14 +5,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.data_quality import load_data_quality_report
+from src.data_quality import REQUIRED_FILES, load_data_quality_report
 from src.log5_matchup import calculate_log5_probability
 from src.preprocess import preprocess
 from src.utils import project_path
 
 
 def main() -> None:
-    if not project_path("data/processed/roster.csv").exists():
+    if any(not project_path("data/processed", name).exists() for name in REQUIRED_FILES):
         preprocess(mode="api")
     report = load_data_quality_report()
     assert report["mode"] == "api"

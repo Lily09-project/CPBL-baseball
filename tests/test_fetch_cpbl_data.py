@@ -5,6 +5,7 @@ import pytest
 
 from src.fetch_cpbl_data import (
     CURRENT_SEASON,
+    build_cpbl_session,
     clean_player_name,
     fetch_recordall,
     normalize_batters,
@@ -30,6 +31,15 @@ def test_parse_rank_team_player_returns_clean_player_name():
 
 def test_current_season_follows_system_year():
     assert CURRENT_SEASON == date.today().year
+
+
+def test_build_cpbl_session_configures_retry_for_official_reads():
+    session = build_cpbl_session(retries=3)
+
+    retry = session.adapters["https://"].max_retries
+    assert retry.total == 3
+    assert retry.backoff_factor == 0.5
+    assert {"GET", "POST"}.issubset(set(retry.allowed_methods))
 
 
 class _FakeResponse:

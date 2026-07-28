@@ -8,8 +8,17 @@ from src.preprocess import preprocess
 from src.utils import project_path
 
 
+REQUIRED_PROCESSED_FILES = (
+    "teams.csv",
+    "roster.csv",
+    "batters_scored.csv",
+    "pitchers_scored.csv",
+    "players_scored.csv",
+)
+
+
 def ensure_processed_data() -> None:
-    if not project_path("data/processed/batters_scored.csv").exists():
+    if any(not project_path("data/processed", name).exists() for name in REQUIRED_PROCESSED_FILES):
         preprocess(mode="api")
 
 
