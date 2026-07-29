@@ -204,6 +204,13 @@ PITCHERS = DATA["pitchers"]
 PLAYERS = DATA["players"]
 TABLE_DOWNLOAD_INDEX = 0
 
+CHART_TEXT = "#e7efed"
+CHART_MUTED = "#9db0b5"
+CHART_GRID = "rgba(157,176,181,.22)"
+CHART_ACCENT = "#d85a52"
+CHART_SECONDARY = "#79b6bc"
+CHART_HIGHLIGHT = "#d3a354"
+
 
 def metric_name(metric: str) -> str:
     return METRIC_LABELS.get(metric, metric.upper() if metric.islower() else metric)
@@ -264,7 +271,7 @@ def show_table(container, df: pd.DataFrame, columns: list[str] | None = None) ->
     display = to_display_table(df, columns)
     container.dataframe(display, width="stretch", hide_index=True)
     container.markdown(
-        "<div class='table-toolbar'><span class='table-toolbar-label'>官方資料表</span><span class='table-toolbar-hint'>UTF-8 CSV</span></div>",
+        "<div class='table-toolbar'><span class='table-toolbar-label'>資料表</span><span class='table-toolbar-hint'>UTF-8 CSV</span></div>",
         unsafe_allow_html=True,
     )
     container.download_button(
@@ -281,28 +288,28 @@ def apply_chart_theme(fig: go.Figure) -> go.Figure:
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#f4f1df", size=18, family="Microsoft JhengHei, Noto Sans TC, sans-serif"),
-        title_font=dict(color="#f4f1df", size=23),
+        font=dict(color=CHART_TEXT, size=18, family="Noto Sans TC, Microsoft JhengHei, sans-serif"),
+        title_font=dict(color=CHART_TEXT, size=22),
         legend=dict(font=dict(size=16), bgcolor="rgba(0,0,0,0)"),
         margin=dict(l=26, r=26, t=58, b=34),
         coloraxis_colorbar=dict(title_font=dict(size=15), tickfont=dict(size=14)),
     )
     fig.update_xaxes(
-        gridcolor="rgba(167,192,196,.22)",
-        zerolinecolor="rgba(167,192,196,.35)",
+        gridcolor=CHART_GRID,
+        zerolinecolor="rgba(157,176,181,.38)",
         title_font=dict(size=17),
-        tickfont=dict(size=15),
+        tickfont=dict(size=15, color=CHART_MUTED),
     )
     fig.update_yaxes(
-        gridcolor="rgba(167,192,196,.22)",
-        zerolinecolor="rgba(167,192,196,.35)",
+        gridcolor=CHART_GRID,
+        zerolinecolor="rgba(157,176,181,.38)",
         title_font=dict(size=17),
-        tickfont=dict(size=15),
+        tickfont=dict(size=15, color=CHART_MUTED),
     )
     fig.update_polars(
         bgcolor="rgba(0,0,0,0)",
-        radialaxis=dict(gridcolor="rgba(167,192,196,.32)", tickfont=dict(size=14, color="#f4f1df")),
-        angularaxis=dict(gridcolor="rgba(167,192,196,.36)", tickfont=dict(size=16, color="#f4f1df")),
+        radialaxis=dict(gridcolor="rgba(157,176,181,.32)", tickfont=dict(size=14, color=CHART_MUTED)),
+        angularaxis=dict(gridcolor="rgba(157,176,181,.36)", tickfont=dict(size=16, color=CHART_TEXT)),
     )
     return fig
 
@@ -367,15 +374,15 @@ def metric_cards(items: list[tuple[str, object]]) -> None:
     if not items:
         return
     cards = "".join(
-        f"<div class='metric-card'><span class='metric-index'>{index:02d}</span><div class='metric-label'>{escape(str(label))}</div><div class='metric-value'>{escape(str(value))}</div></div>"
-        for index, (label, value) in enumerate(items, start=1)
+        f"<div class='metric-card'><div class='metric-label'>{escape(str(label))}</div><div class='metric-value'>{escape(str(value))}</div></div>"
+        for label, value in items
     )
     st.markdown(f"<div class='metric-grid' role='group' aria-label='重點數據'>{cards}</div>", unsafe_allow_html=True)
 
 
 def page_kicker(section: str) -> None:
     st.markdown(
-        f"<div class='page-kicker'><strong>CPBL 官方資料工作台</strong><span class='page-date'>{escape(section)} · 資料驗證 {escape(data_verified_date())}</span></div>",
+        f"<div class='page-kicker'><strong>CPBL 官方資料</strong><span class='page-date'>{escape(section)} · 資料驗證 {escape(data_verified_date())}</span></div>",
         unsafe_allow_html=True,
     )
 
@@ -392,9 +399,9 @@ def radar_chart(labels: list[str], values: list[float], title: str = "能力雷�
             name="能力分布",
             showlegend=False,
             mode="lines+markers",
-            line=dict(color="#6fc8ff", width=3),
-            marker=dict(size=7, color="#9bd7ff"),
-            fillcolor="rgba(111,200,255,.28)",
+            line=dict(color=CHART_ACCENT, width=3),
+            marker=dict(size=7, color=CHART_HIGHLIGHT),
+            fillcolor="rgba(216,90,82,.22)",
             hovertemplate="%{theta}: %{r:.1f}<extra></extra>",
         )
     )
@@ -403,8 +410,8 @@ def radar_chart(labels: list[str], values: list[float], title: str = "能力雷�
         showlegend=False,
         polar=dict(
             bgcolor="rgba(0,0,0,0)",
-            radialaxis=dict(visible=True, range=[0, 100], gridcolor="rgba(167,192,196,.32)"),
-            angularaxis=dict(gridcolor="rgba(167,192,196,.36)"),
+            radialaxis=dict(visible=True, range=[0, 100], gridcolor="rgba(157,176,181,.32)"),
+            angularaxis=dict(gridcolor="rgba(157,176,181,.36)"),
         ),
         height=420,
     )
@@ -441,13 +448,17 @@ def source_status_panel(compact: bool = False) -> None:
     )
     st.markdown(
         f"""
-        <div class="cpbl-card source-card">
-          <h2 class="card-heading">資料來源狀態</h2>
+        <section class="cpbl-card source-card" aria-labelledby="source-status-heading">
+          <h2 id="source-status-heading" class="card-heading">資料來源狀態</h2>
           <p>{text}</p>
-          <p>目前資料模式：CPBL 官方 API；品質狀態：{quality_label}。</p>
-          <p>資料量：球隊 {report.get("available_team_count", 0)} 隊；官方現役名單 {report.get("official_roster_count", 0)} 人；球員總表 {report.get("player_summary_count", report.get("available_player_count", 0))} 人；打者 {hitter_count} 人；投手 {pitcher_count} 人。</p>
-          <p>核對日期：{verified_date}；最後更新：{generated_at}。</p>
-        </div>
+          <div class="source-facts" role="list" aria-label="資料來源摘要">
+            <div role="listitem"><strong>資料模式</strong><span>CPBL 官方 API</span></div>
+            <div role="listitem"><strong>品質狀態</strong><span>{quality_label}</span></div>
+            <div role="listitem"><strong>資料量</strong><span>球隊 {report.get("available_team_count", 0)} 隊 · 球員 {report.get("player_summary_count", report.get("available_player_count", 0))} 人</span></div>
+            <div role="listitem"><strong>最後更新</strong><span>{generated_at}</span></div>
+          </div>
+          <p class="source-footnote">官方現役名單 {report.get("official_roster_count", 0)} 人；打者 {hitter_count} 人；投手 {pitcher_count} 人。核對日期：{verified_date}。</p>
+        </section>
         """,
         unsafe_allow_html=True,
     )
@@ -522,7 +533,7 @@ def league_percentile_chart(row: pd.Series, df: pd.DataFrame, metrics: list[tupl
             x=values,
             y=labels,
             orientation="h",
-            marker_color=["#3ec7a4", "#d6a84f", "#6fc8ff", "#ef6f6c", "#a6d96a"][: len(values)],
+            marker_color=[CHART_ACCENT, CHART_HIGHLIGHT, CHART_SECONDARY, "#65b995", "#e87d72"][: len(values)],
             text=[f"{value:.0f}" for value in values],
             textposition="auto",
             hovertemplate="%{y}: 第 %{x:.1f} 百分位<extra></extra>",
@@ -554,6 +565,7 @@ def ranking_bar_chart(df: pd.DataFrame, title: str) -> go.Figure:
         orientation="h",
         title=title,
         labels={"metric_value": "指標數值", name_column: COLUMN_LABELS.get(name_column, name_column)},
+        color_discrete_sequence=[CHART_ACCENT],
     )
     fig.update_layout(height=360)
     return fig
@@ -639,7 +651,7 @@ def render_player_header(row: pd.Series, player_type: str) -> None:
 def page_home() -> None:
     page_kicker("首頁 / 專案介紹")
     st.title(APP_TITLE)
-    st.caption("面向中華職棒的資料探索儀表板：戰績、排行榜、球員個人頁、投打對決與分項排行。")
+    st.caption("官方戰績、球員成績與衍生比較；資料以 CPBL 公開頁面為來源。")
     source_status_panel()
     metric_cards(
         [
@@ -649,19 +661,19 @@ def page_home() -> None:
             ("資料模式", "官方 API"),
         ]
     )
-    cards = [
-        ("聯盟總覽", "檢視 CPBL 官方目前賽季頁面的戰績、勝差、近況與得失分差。"),
-        ("球員排行榜", "用 OPS、ISO、ERA、WHIP、K/BB 等棒球指標切換投打排行榜。"),
-        ("球員個人頁", "整合本季成績、進階指標、聯盟平均比較、聯盟百分位、排行摘要與相似球員。"),
-        ("投打對決", "使用 CPBL 官方打投成績與聯盟平均 OBP 建立 LOG5 上壘機率模型。"),
-        ("分項排行", "快速查看打者、投手與球隊的 Top / Bottom 分布。"),
-        ("資料來源狀態", "官方資料抓取失敗時會明確報錯，不再自動回落本地展示資料。"),
+    st.header("分析入口")
+    workflows = [
+        ("聯盟總覽", "戰績、勝差、近況、得失分差與主客場勝率。"),
+        ("球員排行榜", "以 OPS、ISO、ERA、WHIP、K/BB 等指標篩選投打表現。"),
+        ("球員個人頁", "查看本季成績、進階指標、聯盟比較、百分位與相似球員。"),
+        ("投打對決", "以官方成績與聯盟平均 OBP 計算 LOG5 衍生機率。"),
+        ("分項排行", "比較打者、投手與球隊的 Top / Bottom 結果。"),
     ]
-    card_html = "\n".join(
-        f"<div class='cpbl-card equal-card'><h2 class='card-heading'>{escape(title)}</h2><p>{escape(body)}</p></div>"
-        for title, body in cards
+    workflow_html = "\n".join(
+        f"<div class='workflow-row' role='listitem'><span class='workflow-label'>{escape(title)}</span><span class='workflow-description'>{escape(body)}</span></div>"
+        for title, body in workflows
     )
-    st.markdown(f"<div class='cpbl-card-grid'>{card_html}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='workflow-grid' role='list' aria-label='分析入口'>{workflow_html}</div>", unsafe_allow_html=True)
 
 
 def page_league() -> None:
@@ -704,7 +716,7 @@ def page_league() -> None:
             orientation="h",
             title="勝率排行",
             color="win_pct",
-            color_continuous_scale=["#3ec7a4", "#d6a84f"],
+            color_continuous_scale=["#65b995", CHART_HIGHLIGHT],
             labels={"win_pct": "勝率", "team": "球隊"},
         ),
     )
@@ -717,7 +729,7 @@ def page_league() -> None:
             orientation="h",
             title="得失分差",
             color="run_diff",
-            color_continuous_scale=["#ef6f6c", "#d6a84f"],
+            color_continuous_scale=["#e87d72", CHART_HIGHLIGHT],
             labels={"run_diff": "得失分差", "team": "球隊"},
         ),
     )
@@ -937,7 +949,7 @@ def page_matchup() -> None:
     pitcher_obp_allowed = pitcher_allowed_rate(pitcher)
     league_obp = as_number(BATTERS["obp"].mean())
     probability = calculate_log5_probability(hitter_obp, pitcher_obp_allowed, league_obp)
-    st.markdown("<span class='cpbl-badge'>LOG5 官方成績衍生模型</span>", unsafe_allow_html=True)
+    st.markdown("<div class='model-label'>MODEL · LOG5 官方成績衍生模型</div>", unsafe_allow_html=True)
     metric_cards(
         [
             ("打者 OBP", f"{hitter_obp:.3f}"),
@@ -1023,7 +1035,7 @@ PAGE_HANDLERS = {
 }
 
 st.sidebar.markdown(
-    "<div class='sidebar-brand'><div class='sidebar-brand-title'>CPBL Analytics</div><div class='sidebar-brand-subtitle'>中華職棒資料分析平台</div></div>",
+    "<div class='sidebar-brand'><div class='sidebar-brand-title'>CPBL 賽季資料</div><div class='sidebar-brand-subtitle'>官方成績與球員資料</div></div>",
     unsafe_allow_html=True,
 )
 st.sidebar.markdown("<div class='sidebar-nav-label'>頁面導覽</div>", unsafe_allow_html=True)

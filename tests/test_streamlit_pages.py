@@ -243,6 +243,17 @@ def test_theme_enforces_equal_cards_spacing_touch_targets_and_mobile_layout():
     assert "transition: all" not in css
 
 
+def test_theme_uses_flat_editorial_data_tool_direction():
+    css = Path("src/theme.py").read_text(encoding="utf-8-sig")
+
+    assert "linear-gradient" not in css
+    assert "metric-index" not in css
+    assert ".workflow-grid" in css
+    assert ".source-facts" in css
+    assert "--accent: #d85a52" in css
+    assert "box-shadow: none" in css
+
+
 def test_every_page_has_one_level_one_title():
     app = AppTest.from_file("app.py")
     app.run(timeout=20)
