@@ -10,6 +10,7 @@ import streamlit as st
 
 from src.app_helpers import load_csv
 from src.data_quality import load_data_quality_report
+from src.fetch_cpbl_data import absolute_url
 from src.log5_matchup import calculate_log5_probability, summarize_matchup_probability
 from src.rankings import get_bottom_players, get_team_rankings, get_top_players
 from src.similarity import find_similar_players
@@ -259,7 +260,20 @@ def to_display_table(df: pd.DataFrame, columns: list[str] | None = None) -> pd.D
 
 
 def dataframe_to_csv_bytes(df: pd.DataFrame) -> bytes:
-    return df.to_csv(index=False).encode("utf-8-sig")
+    safe = df.copy()
+    safe.columns = [neutralize_spreadsheet_formula(column) for column in safe.columns]
+    for column in safe.select_dtypes(include=["object", "string"]).columns:
+        safe[column] = safe[column].map(neutralize_spreadsheet_formula)
+    return safe.to_csv(index=False).encode("utf-8-sig")
+
+
+def neutralize_spreadsheet_formula(value: object) -> object:
+    if not isinstance(value, str) or not value:
+        return value
+    candidate = value.lstrip(" \t\r\n\v\f")
+    if candidate.startswith(("=", "+", "-", "@")) and candidate != "-":
+        return f"'{value}"
+    return value
 
 
 def show_table(container, df: pd.DataFrame, columns: list[str] | None = None) -> None:
@@ -643,7 +657,9 @@ def render_player_header(row: pd.Series, player_type: str) -> None:
         """,
         unsafe_allow_html=True,
     )
-    profile_url = str(directory_row.get("profile_url", "") or "") if directory_row is not None else ""
+    profile_url = absolute_url(
+        str(directory_row.get("profile_url", "") or "") if directory_row is not None else ""
+    )
     if profile_url.startswith("https://www.cpbl.com.tw/"):
         st.markdown(f"[開啟 CPBL 官方球員頁]({profile_url})")
 

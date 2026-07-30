@@ -1,7 +1,9 @@
-streamlit>=1.36
-pandas>=2.0
-numpy>=1.24
-plotly>=5.20
-requests>=2.31
-pytest>=8.0
-lxml>=5.2
+streamlit>=1.58.0
+pandas>=3.0.5
+numpy>=2.5.1
+plotly>=6.9.0
+requests>=2.34.2
+pytest>=9.1.1
+lxml>=6.1.1
+gitpython>=3.1.57
+pillow>=12.3.0

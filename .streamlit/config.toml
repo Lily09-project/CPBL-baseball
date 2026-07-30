@@ -5,3 +5,9 @@ backgroundColor = "#071820"
 secondaryBackgroundColor = "#0E2731"
 textColor = "#F7F2DF"
 font = "sans-serif"
+
+[server]
+address = "127.0.0.1"
+headless = true
+enableXsrfProtection = true
+enableCORS = true

@@ -5,6 +5,7 @@ from html.parser import HTMLParser
 from io import StringIO
 import re
 from typing import Any
+from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
 import pandas as pd
 import requests
@@ -97,9 +98,28 @@ def normalize_space(value: Any) -> str:
 
 
 def absolute_url(path: str) -> str:
-    if path.startswith("http"):
-        return path
-    return f"{CPBL_BASE_URL}{path}"
+    candidate = urljoin(f"{CPBL_BASE_URL}/", path)
+    try:
+        parsed = urlparse(candidate)
+        if (
+            parsed.scheme != "https"
+            or parsed.hostname != "www.cpbl.com.tw"
+            or parsed.port not in (None, 443)
+            or parsed.username
+            or parsed.password
+            or parsed.path != "/team/person"
+            or parsed.fragment
+        ):
+            return ""
+        query = parse_qs(parsed.query, keep_blank_values=True)
+        if set(query) != {"acnt"} or len(query["acnt"]) != 1:
+            return ""
+        account = query["acnt"][0]
+        if not re.fullmatch(r"\d{10}", account):
+            return ""
+    except ValueError:
+        return ""
+    return f"{CPBL_BASE_URL}/team/person?{urlencode({'acnt': account})}"
 
 
 def parse_query_value(url: str, key: str) -> str:
@@ -441,14 +461,3 @@ def fetch_cpbl_official_data(timeout: int = 20) -> dict[str, pd.DataFrame]:
         "batters": batters,
         "pitchers": pitchers,
     }
-
-
-def fetch_sportsdata_endpoint(url: str, timeout: int = 8) -> pd.DataFrame:
-    response = requests.get(url, timeout=timeout, headers=DEFAULT_HEADERS)
-    response.raise_for_status()
-    data = response.json()
-    if isinstance(data, dict):
-        data = data.get("data", data.get("records", []))
-    if not isinstance(data, list):
-        return pd.DataFrame()
-    return pd.DataFrame(data)

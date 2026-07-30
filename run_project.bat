@@ -9,8 +9,11 @@ set "BUNDLED_PY=%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\depend
 if exist "%VENV_PY%" (
     "%VENV_PY%" -c "import lxml, numpy, pandas, plotly, pytest, requests, streamlit" >nul 2>nul
     if not errorlevel 1 (
-        set "PYTHON_CMD="%VENV_PY%""
-        goto runtime_ready
+        "%VENV_PY%" -c "from importlib.metadata import version; from pathlib import Path; from packaging.requirements import Requirement; reqs=[Requirement(line) for line in Path('requirements.txt').read_text(encoding='utf-8').splitlines() if line.strip() and not line.lstrip().startswith('#')]; raise SystemExit(0 if all(req.specifier.contains(version(req.name), prereleases=True) for req in reqs) else 1)" >nul 2>nul
+        if not errorlevel 1 (
+            set "PYTHON_CMD="%VENV_PY%""
+            goto runtime_ready
+        )
     )
 )
 
@@ -40,8 +43,12 @@ if not exist "%VENV_PY%" (
     if errorlevel 1 goto runtime_fail
 )
 
+echo Updating secure packaging tools...
+"%VENV_PY%" -m pip install --disable-pip-version-check --upgrade "pip>=26.1.2"
+if errorlevel 1 goto dependency_fail
+
 echo Installing project requirements...
-"%VENV_PY%" -m pip install --disable-pip-version-check -r requirements.txt
+"%VENV_PY%" -m pip install --disable-pip-version-check --upgrade -r requirements.txt
 if errorlevel 1 goto dependency_fail
 
 "%VENV_PY%" -c "import lxml, numpy, pandas, plotly, pytest, requests, streamlit" >nul 2>nul
@@ -73,9 +80,9 @@ if /I "%~1"=="--check" (
     exit /b 0
 )
 
-echo Starting CPBL dashboard at http://localhost:8501
+echo Starting CPBL dashboard at http://127.0.0.1:8501
 echo Press Ctrl+C to stop the dashboard. This window must stay open.
-%PYTHON_CMD% -m streamlit run app.py --server.port 8501 --server.headless true
+%PYTHON_CMD% -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501 --server.headless true
 if errorlevel 1 goto fail
 echo done
 exit /b 0

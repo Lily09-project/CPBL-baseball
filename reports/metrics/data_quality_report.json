@@ -1,7 +1,7 @@
 {
   "mode": "api",
   "fallback_reason": "api mode: 使用 CPBL 官方 /player、/standings/season、/stats/recordallaction",
-  "generated_at": "2026-07-29T12:00:11+08:00",
+  "generated_at": "2026-07-30T14:11:38+08:00",
   "files": {
     "teams.csv": {
       "row_count": 6,
@@ -76,7 +76,7 @@
       }
     },
     "pitchers_scored.csv": {
-      "row_count": 146,
+      "row_count": 147,
       "missing_ratio": {
         "season": 0.0,
         "player_name": 0.0,
@@ -123,7 +123,7 @@
   "available_team_count": 6,
   "available_player_count": 451,
   "available_hitter_count": 167,
-  "available_pitcher_count": 146,
+  "available_pitcher_count": 147,
   "official_roster_count": 450,
   "player_summary_count": 451,
   "model_status": "official-derived scoring ready",

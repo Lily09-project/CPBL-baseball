@@ -6,3 +6,25 @@ __pycache__/
 reports/metrics/pytest_tmp*/
 models/
 reports/figures/
+
+# Local secrets and credentials
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+
+# Runtime data and internal planning notes
+data/raw/
+notes/source_prompt.txt
+
+# Local databases, logs, and editor backups
+*.db
+*.sqlite
+*.sqlite3
+*.log
+*.bak

@@ -59,7 +59,6 @@ python -m streamlit run app.py
 - `data/processed/pitchers_scored.csv`
 - `data/processed/players_scored.csv`
 - `reports/metrics/data_quality_report.json`
-- `notes/source_prompt.txt`
 
 ## 專案結構
 
@@ -82,3 +81,12 @@ tests/
 ## 注意事項
 
 目前正式流程以 CPBL 官方網站為資料來源，需可連線到 `www.cpbl.com.tw`。若官方頁面欄位名稱或分頁參數異動，請先修正 `src/fetch_cpbl_data.py`，再執行 `run_all.py --mode api` 重新產生 `data/processed/*.csv`。
+
+
+## 安全說明
+
+- 本地啟動只監聽 `127.0.0.1`，不直接暴露到區域網路。
+- `.env`、Streamlit secrets、私鑰、原始抓取 HTML 與內部規劃筆記不納入版本控制。
+- CSV 下載會中和試算表公式前綴，避免開啟檔案時執行惡意公式。
+- CPBL 球員連結只接受 `https://www.cpbl.com.tw`。
+- 依賴套件設定已知漏洞修復版本下限；GitHub Dependabot 每週檢查更新。
