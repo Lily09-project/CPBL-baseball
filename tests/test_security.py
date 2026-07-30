@@ -66,7 +66,7 @@ def test_launcher_enforces_secure_dependency_floors_and_loopback_binding():
     launcher = Path("run_project.bat").read_text(encoding="utf-8-sig").lower()
 
     for requirement in [
-        "streamlit>=1.58.0",
+        "streamlit>=1.60.0",
         "pandas>=3.0.5",
         "numpy>=2.5.1",
         "plotly>=6.9.0",
