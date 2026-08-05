@@ -167,7 +167,6 @@ def rank_scouting_candidates(
     threshold: float,
     priority: str,
     team: str = "全部",
-    role_or_position: str = "全部",
 ) -> pd.DataFrame:
     population = qualified_population(df, player_type, threshold)
     if population.empty:
@@ -192,8 +191,6 @@ def rank_scouting_candidates(
     filtered = population
     if team != "全部":
         filtered = filtered[filtered["team"] == team]
-    if role_or_position != "全部":
-        filtered = filtered[filtered["role_or_position"] == role_or_position]
     return filtered.sort_values(["priority_score", "player_id"], ascending=[False, True]).reset_index(drop=True)
 
 
@@ -208,7 +205,6 @@ def comparison_frame(candidates: pd.DataFrame, selected_player_ids: list[str], p
         "player_id",
         "player_name",
         "team",
-        "role_or_position",
         usage_column,
         "priority_score",
         "qualified_percentile",

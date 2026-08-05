@@ -1,7 +1,7 @@
 {
   "mode": "api",
   "fallback_reason": "api mode: 使用 CPBL 官方 /player、/standings/season、/stats/recordallaction",
-  "generated_at": "2026-08-05T19:57:37+08:00",
+  "generated_at": "2026-08-05T21:20:01+08:00",
   "files": {
     "teams.csv": {
       "row_count": 6,
@@ -128,5 +128,76 @@
   "player_summary_count": 451,
   "model_status": "official-derived scoring ready",
   "quality_status": "pass",
-  "warnings": []
+  "warnings": [],
+  "snapshot": {
+    "schema_version": "1.0",
+    "snapshot_id": "20260805T131800Z-e7a2d1284197",
+    "captured_at": "2026-08-05T13:18:00+00:00",
+    "season": 2026,
+    "relative_path": "season=2026/snapshot_id=20260805T131800Z-e7a2d1284197",
+    "previous_snapshot_id": "20260805T131301Z-c349fbe7fcb9",
+    "diff": {
+      "files": {
+        "batters_scored.csv": {
+          "previous_row_count": 168,
+          "current_row_count": 168,
+          "row_count_delta": 0,
+          "schema_added_columns": [],
+          "schema_removed_columns": [],
+          "added_rows": 0,
+          "removed_rows": 0,
+          "changed_rows": 19,
+          "key_column": "player_id"
+        },
+        "pitchers_scored.csv": {
+          "previous_row_count": 149,
+          "current_row_count": 149,
+          "row_count_delta": 0,
+          "schema_added_columns": [],
+          "schema_removed_columns": [],
+          "added_rows": 0,
+          "removed_rows": 0,
+          "changed_rows": 7,
+          "key_column": "player_id"
+        },
+        "players_scored.csv": {
+          "previous_row_count": 451,
+          "current_row_count": 451,
+          "row_count_delta": 0,
+          "schema_added_columns": [],
+          "schema_removed_columns": [],
+          "added_rows": 0,
+          "removed_rows": 0,
+          "changed_rows": 22,
+          "key_column": "player_id"
+        },
+        "roster.csv": {
+          "previous_row_count": 450,
+          "current_row_count": 450,
+          "row_count_delta": 0,
+          "schema_added_columns": [],
+          "schema_removed_columns": [],
+          "added_rows": 0,
+          "removed_rows": 0,
+          "changed_rows": 0,
+          "key_column": "player_id"
+        },
+        "teams.csv": {
+          "previous_row_count": 6,
+          "current_row_count": 6,
+          "row_count_delta": 0,
+          "schema_added_columns": [],
+          "schema_removed_columns": [],
+          "added_rows": 0,
+          "removed_rows": 0,
+          "changed_rows": 0,
+          "key_column": "team"
+        }
+      },
+      "added_rows": 0,
+      "removed_rows": 0,
+      "changed_rows": 48,
+      "schema_changed_files": []
+    }
+  }
 }

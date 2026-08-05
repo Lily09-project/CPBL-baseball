@@ -509,6 +509,14 @@ def render_data_trust_surface(
         f"最後驗證：{data_generated_time(report)}",
         f"資料品質：{quality_label}",
     ]
+    snapshot = report.get("snapshot", {})
+    if isinstance(snapshot, dict) and snapshot.get("snapshot_id"):
+        details.append(f"資料快照：{snapshot['snapshot_id']}")
+        diff = snapshot.get("diff")
+        if isinstance(diff, dict):
+            details.append(
+                f"本次異動：新增 {diff.get('added_rows', 0)}、移除 {diff.get('removed_rows', 0)}、變更 {diff.get('changed_rows', 0)}"
+            )
     if player_type is not None and threshold is not None and population_count is not None:
         details.append(f"符合門檻母體：{population_count} 人（{qualification_label(player_type)} ≥ {threshold:g}）")
     st.markdown(
@@ -844,9 +852,6 @@ def page_scouting_workbench() -> None:
     default_threshold = DEFAULT_QUALIFICATION[player_type]
     maximum = qualification_upper_bound(source, player_type)
     team = st.selectbox("球隊", ["全部", *sorted(source["team"].dropna().unique())], key=f"scouting_team_{player_type}")
-    role_column = "position" if player_type == "打者" else "role"
-    role_values = sorted(source[role_column].dropna().astype(str).unique())
-    role_or_position = st.selectbox("位置 / 角色", ["全部", *role_values], key=f"scouting_role_{player_type}")
     if player_type == "打者":
         threshold = st.number_input("最低打席 (PA)", min_value=int(default_threshold), max_value=max(int(maximum), int(default_threshold)), value=int(default_threshold), step=5, key="scouting_min_pa")
     else:
@@ -855,17 +860,17 @@ def page_scouting_workbench() -> None:
 
     qualified = qualified_population(source, player_type, float(threshold))
     render_data_trust_surface(QUALITY_REPORT, player_type, float(threshold), len(qualified))
-    candidates = rank_scouting_candidates(source, player_type, float(threshold), priority, team, role_or_position)
+    candidates = rank_scouting_candidates(source, player_type, float(threshold), priority, team)
     if candidates.empty:
-        st.info(f"目前沒有符合條件的球員。資格門檻維持 {usage_label} ≥ {float(threshold):g}，請調整球隊或位置 / 角色。")
+        st.info(f"目前沒有符合條件的球員。資格門檻維持 {usage_label} ≥ {float(threshold):g}，請調整球隊。")
         return
 
     st.header("候選名單")
     st.caption(f"評估重點：{priority}；排名依評估分數降冪，同分時依 CPBL 球員 ID 排序。")
     display_columns = (
-        ["player_id", "player_name", "team", "role_or_position", "pa", "priority_score", "qualified_percentile", "contact_score", "power_score", "discipline_score", "hitter_value_score", "evidence_strengths", "evidence_risks", "evidence_notes"]
+        ["player_id", "player_name", "team", "pa", "priority_score", "qualified_percentile", "contact_score", "power_score", "discipline_score", "hitter_value_score", "evidence_strengths", "evidence_risks", "evidence_notes"]
         if player_type == "打者"
-        else ["player_id", "player_name", "team", "role_or_position", "innings_pitched", "priority_score", "qualified_percentile", "run_prevention_score", "strikeout_score", "command_score", "pitcher_value_score", "evidence_strengths", "evidence_risks", "evidence_notes"]
+        else ["player_id", "player_name", "team", "innings_pitched", "priority_score", "qualified_percentile", "run_prevention_score", "strikeout_score", "command_score", "pitcher_value_score", "evidence_strengths", "evidence_risks", "evidence_notes"]
     )
     show_table(st, candidates, display_columns)
 

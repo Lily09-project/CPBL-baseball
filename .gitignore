@@ -20,6 +20,7 @@ credentials.json
 
 # Runtime data and internal planning notes
 data/raw/
+data/snapshots/
 notes/source_prompt.txt
 
 # Local databases, logs, and editor backups
