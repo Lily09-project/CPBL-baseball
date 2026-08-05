@@ -31,6 +31,10 @@ def _missing_ratio(df: pd.DataFrame) -> dict[str, float]:
     return {col: round(float(df[col].isna().mean()), 4) for col in df.columns}
 
 
+def save_data_quality_report(report: dict) -> None:
+    out_path = project_path("reports/metrics/data_quality_report.json")
+    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+
 def generate_data_quality_report(mode: str = "api", fallback_reason: str = "CPBL official API") -> dict:
     ensure_dirs()
     processed_dir = project_path("data/processed")
@@ -112,8 +116,7 @@ def generate_data_quality_report(mode: str = "api", fallback_reason: str = "CPBL
     elif warnings:
         report["quality_status"] = "warning"
     report["warnings"] = warnings
-    out_path = project_path("reports/metrics/data_quality_report.json")
-    out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    save_data_quality_report(report)
     return report
 
 

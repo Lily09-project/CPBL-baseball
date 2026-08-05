@@ -154,3 +154,19 @@ def test_official_player_summary_matches_roster_and_stats_union():
     forbidden_columns = {"recent_hot_score", "news_heat_score", "under_the_radar_score"}
     all_columns = set(players.columns) | set(batters.columns) | set(pitchers.columns)
     assert not forbidden_columns.intersection(all_columns)
+
+
+def test_save_data_quality_report_persists_snapshot_lineage(monkeypatch, tmp_path):
+    import src.data_quality as data_quality
+
+    (tmp_path / "reports" / "metrics").mkdir(parents=True)
+    monkeypatch.setattr("src.data_quality.project_path", lambda *parts: tmp_path.joinpath(*parts))
+    report = {
+        "quality_status": "pass",
+        "snapshot": {"snapshot_id": "20260805T123000Z-abc", "previous_snapshot_id": None},
+    }
+
+    data_quality.save_data_quality_report(report)
+
+    saved = (tmp_path / "reports" / "metrics" / "data_quality_report.json").read_text(encoding="utf-8")
+    assert "20260805T123000Z-abc" in saved

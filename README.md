@@ -70,3 +70,15 @@ run_project.bat --check
 ## 公開儲存庫政策
 
 可公開追蹤的內容包括原始碼、測試、`data/processed/` CSV、品質報告、文件、GitHub 工作流程與設定檔。永不追蹤 `data/raw/`、`notes/source_prompt.txt`、`.env`、`.streamlit/secrets.toml`、憑證、私鑰、本機資料庫、執行日誌、快取、偵錯輸出與 `.venv/`。
+
+## 可稽核資料快照
+
+每次 `python run_all.py --mode api` 在品質檢查通過後，都會將當前 `data/processed/` 的 CSV 複本保存為本機快照，並建立 `manifest.json`。Manifest 包含：
+
+- CPBL 官方來源 URL、擷取時間與球季
+- 每個輸出檔的列數、欄位、業務主鍵與 SHA-256 校驗碼
+- 品質檢查結果與前一份快照的新增、移除、變更列數及 schema 漂移摘要
+
+快照寫入 `data/snapshots/`，此目錄與原始 HTML 一樣不會上傳 GitHub。相同輸出校驗碼會重用既有快照，避免因重跑產生重複歷史。儀表板的資料信任列會顯示快照 ID，以及和前一份不同的資料摘要。
+
+此版本保存的是官方球季累計名單、球隊戰績、打者與投手成績輸出；它不宣稱提供逐場事件資料、近十場趨勢、守備位置細分或先發／後援角色。工作台僅保留可由目前官方來源驗證的球隊、PA／IP 資格與評估維度。

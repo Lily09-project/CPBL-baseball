@@ -365,3 +365,16 @@ def test_theme_covers_safe_areas_native_controls_and_interaction_states():
         '[data-testid="stMainMenu"]',
     ]:
         assert required_rule in css
+
+
+def test_scouting_workbench_hides_unverified_position_role_filter_and_shows_snapshot_lineage() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    app.sidebar.radio[0].set_value("球探工作台")
+    app.run(timeout=20)
+
+    assert len(app.exception) == 0
+    assert all(box.label != "位置 / 角色" for box in app.selectbox)
+    source = APP_PATH.read_text(encoding="utf-8-sig")
+    assert "資料快照" in source
+    assert "snapshot_id" in source

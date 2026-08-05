@@ -20,6 +20,13 @@ def test_run_all_defaults_to_api(monkeypatch, capsys):
         "generate_data_quality_report",
         lambda mode, fallback_reason: {"quality_status": "pass", "mode": mode, "fallback_reason": fallback_reason},
     )
+    monkeypatch.setattr(
+        run_all,
+        "create_processed_snapshot",
+        lambda processed_dir, snapshot_root, report: {"snapshot_id": "test-snapshot", "relative_path": "test", "diff": None},
+        raising=False,
+    )
+    monkeypatch.setattr(run_all, "save_data_quality_report", lambda report: None, raising=False)
 
     main()
 
@@ -45,3 +52,38 @@ def test_run_all_stops_when_quality_report_fails(monkeypatch):
 
     with pytest.raises(RuntimeError, match="資料品質檢查失敗"):
         main()
+
+
+def test_run_all_attaches_snapshot_only_after_quality_passes(monkeypatch):
+    calls = {}
+    monkeypatch.setattr(sys, "argv", ["run_all.py"])
+    monkeypatch.setattr(run_all, "preprocess", lambda mode: {"teams": "teams.csv"})
+    monkeypatch.setattr(
+        run_all,
+        "generate_data_quality_report",
+        lambda mode, fallback_reason: {
+            "quality_status": "pass",
+            "mode": mode,
+            "generated_at": "2026-08-05T20:30:00+08:00",
+        },
+    )
+    monkeypatch.setattr(
+        run_all,
+        "create_processed_snapshot",
+        lambda processed_dir, snapshot_root, report: {
+            "snapshot_id": "snapshot-1",
+            "relative_path": "season=2026/snapshot_id=snapshot-1",
+            "diff": None,
+        },
+        raising=False,
+    )
+    monkeypatch.setattr(
+        run_all,
+        "save_data_quality_report",
+        lambda report: calls.setdefault("report", report),
+        raising=False,
+    )
+
+    main()
+
+    assert calls["report"]["snapshot"]["snapshot_id"] == "snapshot-1"

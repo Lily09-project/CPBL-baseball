@@ -236,7 +236,6 @@ def test_ranking_and_comparison_preserve_documented_order(scored_hitters: pd.Dat
         "player_id",
         "player_name",
         "team",
-        "role_or_position",
         "pa",
         "priority_score",
         "qualified_percentile",
