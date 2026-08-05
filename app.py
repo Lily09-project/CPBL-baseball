@@ -13,6 +13,17 @@ from src.data_quality import load_data_quality_report
 from src.fetch_cpbl_data import absolute_url
 from src.log5_matchup import calculate_log5_probability, summarize_matchup_probability
 from src.rankings import get_bottom_players, get_team_rankings, get_top_players
+from src.scouting import (
+    DEFAULT_QUALIFICATION,
+    build_evidence_signals,
+    comparison_frame,
+    percentile_rank,
+    priority_options,
+    qualification_label,
+    qualification_upper_bound,
+    qualified_population,
+    rank_scouting_candidates,
+)
 from src.similarity import find_similar_players
 from src.theme import STREAMLIT_CSS
 
@@ -47,8 +58,9 @@ DATA_VERIFIED_DATE = data_verified_date()
 SOURCE_NOTE = source_note()
 
 PAGES = [
-    "首頁 / 專案介紹",
+    "資料訊號總覽",
     "聯盟總覽",
+    "球探工作台",
     "球員排行榜",
     "球員個人頁",
     "投打對決",
@@ -70,6 +82,8 @@ SCORE_METRICS = {
     "pitcher_value_score",
     "player_value_score",
     "momentum_score",
+    "priority_score",
+    "qualified_percentile",
 }
 
 METRIC_LABELS = {
@@ -160,6 +174,11 @@ COLUMN_LABELS = {
     "command_score": "控球能力",
     "pitcher_value_score": "投手綜合",
     "player_value_score": "綜合分數",
+    "priority_score": "評估分數",
+    "qualified_percentile": "符合門檻母體百分位",
+    "evidence_strengths": "強項依據",
+    "evidence_risks": "風險依據",
+    "evidence_notes": "資料註記",
     "metric_value": "指標數值",
     "similarity": "相似度",
 }
@@ -477,6 +496,44 @@ def source_status_panel(compact: bool = False) -> None:
         unsafe_allow_html=True,
     )
 
+def render_data_trust_surface(
+    report: dict,
+    player_type: str | None = None,
+    threshold: float | None = None,
+    population_count: int | None = None,
+) -> None:
+    quality_status = str(report.get("quality_status", "unknown"))
+    quality_label = {"pass": "通過", "warning": "需注意", "failed": "失敗"}.get(quality_status, "未知")
+    details = [
+        "來源網域：www.cpbl.com.tw",
+        f"最後驗證：{data_generated_time(report)}",
+        f"資料品質：{quality_label}",
+    ]
+    if player_type is not None and threshold is not None and population_count is not None:
+        details.append(f"符合門檻母體：{population_count} 人（{qualification_label(player_type)} ≥ {threshold:g}）")
+    st.markdown(
+        "<div class='trust-strip' role='note'><span>" + "</span><span>".join(escape(item) for item in details) + "</span></div>",
+        unsafe_allow_html=True,
+    )
+    warnings = [str(item) for item in report.get("warnings", []) if str(item)]
+    if quality_status != "pass" and warnings:
+        st.warning("資料品質警示：" + "；".join(warnings))
+    st.caption("LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。")
+
+
+def render_player_evidence(row: pd.Series, population: pd.DataFrame, player_type: str, threshold: float) -> None:
+    evidence = build_evidence_signals(row, population, player_type, threshold)
+    st.header("評估依據")
+    st.caption(f"符合門檻母體 {len(population)} 人；{qualification_label(player_type)} ≥ {threshold:g}；百分位越高代表相對表現越前。")
+    columns = st.columns(3, gap="medium")
+    sections = [("強項", evidence["strengths"]), ("風險", evidence["risks"]), ("資料註記", evidence["notes"])]
+    for container, (heading, items) in zip(columns, sections):
+        container.subheader(heading)
+        if items:
+            for item in items:
+                container.markdown(f"- {item}")
+        else:
+            container.caption("未觸發既定門檻。")
 
 def rank_value(df: pd.DataFrame, player_id: str, metric: str, ascending: bool = False) -> tuple[int | None, int]:
     if df.empty or metric not in df.columns:
@@ -528,20 +585,9 @@ def league_comparison(row: pd.Series, df: pd.DataFrame, metrics: list[tuple[str,
     return pd.DataFrame(rows)
 
 
-def percentile_rank(df: pd.DataFrame, row: pd.Series, metric: str, lower_is_better: bool = False) -> float:
-    if metric not in df.columns:
-        return 0.0
-    values = pd.to_numeric(df[metric], errors="coerce").dropna()
-    player_value = pd.to_numeric(pd.Series([row.get(metric)]), errors="coerce").iloc[0]
-    if values.empty or pd.isna(player_value):
-        return 0.0
-    ahead = values >= player_value if lower_is_better else values <= player_value
-    return round(float(ahead.mean() * 100), 1)
-
-
 def league_percentile_chart(row: pd.Series, df: pd.DataFrame, metrics: list[tuple[str, bool]]) -> go.Figure:
     labels = [metric_name(metric) for metric, _ in metrics]
-    values = [percentile_rank(df, row, metric, lower_better) for metric, lower_better in metrics]
+    values = [percentile_rank(df, row, metric, lower_better) or 0.0 for metric, lower_better in metrics]
     fig = go.Figure(
         go.Bar(
             x=values,
@@ -615,6 +661,8 @@ def render_roster_only_player(row: pd.Series) -> None:
     st.subheader("本季成績")
     show_table(st, pd.DataFrame([row]), ["season", "team", "player_name", "roster_status", "source_note"])
     st.info("此球員存在於 CPBL 官方現役名單，但目前官方本季打擊或投球全記錄表未列出一軍成績。")
+    st.header("評估依據")
+    st.info("尚無一軍成績，無法計算符合門檻母體百分位或評估訊號。")
 
     c1, c2 = st.columns(2, gap="medium")
     c1.subheader("進階指標")
@@ -665,24 +713,39 @@ def render_player_header(row: pd.Series, player_type: str) -> None:
 
 
 def page_home() -> None:
-    page_kicker("首頁 / 專案介紹")
-    st.title(APP_TITLE)
+    page_kicker("資料訊號總覽")
+    st.title("資料訊號總覽")
     st.caption("官方戰績、球員成績與衍生比較；資料以 CPBL 公開頁面為來源。")
     source_status_panel()
+    render_data_trust_surface(QUALITY_REPORT)
     metric_cards(
         [
             ("球隊數", TEAMS["team"].nunique()),
             ("官方球員總表", PLAYERS["player_id"].nunique() if not PLAYERS.empty else ROSTER["player_id"].nunique()),
-            ("核對日期", data_verified_date()),
-            ("資料模式", "官方 API"),
+            ("打者樣本", len(BATTERS)),
+            ("投手樣本", len(PITCHERS)),
         ]
+    )
+    st.header("資料可回答")
+    st.markdown(
+        "- 球員是否達到打席或投球局數資格門檻。\n"
+        "- 評估分數由哪些官方成績訊號推動。\n"
+        "- 球員在符合門檻母體中的相對百分位。\n"
+        "- 官方資料目前可支撐與不可支撐的判讀範圍。"
+    )
+    st.header("資料限制")
+    st.markdown(
+        "- 目前使用本季官方彙總成績，不投射未來表現。\n"
+        "- LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。\n"
+        "- 未列入官方本季全記錄表的現役球員只呈現名單資訊，不計算百分位或評估訊號。"
     )
     st.header("分析入口")
     workflows = [
+        ("球探工作台", "查看打席與投球局數資格門檻、以官方成績產生固定評估分數，並比較符合門檻母體百分位。"),
         ("聯盟總覽", "戰績、勝差、近況、得失分差與主客場勝率。"),
         ("球員排行榜", "以 OPS、ISO、ERA、WHIP、K/BB 等指標篩選投打表現。"),
-        ("球員個人頁", "查看本季成績、進階指標、聯盟比較、百分位與相似球員。"),
-        ("投打對決", "以官方成績與聯盟平均 OBP 計算 LOG5 衍生機率。"),
+        ("球員個人頁", "查看本季成績、評估依據、聯盟比較、百分位與相似球員。"),
+        ("投打對決", "以官方成績與聯盟平均 OBP 計算 LOG5 情境結果。"),
         ("分項排行", "比較打者、投手與球隊的 Top / Bottom 結果。"),
     ]
     workflow_html = "\n".join(
@@ -690,8 +753,6 @@ def page_home() -> None:
         for title, body in workflows
     )
     st.markdown(f"<div class='workflow-grid' role='list' aria-label='分析入口'>{workflow_html}</div>", unsafe_allow_html=True)
-
-
 def page_league() -> None:
     page_kicker("聯盟總覽")
     st.title("聯盟總覽")
@@ -767,6 +828,65 @@ def page_league() -> None:
     venue["客場勝率"] = venue.apply(lambda row: as_number(row["away_wins"]) / max(as_number(row["away_wins"]) + as_number(row["away_losses"]), 1), axis=1)
     venue_long = venue.melt(id_vars="team", value_vars=["主場勝率", "客場勝率"], var_name="場地", value_name="勝率")
     show_chart(c4, px.bar(venue_long, x="勝率", y="team", color="場地", orientation="h", barmode="group", title="主客場勝率", labels={"team": "球隊"}))
+
+
+def page_scouting_workbench() -> None:
+    page_kicker("球探工作台")
+    st.title("球探工作台")
+    st.caption("以可重現的資格門檻、既有衍生分數與聯盟百分位建立本季觀察名單；不預測未來表現。")
+    player_type = st.radio("球員類型", ["打者", "投手"], horizontal=True, key="scouting_player_type")
+    source = BATTERS if player_type == "打者" else PITCHERS
+    if source.empty:
+        st.info(f"目前缺少官方{player_type}成績，無法建立球探工作台。")
+        return
+
+    usage_label = qualification_label(player_type)
+    default_threshold = DEFAULT_QUALIFICATION[player_type]
+    maximum = qualification_upper_bound(source, player_type)
+    team = st.selectbox("球隊", ["全部", *sorted(source["team"].dropna().unique())], key=f"scouting_team_{player_type}")
+    role_column = "position" if player_type == "打者" else "role"
+    role_values = sorted(source[role_column].dropna().astype(str).unique())
+    role_or_position = st.selectbox("位置 / 角色", ["全部", *role_values], key=f"scouting_role_{player_type}")
+    if player_type == "打者":
+        threshold = st.number_input("最低打席 (PA)", min_value=int(default_threshold), max_value=max(int(maximum), int(default_threshold)), value=int(default_threshold), step=5, key="scouting_min_pa")
+    else:
+        threshold = st.number_input("最低投球局數 (IP)", min_value=float(default_threshold), max_value=maximum, value=float(default_threshold), step=1.0, key="scouting_min_ip")
+    priority = st.selectbox("評估重點", priority_options(player_type), key=f"scouting_priority_{player_type}")
+
+    qualified = qualified_population(source, player_type, float(threshold))
+    render_data_trust_surface(QUALITY_REPORT, player_type, float(threshold), len(qualified))
+    candidates = rank_scouting_candidates(source, player_type, float(threshold), priority, team, role_or_position)
+    if candidates.empty:
+        st.info(f"目前沒有符合條件的球員。資格門檻維持 {usage_label} ≥ {float(threshold):g}，請調整球隊或位置 / 角色。")
+        return
+
+    st.header("候選名單")
+    st.caption(f"評估重點：{priority}；排名依評估分數降冪，同分時依 CPBL 球員 ID 排序。")
+    display_columns = (
+        ["player_id", "player_name", "team", "role_or_position", "pa", "priority_score", "qualified_percentile", "contact_score", "power_score", "discipline_score", "hitter_value_score", "evidence_strengths", "evidence_risks", "evidence_notes"]
+        if player_type == "打者"
+        else ["player_id", "player_name", "team", "role_or_position", "innings_pitched", "priority_score", "qualified_percentile", "run_prevention_score", "strikeout_score", "command_score", "pitcher_value_score", "evidence_strengths", "evidence_risks", "evidence_notes"]
+    )
+    show_table(st, candidates, display_columns)
+
+    options = {
+        f"{row.player_name} · {row.team} · {row.player_id}": str(row.player_id)
+        for row in candidates[["player_id", "player_name", "team"]].itertuples(index=False)
+    }
+    selected_labels = st.multiselect(
+        "比較球員",
+        list(options),
+        max_selections=4,
+        help="最多選擇 4 位球員；比較表會保留此選擇順序。",
+        key=f"scouting_compare_{player_type}",
+    )
+    st.caption("最多選擇 4 位球員。")
+    comparison = comparison_frame(candidates, [options[label] for label in selected_labels], player_type)
+    st.header("並列比較")
+    if comparison.empty:
+        st.info("選擇候選名單中的球員後，這裡會顯示相同資格母體下的並列數據。")
+    else:
+        show_table(st, comparison)
 
 
 def page_rankings() -> None:
@@ -928,6 +1048,10 @@ def page_player() -> None:
 
     st.header("本季成績")
     show_table(st, pd.DataFrame([row]), season_columns)
+    evidence_threshold = DEFAULT_QUALIFICATION[stat_type]
+    evidence_population = qualified_population(df, stat_type, evidence_threshold)
+    render_data_trust_surface(QUALITY_REPORT, stat_type, evidence_threshold, len(evidence_population))
+    render_player_evidence(row, evidence_population, stat_type, evidence_threshold)
 
     c1, c2 = st.columns(2, gap="medium")
     c1.subheader("進階指標")
@@ -1042,8 +1166,9 @@ def page_metric_rankings() -> None:
 
 
 PAGE_HANDLERS = {
-    "首頁 / 專案介紹": page_home,
+    "資料訊號總覽": page_home,
     "聯盟總覽": page_league,
+    "球探工作台": page_scouting_workbench,
     "球員排行榜": page_rankings,
     "球員個人頁": page_player,
     "投打對決": page_matchup,
