@@ -1,13 +1,19 @@
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
+
+import pytest
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_runtime_check_uses_project_virtual_environment() -> None:
+    if os.name != "nt":
+        pytest.skip("run_project.bat is a Windows launcher")
+
     result = subprocess.run(
         ["cmd.exe", "/d", "/c", str(ROOT / "run_project.bat"), "--runtime-check"],
         cwd=ROOT,
