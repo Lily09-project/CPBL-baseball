@@ -898,4 +898,3 @@ Open the run created by the push. Security checks must be green for the Gitleaks
 **Placeholder scan:** Every task has paths, signatures, UI labels, formulas, test code, commands, expected results, and commits. No deferred work markers are present.
 
 **Type consistency:** qualified_population returns the DataFrame used by percentile_rank, build_evidence_signals, and rank_scouting_candidates. rank_scouting_candidates returns the candidate DataFrame consumed by comparison_frame. comparison_frame returns the DataFrame consumed by show_table. The qualification boundary converts player_id to pandas string and comparison converts selected IDs to str before indexing.
-
