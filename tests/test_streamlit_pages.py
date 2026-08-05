@@ -2,6 +2,10 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
+ROOT = Path(__file__).resolve().parents[1]
+APP_PATH = ROOT / "app.py"
+
+
 
 PAGES = [
     "首頁 / 專案介紹",
@@ -51,7 +55,7 @@ def visible_text(app: AppTest) -> str:
 
 
 def test_all_streamlit_pages_render_without_exceptions():
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
     assert len(app.exception) == 0
 
@@ -62,7 +66,7 @@ def test_all_streamlit_pages_render_without_exceptions():
 
 
 def test_removed_pages_are_not_in_sidebar():
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
 
     sidebar_options = list(app.sidebar.radio[0].options)
@@ -72,7 +76,7 @@ def test_removed_pages_are_not_in_sidebar():
 
 
 def test_rendered_frontend_text_is_readable_traditional_chinese():
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
 
     for page in PAGES:
@@ -89,7 +93,7 @@ def test_rendered_frontend_text_is_readable_traditional_chinese():
 
 
 def test_league_table_uses_chinese_baseball_columns():
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
     app.sidebar.radio[0].set_value("聯盟總覽")
     app.run(timeout=20)
@@ -128,11 +132,11 @@ def test_verified_date_comes_from_quality_report():
 
     assert dashboard.data_verified_date(report) == expected_date
     assert dashboard.DATA_VERIFIED_DATE == expected_date
-    assert "2026-07-05" not in Path("app.py").read_text(encoding="utf-8-sig")
+    assert "2026-07-05" not in APP_PATH.read_text(encoding="utf-8-sig")
 
 
 def test_player_page_has_complete_sections_and_no_raw_url_table():
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
     app.sidebar.radio[0].set_value("球員個人頁")
     app.run(timeout=20)
@@ -153,7 +157,7 @@ def test_player_page_has_complete_sections_and_no_raw_url_table():
 
 
 def test_source_contains_correct_page_and_baseball_terms():
-    text = Path("app.py").read_text(encoding="utf-8-sig")
+    text = APP_PATH.read_text(encoding="utf-8-sig")
     required_terms = [
         "CPBL 中職資料分析平台",
         "打擊率 (AVG)",
@@ -178,7 +182,7 @@ def test_source_contains_correct_page_and_baseball_terms():
 
 
 def test_league_filter_and_player_type_controls_update_without_errors():
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
 
     app.sidebar.radio[0].set_value("聯盟總覽")
@@ -204,7 +208,7 @@ def test_league_filter_and_player_type_controls_update_without_errors():
 
 
 def test_metric_ranking_team_view_renders_balanced_top_and_bottom_sections():
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
     app.sidebar.radio[0].set_value("分項排行")
     app.run(timeout=20)
@@ -255,7 +259,7 @@ def test_theme_uses_flat_editorial_data_tool_direction():
 
 
 def test_every_page_has_one_level_one_title():
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
 
     for page in PAGES:
@@ -265,7 +269,7 @@ def test_every_page_has_one_level_one_title():
 
 
 def test_accessibility_shell_and_chart_summaries_are_present():
-    app = AppTest.from_file("app.py")
+    app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
     app.sidebar.radio[0].set_value("聯盟總覽")
     app.run(timeout=20)
