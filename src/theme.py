@@ -677,6 +677,26 @@ button:disabled,
   }
 }
 
+.trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem .9rem;
+  margin: .75rem 0 1.25rem 0;
+  padding: .78rem .92rem;
+  border: 1px solid rgba(101, 185, 149, .42);
+  border-left: 3px solid var(--mint);
+  border-radius: 4px;
+  background: var(--surface-muted);
+  color: var(--muted-strong);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.trust-strip span + span::before {
+  content: "•";
+  color: var(--mint);
+  margin-right: .9rem;
+}
 @media (max-width: 720px) {
   .stApp {
     font-size: 18.5px;
@@ -694,6 +714,12 @@ button:disabled,
     align-items: flex-start;
     flex-direction: column;
     gap: .3rem;
+  }
+
+  .trust-strip {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .25rem;
   }
 
   h1 {

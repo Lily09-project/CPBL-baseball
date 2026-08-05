@@ -28,3 +28,7 @@ notes/source_prompt.txt
 *.sqlite3
 *.log
 *.bak
+
+# Local agent workspaces
+.worktrees/
+.superpowers/

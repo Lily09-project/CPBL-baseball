@@ -8,8 +8,9 @@ APP_PATH = ROOT / "app.py"
 
 
 PAGES = [
-    "首頁 / 專案介紹",
+    "資料訊號總覽",
     "聯盟總覽",
+    "球探工作台",
     "球員排行榜",
     "球員個人頁",
     "投打對決",
@@ -19,10 +20,11 @@ PAGES = [
 REMOVED_PAGES = ["相關新聞", "新聞 × 數據洞察", "資料品質與測試"]
 
 REQUIRED_FRONTEND_TERMS = {
-    "首頁 / 專案介紹": ["CPBL 中職資料分析平台", "資料來源狀態", "球員個人頁", "LOG5"],
+    "資料訊號總覽": ["資料訊號總覽", "球探工作台", "資料品質", "資料可回答", "資料限制", "LOG5 為情境計算，非校準預測模型", "資格門檻", "固定評估分數", "符合門檻母體百分位"],
     "聯盟總覽": ["聯盟總覽", "戰績表", "勝差", "近況"],
+    "球探工作台": ["球探工作台", "最低打席 (PA)", "評估重點", "符合門檻母體", "最多選擇 4 位球員"],
     "球員排行榜": ["球員排行榜", "打者", "投手", "OPS"],
-    "球員個人頁": ["球員個人頁", "全體球員", "官方現役名單", "本季成績", "進階指標", "聯盟平均比較", "排行摘要", "聯盟百分位", "能力雷達圖", "相似球員推薦"],
+    "球員個人頁": ["球員個人頁", "全體球員", "官方現役名單", "本季成績", "評估依據", "進階指標", "聯盟平均比較", "排行摘要", "聯盟百分位", "能力雷達圖", "相似球員推薦"],
     "投打對決": ["投打對決", "LOG5", "OBP", "SLG", "OPS", "ERA", "WHIP", "K/BB"],
     "分項排行": ["分項排行", "指標", "Top 10"],
 }
@@ -48,6 +50,11 @@ def visible_text(app: AppTest) -> str:
                 parts.append(str(value))
     for selectbox in app.selectbox:
         parts.append(str(selectbox.label))
+    for number_input in app.number_input:
+        parts.append(str(number_input.label))
+    for multiselect in app.multiselect:
+        parts.append(str(multiselect.label))
+        parts.extend(str(option) for option in multiselect.options)
     for radio in app.radio:
         parts.append(str(radio.label))
         parts.extend(str(option) for option in radio.options)
@@ -135,6 +142,48 @@ def test_verified_date_comes_from_quality_report():
     assert "2026-07-05" not in APP_PATH.read_text(encoding="utf-8-sig")
 
 
+
+def test_data_signal_overview_exposes_lineage_quality_and_log5_limit() -> None:
+    import app as dashboard
+
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    app.sidebar.radio[0].set_value("資料訊號總覽")
+    app.run(timeout=20)
+    text = visible_text(app)
+
+    assert "www.cpbl.com.tw" in text
+    assert dashboard.data_generated_time() in text
+    assert "品質狀態" in text
+    assert "LOG5 為情境計算，非校準預測模型" in text
+    assert "球探工作台" in text
+    assert "資格門檻" in text
+    assert "固定評估分數" in text
+    assert "符合門檻母體百分位" in text
+    source = APP_PATH.read_text(encoding="utf-8-sig")
+    workflow_start = source.index("workflows = [")
+    assert source.index("(\"球探工作台\"", workflow_start) < source.index("(\"聯盟總覽\"", workflow_start)
+
+
+def test_player_page_renders_explainable_evidence_with_percentile_basis() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    app.sidebar.radio[0].set_value("球員個人頁")
+    app.run(timeout=20)
+    player_type = next(radio for radio in app.radio if radio.label == "球員類型")
+    player_type.set_value("打者")
+    app.run(timeout=20)
+    text = visible_text(app)
+
+    assert "評估依據" in text
+    assert "符合門檻母體" in text
+    assert "PA ≥ 30" in text
+    assert "百分位依據：" in text
+    assert "OBP 有利百分位" in text
+    assert "ISO 有利百分位" in text
+    assert "K% 有利百分位" in text
+
+
 def test_player_page_has_complete_sections_and_no_raw_url_table():
     app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
@@ -205,6 +254,23 @@ def test_league_filter_and_player_type_controls_update_without_errors():
         text = visible_text(app)
         assert "聯盟百分位" in text
         assert "相似球員推薦" in text
+
+
+def test_scouting_workbench_filters_and_compares_without_errors() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    app.sidebar.radio[0].set_value("球探工作台")
+    app.run(timeout=20)
+
+    assert len(app.exception) == 0
+    assert "符合門檻母體" in visible_text(app)
+    hitter_type = next(radio for radio in app.radio if radio.label == "球員類型")
+    hitter_type.set_value("投手")
+    app.run(timeout=20)
+    assert len(app.exception) == 0
+    assert any(box.label == "最低投球局數 (IP)" for box in app.number_input)
+    assert any(box.label == "評估重點" for box in app.selectbox)
+    assert any(box.label == "比較球員" for box in app.multiselect)
 
 
 def test_metric_ranking_team_view_renders_balanced_top_and_bottom_sections():
