@@ -1,7 +1,7 @@
 {
   "mode": "api",
   "fallback_reason": "api mode: 使用 CPBL 官方 /player、/standings/season、/stats/recordallaction",
-  "generated_at": "2026-08-06T14:31:36+08:00",
+  "generated_at": "2026-08-06T16:18:21+08:00",
   "files": {
     "teams.csv": {
       "row_count": 6,
