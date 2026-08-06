@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
@@ -378,3 +378,26 @@ def test_scouting_workbench_hides_unverified_position_role_filter_and_shows_snap
     source = APP_PATH.read_text(encoding="utf-8-sig")
     assert "資料快照" in source
     assert "snapshot_id" in source
+
+
+def test_scouting_desk_visual_system_is_available_to_every_page() -> None:
+    css = Path("src/theme.py").read_text(encoding="utf-8-sig")
+    source = APP_PATH.read_text(encoding="utf-8-sig")
+
+    for required_rule in [
+        ".page-masthead",
+        ".data-status-line",
+        ".metric-card-detail",
+        ".evidence-grid",
+        ".route-card",
+        ".player-identity",
+        ".control-caption",
+        "--space-4",
+        "--radius",
+    ]:
+        assert required_rule in css
+
+    assert "def page_intro(" in source
+    assert "def render_analysis_routes(" in source
+    assert "def switch_page(" in source
+    assert 'key="main_navigation"' in source

@@ -33,3 +33,4 @@ notes/source_prompt.txt
 # Local agent workspaces
 .worktrees/
 .superpowers/
+.pytest_sessions/
