@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime
 from html import escape
@@ -25,7 +25,7 @@ from src.scouting import (
     rank_scouting_candidates,
 )
 from src.similarity import find_similar_players
-from src.theme import STREAMLIT_CSS
+from src.theme import STREAMLIT_CSS, STREAMLIT_LAYOUT_CSS
 
 
 APP_TITLE = "CPBL 中職資料分析平台"
@@ -199,6 +199,7 @@ METRIC_HELP = {
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
 st.markdown(STREAMLIT_CSS, unsafe_allow_html=True)
+st.markdown(STREAMLIT_LAYOUT_CSS, unsafe_allow_html=True)
 st.markdown(
     '<a class="skip-link" href="#cpbl-main">跳至主要內容</a><div id="cpbl-main" tabindex="-1"></div>',
     unsafe_allow_html=True,
@@ -403,21 +404,62 @@ def show_chart(container, fig: go.Figure) -> None:
     )
 
 
-def metric_cards(items: list[tuple[str, object]]) -> None:
+def metric_cards(items: list[tuple[object, ...]]) -> None:
     if not items:
         return
-    cards = "".join(
-        f"<div class='metric-card'><div class='metric-label'>{escape(str(label))}</div><div class='metric-value'>{escape(str(value))}</div></div>"
-        for label, value in items
+    cards: list[str] = []
+    for item in items:
+        label, value = item[0], item[1]
+        detail = item[2] if len(item) > 2 else ""
+        cards.append(
+            "<div class='metric-card'><div class='metric-label'>"
+            + escape(str(label))
+            + "</div><div class='metric-value'>"
+            + escape(str(value))
+            + "</div><div class='metric-card-detail'>"
+            + escape(str(detail))
+            + "</div></div>"
+        )
+    st.markdown(f"<div class='metric-grid' role='group' aria-label='重點數據'>{''.join(cards)}</div>", unsafe_allow_html=True)
+
+
+def page_kicker(section: str) -> str:
+    return (
+        "<div class='page-kicker'><strong>CPBL 官方資料</strong>"
+        f"<span class='page-date'>{escape(section)} · 資料驗證 {escape(data_verified_date())}</span></div>"
     )
-    st.markdown(f"<div class='metric-grid' role='group' aria-label='重點數據'>{cards}</div>", unsafe_allow_html=True)
 
 
-def page_kicker(section: str) -> None:
+def page_intro(section: str, title: str, description: str) -> None:
     st.markdown(
-        f"<div class='page-kicker'><strong>CPBL 官方資料</strong><span class='page-date'>{escape(section)} · 資料驗證 {escape(data_verified_date())}</span></div>",
+        "<section class='page-masthead' aria-label='頁面資料狀態'><div>"
+        + page_kicker(section)
+        + "</div><div class='data-status-line'>官方資料已核對</div></section>",
         unsafe_allow_html=True,
     )
+    st.title(title)
+    st.caption(description)
+
+
+def switch_page(page: str) -> None:
+    st.session_state["main_navigation"] = page
+
+
+def render_analysis_routes() -> None:
+    routes = [
+        ("球探工作台", "從資格門檻開始，建立可說明的觀察名單。"),
+        ("球員排行榜", "依單一指標快速縮小本季候選範圍。"),
+        ("投打對決", "用明確限制的 LOG5 情境理解投打差異。"),
+    ]
+    route_cards = "".join(
+        "<section class='route-card'><div class='route-eyebrow'>分析入口</div>"
+        f"<div class='route-label'>{escape(target)}</div>"
+        f"<div class='route-description'>{escape(description)}</div></section>"
+        for target, description in routes
+    )
+    st.markdown(f"<div class='route-grid' aria-label='主要分析入口'>{route_cards}</div>", unsafe_allow_html=True)
+    target = st.selectbox("開啟分析頁", [route[0] for route in routes], key="analysis_route_target")
+    st.button("前往分析頁", key="analysis_route_go", on_click=switch_page, args=(target,), width="content")
 
 
 def radar_chart(labels: list[str], values: list[float], title: str = "能力雷達圖") -> go.Figure:
@@ -519,10 +561,8 @@ def render_data_trust_surface(
             )
     if player_type is not None and threshold is not None and population_count is not None:
         details.append(f"符合門檻母體：{population_count} 人（{qualification_label(player_type)} ≥ {threshold:g}）")
-    st.markdown(
-        "<div class='trust-strip' role='note'><span>" + "</span><span>".join(escape(item) for item in details) + "</span></div>",
-        unsafe_allow_html=True,
-    )
+    trust_items = "".join(f"<span class='trust-item'>{escape(item)}</span>" for item in details)
+    st.markdown(f"<div class='trust-strip' role='note'>{trust_items}</div>", unsafe_allow_html=True)
     warnings = [str(item) for item in report.get("warnings", []) if str(item)]
     if quality_status != "pass" and warnings:
         st.warning("資料品質警示：" + "；".join(warnings))
@@ -532,16 +572,24 @@ def render_data_trust_surface(
 def render_player_evidence(row: pd.Series, population: pd.DataFrame, player_type: str, threshold: float) -> None:
     evidence = build_evidence_signals(row, population, player_type, threshold)
     st.header("評估依據")
-    st.caption(f"符合門檻母體 {len(population)} 人；{qualification_label(player_type)} ≥ {threshold:g}；百分位越高代表相對表現越前。")
-    columns = st.columns(3, gap="medium")
-    sections = [("強項", evidence["strengths"]), ("風險", evidence["risks"]), ("資料註記", evidence["notes"])]
-    for container, (heading, items) in zip(columns, sections):
-        container.subheader(heading)
+    st.markdown(
+        f"<span class='control-caption'>符合門檻母體 {len(population)} 人 · {qualification_label(player_type)} ≥ {threshold:g} · 百分位越高代表相對表現越前</span>",
+        unsafe_allow_html=True,
+    )
+    sections = [
+        ("強項", evidence["strengths"], "strength"),
+        ("風險", evidence["risks"], "risk"),
+        ("資料註記", evidence["notes"], "note"),
+    ]
+    cards: list[str] = []
+    for heading, items, tone in sections:
         if items:
-            for item in items:
-                container.markdown(f"- {item}")
+            content = "<ul>" + "".join(f"<li>{escape(str(item))}</li>" for item in items) + "</ul>"
         else:
-            container.caption("未觸發既定門檻。")
+            content = "<div class='evidence-empty'>未觸發既定門檻。</div>"
+        cards.append(f"<section class='evidence-panel {tone}'><h3>{heading}</h3>{content}</section>")
+    st.markdown(f"<div class='evidence-grid'>{''.join(cards)}</div>", unsafe_allow_html=True)
+
 
 def rank_value(df: pd.DataFrame, player_id: str, metric: str, ascending: bool = False) -> tuple[int | None, int]:
     if df.empty or metric not in df.columns:
@@ -703,37 +751,32 @@ def render_player_header(row: pd.Series, player_type: str) -> None:
     identity_parts.append(str(season))
     identity_line = " · ".join(identity_parts)
     st.markdown(
-        f"""
-        <div class="cpbl-card player-hero">
-          <h2>{escape(str(row["player_name"]))}</h2>
-          <p>{escape(identity_line)}</p>
-          <p>名單狀態：{escape(str(status))}</p>
-          <p>資料核對：{data_verified_date()}；名單與成績取自 CPBL 官方網站，進階分數由官方成績衍生。</p>
-        </div>
-        """,
+        f"<section class='player-identity' aria-label='球員基本資料'><div>"
+        f"<div class='identity-label'>PLAYER DOSSIER</div><h2>{escape(str(row['player_name']))}</h2>"
+        f"<p>{escape(identity_line)} · 資料核對 {data_verified_date()}</p></div>"
+        f"<div class='identity-status'>{escape(str(status))}</div></section>",
         unsafe_allow_html=True,
     )
-    profile_url = absolute_url(
-        str(directory_row.get("profile_url", "") or "") if directory_row is not None else ""
-    )
+    profile_url = absolute_url(str(directory_row.get("profile_url", "") or "") if directory_row is not None else "")
     if profile_url.startswith("https://www.cpbl.com.tw/"):
-        st.markdown(f"[開啟 CPBL 官方球員頁]({profile_url})")
+        st.link_button("開啟 CPBL 官方球員頁", profile_url, width="content")
 
 
 def page_home() -> None:
-    page_kicker("資料訊號總覽")
-    st.title("資料訊號總覽")
-    st.caption("官方戰績、球員成績與衍生比較；資料以 CPBL 公開頁面為來源。")
-    source_status_panel()
+    page_intro("資料訊號總覽", "資料訊號總覽", "以 CPBL 官方資料建立本季觀察框架：先確認資料，再進入可重現的比較。")
     render_data_trust_surface(QUALITY_REPORT)
     metric_cards(
         [
-            ("球隊數", TEAMS["team"].nunique()),
-            ("官方球員總表", PLAYERS["player_id"].nunique() if not PLAYERS.empty else ROSTER["player_id"].nunique()),
-            ("打者樣本", len(BATTERS)),
-            ("投手樣本", len(PITCHERS)),
+            ("球隊數", TEAMS["team"].nunique(), "官方戰績資料"),
+            ("官方球員總表", PLAYERS["player_id"].nunique() if not PLAYERS.empty else ROSTER["player_id"].nunique(), "名單與成績聯集"),
+            ("打者樣本", len(BATTERS), "官方全記錄表"),
+            ("投手樣本", len(PITCHERS), "官方全記錄表"),
         ]
     )
+    st.header("分析入口")
+    st.caption("從一項清楚的工作開始，避免在沒有資格門檻與母體基準的情況下直接比較數字。")
+    render_analysis_routes()
+
     st.header("資料可回答")
     st.markdown(
         "- 球員是否達到打席或投球局數資格門檻。\n"
@@ -747,7 +790,6 @@ def page_home() -> None:
         "- LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。\n"
         "- 未列入官方本季全記錄表的現役球員只呈現名單資訊，不計算百分位或評估訊號。"
     )
-    st.header("分析入口")
     workflows = [
         ("球探工作台", "查看打席與投球局數資格門檻、以官方成績產生固定評估分數，並比較符合門檻母體百分位。"),
         ("聯盟總覽", "戰績、勝差、近況、得失分差與主客場勝率。"),
@@ -760,10 +802,12 @@ def page_home() -> None:
         f"<div class='workflow-row' role='listitem'><span class='workflow-label'>{escape(title)}</span><span class='workflow-description'>{escape(body)}</span></div>"
         for title, body in workflows
     )
-    st.markdown(f"<div class='workflow-grid' role='list' aria-label='分析入口'>{workflow_html}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='workflow-grid' role='list' aria-label='完整分析流程'>{workflow_html}</div>", unsafe_allow_html=True)
+    source_status_panel()
+
+
 def page_league() -> None:
-    page_kicker("聯盟總覽")
-    st.title("聯盟總覽")
+    page_intro("聯盟總覽", "聯盟總覽", "以球隊戰績、得失分與主客場差異，建立本季聯盟的可比較基準。")
     if TEAMS.empty:
         st.info("目前沒有可顯示的官方球隊戰績，請重新執行 API 資料抓取。")
         return
@@ -839,9 +883,7 @@ def page_league() -> None:
 
 
 def page_scouting_workbench() -> None:
-    page_kicker("球探工作台")
-    st.title("球探工作台")
-    st.caption("以可重現的資格門檻、既有衍生分數與聯盟百分位建立本季觀察名單；不預測未來表現。")
+    page_intro("球探工作台", "球探工作台", "以可重現的資格門檻、既有衍生分數與聯盟百分位建立本季觀察名單；不預測未來表現。")
     player_type = st.radio("球員類型", ["打者", "投手"], horizontal=True, key="scouting_player_type")
     source = BATTERS if player_type == "打者" else PITCHERS
     if source.empty:
@@ -851,12 +893,14 @@ def page_scouting_workbench() -> None:
     usage_label = qualification_label(player_type)
     default_threshold = DEFAULT_QUALIFICATION[player_type]
     maximum = qualification_upper_bound(source, player_type)
-    team = st.selectbox("球隊", ["全部", *sorted(source["team"].dropna().unique())], key=f"scouting_team_{player_type}")
+    st.markdown("<span class='control-caption'>設定資料母體：球隊、資格門檻與評估重點會共同決定候選範圍。</span>", unsafe_allow_html=True)
+    control_team, control_threshold, control_priority = st.columns(3, gap="medium")
+    team = control_team.selectbox("球隊", ["全部", *sorted(source["team"].dropna().unique())], key=f"scouting_team_{player_type}")
     if player_type == "打者":
-        threshold = st.number_input("最低打席 (PA)", min_value=int(default_threshold), max_value=max(int(maximum), int(default_threshold)), value=int(default_threshold), step=5, key="scouting_min_pa")
+        threshold = control_threshold.number_input("最低打席 (PA)", min_value=int(default_threshold), max_value=max(int(maximum), int(default_threshold)), value=int(default_threshold), step=5, key="scouting_min_pa")
     else:
-        threshold = st.number_input("最低投球局數 (IP)", min_value=float(default_threshold), max_value=maximum, value=float(default_threshold), step=1.0, key="scouting_min_ip")
-    priority = st.selectbox("評估重點", priority_options(player_type), key=f"scouting_priority_{player_type}")
+        threshold = control_threshold.number_input("最低投球局數 (IP)", min_value=float(default_threshold), max_value=maximum, value=float(default_threshold), step=1.0, key="scouting_min_ip")
+    priority = control_priority.selectbox("評估重點", priority_options(player_type), key=f"scouting_priority_{player_type}")
 
     qualified = qualified_population(source, player_type, float(threshold))
     render_data_trust_surface(QUALITY_REPORT, player_type, float(threshold), len(qualified))
@@ -895,8 +939,7 @@ def page_scouting_workbench() -> None:
 
 
 def page_rankings() -> None:
-    page_kicker("球員排行榜")
-    st.title("球員排行榜")
+    page_intro("球員排行榜", "球員排行榜", "以清楚的門檻與單一指標縮小候選範圍，再回到球員檔案查看完整脈絡。")
     if BATTERS.empty or PITCHERS.empty:
         st.info("目前缺少官方打者或投手資料，請重新執行 API 資料抓取。")
         return
@@ -929,8 +972,7 @@ def page_rankings() -> None:
 
 
 def page_player() -> None:
-    page_kicker("球員個人頁")
-    st.title("球員個人頁")
+    page_intro("球員個人頁", "球員個人頁", "從官方名單或本季成績選擇球員，依序檢視事實、相對位置與可解釋的評估訊號。")
     source_status_panel(compact=True)
     st.caption("全體球員以 CPBL 官方現役名單與官方全記錄成績表的聯集為主；本季一軍成績表未列出的球員會顯示為「官方現役名單」。")
     player_type = st.radio("球員類型", ["全體球員", "打者", "投手"], horizontal=True, key="player_type")
@@ -1070,16 +1112,15 @@ def page_player() -> None:
     c4.subheader("聯盟百分位")
     show_chart(c4, league_percentile_chart(row, df, compare_metrics))
 
-    st.header("能力雷達圖")
-    show_chart(st, radar_chart(radar_labels, radar_values, "能力雷達圖"))
-
-    st.header("相似球員推薦")
-    show_table(st, find_similar_players(df, row["player_id"], player_type=stat_type, n=5))
+    radar_column, similar_column = st.columns(2, gap="medium")
+    radar_column.subheader("能力雷達圖")
+    show_chart(radar_column, radar_chart(radar_labels, radar_values, "能力雷達圖"))
+    similar_column.subheader("相似球員推薦")
+    show_table(similar_column, find_similar_players(df, row["player_id"], player_type=stat_type, n=5))
 
 
 def page_matchup() -> None:
-    page_kicker("投打對決")
-    st.title("投打對決")
+    page_intro("投打對決", "投打對決", "以本季官方彙總成績建構受限的 LOG5 情境，協助閱讀投打差異，不作比賽預測。")
     if BATTERS.empty or PITCHERS.empty:
         st.info("目前缺少官方打者或投手資料，請重新執行 API 資料抓取。")
         return
@@ -1129,8 +1170,7 @@ def page_matchup() -> None:
 
 
 def page_metric_rankings() -> None:
-    page_kicker("分項排行")
-    st.title("分項排行")
+    page_intro("分項排行", "分項排行", "將打者、投手與球隊放在一致的比較格式中，同時保留前段與後段觀察。")
     category = st.selectbox("類型", ["打者", "投手", "球隊"], key="metric_ranking_category")
     if category == "打者":
         df = BATTERS
@@ -1181,11 +1221,11 @@ PAGE_HANDLERS = {
 }
 
 st.sidebar.markdown(
-    "<div class='sidebar-brand'><div class='sidebar-brand-title'>CPBL 賽季資料</div><div class='sidebar-brand-subtitle'>官方成績與球員資料</div></div>",
+    "<div class='sidebar-brand'><div class='brand-mark'>CPBL</div><div><div class='sidebar-brand-title'>Scouting Desk</div><div class='sidebar-brand-subtitle'>官方賽季資料工作台</div></div></div>",
     unsafe_allow_html=True,
 )
 st.sidebar.markdown("<div class='sidebar-nav-label'>頁面導覽</div>", unsafe_allow_html=True)
-selected = st.sidebar.radio("頁面導覽", PAGES, label_visibility="collapsed")
+selected = st.sidebar.radio("頁面導覽", PAGES, label_visibility="collapsed", key="main_navigation")
 st.sidebar.markdown(
     f"<div class='sidebar-status'><strong>官方資料已核對</strong><br>更新日期：{escape(data_verified_date())}<br>術語：OPS · ISO · AVG · OBP · SLG · ERA · WHIP · K/BB · LOG5</div>",
     unsafe_allow_html=True,
