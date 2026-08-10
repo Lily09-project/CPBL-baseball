@@ -41,7 +41,7 @@ jobs:
       - name: Scan tracked files for secrets
         shell: bash
         run: |
-          detect-secrets scan --all-files --exclude-files '(^|[\\/])\.(venv|git|pytest_cache|pytest_tmp)([\\/]|$)' > /tmp/secret-scan.json
+          detect-secrets scan --no-verify > /tmp/secret-scan.json
           python -c "import json,sys; r=json.load(open('/tmp/secret-scan.json', encoding='utf-8')).get('results', {}); n=sum(len(v) for v in r.values()); print(f'secret findings={n}'); sys.exit(1 if n else 0)"
 
       - name: Audit Python dependencies
