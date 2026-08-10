@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 
 STREAMLIT_CSS = """
@@ -908,6 +908,16 @@ button:disabled,
     padding-left: max(1rem, env(safe-area-inset-left));
   }
 
+  [data-testid="stHorizontalBlock"] {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+  }
+
   h1 {
     font-size: 2.16rem !important;
   }
@@ -1261,6 +1271,67 @@ STREAMLIT_LAYOUT_CSS = """
   [data-testid="stMarkdownContainer"] .route-card { min-height: 0; height: auto; }
   [data-testid="stMarkdownContainer"] .trust-strip { align-items: flex-start; flex-direction: column; gap: .25rem; }
   [data-testid="stMarkdownContainer"] .trust-item + .trust-item::before { display: none; }
+}
+.sidebar-search-label {
+  margin-top: 1.35rem;
+}
+
+[data-testid="stMarkdownContainer"] .data-status-line.status-recent {
+  border-color: rgba(211, 163, 84, .55);
+  background: rgba(211, 163, 84, .1);
+  color: var(--gold);
+}
+
+[data-testid="stMarkdownContainer"] .data-status-line.status-recent::before {
+  background: var(--gold);
+}
+
+[data-testid="stMarkdownContainer"] .data-status-line.status-stale {
+  border-color: rgba(240, 138, 120, .6);
+  background: rgba(216, 90, 82, .12);
+  color: var(--accent-soft);
+}
+
+[data-testid="stMarkdownContainer"] .data-status-line.status-stale::before {
+  background: var(--accent-soft);
+}
+
+[data-testid="stMarkdownContainer"] .data-status-line.status-unknown {
+  border-color: rgba(156, 173, 176, .5);
+  background: rgba(156, 173, 176, .08);
+  color: var(--muted-strong);
+}
+
+[data-testid="stMarkdownContainer"] .data-status-line.status-unknown::before {
+  background: var(--muted-strong);
+}
+
+[data-testid="stSidebar"] .sidebar-status.status-recent strong {
+  color: var(--gold);
+}
+
+[data-testid="stSidebar"] .sidebar-status.status-stale strong {
+  color: var(--accent-soft);
+}
+
+[data-testid="stSidebar"] .sidebar-status.status-unknown strong {
+  color: var(--muted-strong);
+}
+
+.product-footer {
+  display: grid;
+  gap: .35rem;
+  margin-top: 3.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: .86rem;
+  line-height: 1.55;
+}
+
+.product-footer strong {
+  color: var(--muted-strong);
+  font-weight: 700;
 }
 </style>
 """

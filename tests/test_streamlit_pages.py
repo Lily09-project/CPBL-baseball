@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
@@ -20,11 +20,11 @@ PAGES = [
 REMOVED_PAGES = ["相關新聞", "新聞 × 數據洞察", "資料品質與測試"]
 
 REQUIRED_FRONTEND_TERMS = {
-    "資料訊號總覽": ["資料訊號總覽", "球探工作台", "資料品質", "資料可回答", "資料限制", "LOG5 為情境計算，非校準預測模型", "資格門檻", "固定評估分數", "符合門檻母體百分位"],
+    "資料訊號總覽": ["資料訊號總覽", "球探工作台", "資料品質", "資料新鮮度", "資料可回答", "資料限制", "LOG5 為情境計算，非校準預測模型", "資格門檻", "固定評估分數", "符合門檻母體百分位", "評估分數變化焦點", "累計資料差異"],
     "聯盟總覽": ["聯盟總覽", "戰績表", "勝差", "近況"],
     "球探工作台": ["球探工作台", "最低打席 (PA)", "評估重點", "符合門檻母體", "最多選擇 4 位球員"],
     "球員排行榜": ["球員排行榜", "打者", "投手", "OPS"],
-    "球員個人頁": ["球員個人頁", "全體球員", "官方現役名單", "本季成績", "評估依據", "進階指標", "聯盟平均比較", "排行摘要", "聯盟百分位", "能力雷達圖", "相似球員推薦"],
+    "球員個人頁": ["球員個人頁", "全體球員", "官方現役名單", "本季成績", "前次快照變化", "累計資料差異", "評估依據", "進階指標", "聯盟平均比較", "排行摘要", "聯盟百分位", "能力雷達圖", "相似球員推薦"],
     "投打對決": ["投打對決", "LOG5", "OBP", "SLG", "OPS", "ERA", "WHIP", "K/BB"],
     "分項排行": ["分項排行", "指標", "Top 10"],
 }
@@ -82,6 +82,88 @@ def test_removed_pages_are_not_in_sidebar():
         assert page not in sidebar_options
 
 
+def test_sidebar_has_complete_player_quick_search() -> None:
+    import app as dashboard
+
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+
+    search = next(box for box in app.sidebar.selectbox if box.label == "快速尋找球員")
+    assert search.options[0] == "選擇球員"
+    assert len(search.options) == dashboard.PLAYERS["player_id"].nunique() + 1
+    assert any(button.label == "開啟球員頁" for button in app.sidebar.button)
+
+
+def test_player_search_options_handles_roster_only_fallback() -> None:
+    import pandas as pd
+    import app as dashboard
+
+    roster_only = pd.DataFrame(
+        [{"player_id": "0000000001", "player_name": "測試球員", "team": "測試隊"}]
+    )
+
+    options = dashboard.player_search_options(roster_only)
+
+    assert options == {"測試球員 · 測試隊 · 官方現役名單 · 0000000001": "0000000001"}
+
+
+def test_player_quick_search_opens_selected_player_page() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    search = next(box for box in app.sidebar.selectbox if box.label == "快速尋找球員")
+    selected_label = search.options[1]
+
+    search.set_value(selected_label)
+    app.run(timeout=20)
+    next(button for button in app.sidebar.button if button.label == "開啟球員頁").click()
+    app.run(timeout=20)
+
+    assert app.sidebar.radio[0].value == "球員個人頁"
+    assert selected_label.split(" · ", 1)[0] in visible_text(app)
+
+
+def test_player_quick_search_reopens_player_after_manual_selection_change() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    search = next(box for box in app.sidebar.selectbox if box.label == "快速尋找球員")
+    selected_label = next(
+        label
+        for label in search.options[1:]
+        if sum(f" · {label.split(' · ')[1]} · " in option for option in search.options) > 1
+    )
+
+    search.set_value(selected_label)
+    app.run(timeout=20)
+    next(button for button in app.sidebar.button if button.label == "開啟球員頁").click()
+    app.run(timeout=20)
+
+    player_select = next(box for box in app.selectbox if box.label == "球員選擇")
+    alternate = next(option for option in player_select.options if option != player_select.value)
+    player_select.set_value(alternate)
+    app.run(timeout=20)
+    assert alternate in visible_text(app)
+
+    next(button for button in app.sidebar.button if button.label == "開啟球員頁").click()
+    app.run(timeout=20)
+
+    assert selected_label.split(" · ", 1)[0] in visible_text(app)
+
+
+def test_player_deep_link_restores_page_and_player() -> None:
+    import app as dashboard
+
+    target = dashboard.PLAYERS.iloc[0]
+    app = AppTest.from_file(APP_PATH)
+    app.query_params["page"] = "球員個人頁"
+    app.query_params["player"] = str(target["player_id"])
+    app.run(timeout=20)
+
+    assert app.sidebar.radio[0].value == "球員個人頁"
+    assert str(target["player_name"]) in visible_text(app)
+    assert app.query_params["page"] == ["球員個人頁"]
+    assert app.query_params["player"] == [str(target["player_id"])]
+
+
 def test_rendered_frontend_text_is_readable_traditional_chinese():
     app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
@@ -90,6 +172,7 @@ def test_rendered_frontend_text_is_readable_traditional_chinese():
         app.sidebar.radio[0].set_value(page)
         app.run(timeout=20)
         text = visible_text(app)
+        assert "非 CPBL 官方服務" in text, f"{page} missing independent-product disclosure"
         for marker in MOJIBAKE_MARKERS:
             assert marker not in text, f"{page} contains mojibake marker {marker!r}"
         assert "undefined" not in text.lower(), f"{page} contains undefined"
@@ -152,7 +235,9 @@ def test_data_signal_overview_exposes_lineage_quality_and_log5_limit() -> None:
     app.run(timeout=20)
     text = visible_text(app)
 
-    assert "www.cpbl.com.tw" in text
+    source = APP_PATH.read_text(encoding="utf-8-sig")
+    assert '"來源網域：cpbl.com.tw"' in source
+    assert "www.cpbl.com.tw" not in source
     assert dashboard.data_generated_time() in text
     assert "品質狀態" in text
     assert "LOG5 為情境計算，非校準預測模型" in text
@@ -160,9 +245,29 @@ def test_data_signal_overview_exposes_lineage_quality_and_log5_limit() -> None:
     assert "資格門檻" in text
     assert "固定評估分數" in text
     assert "符合門檻母體百分位" in text
-    source = APP_PATH.read_text(encoding="utf-8-sig")
     workflow_start = source.index("workflows = [")
     assert source.index("(\"球探工作台\"", workflow_start) < source.index("(\"聯盟總覽\"", workflow_start)
+
+
+def test_snapshot_movement_sections_are_visible_and_explicitly_limited() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    home_text = visible_text(app)
+
+    assert "評估分數變化焦點" in home_text
+    assert "累計資料差異" in home_text
+    assert "不是逐場表現或未來預測" in home_text
+
+    app.sidebar.radio[0].set_value("球員個人頁")
+    app.run(timeout=20)
+    player_type = next(radio for radio in app.radio if radio.label == "球員類型")
+    player_type.set_value("打者")
+    app.run(timeout=20)
+    player_text = visible_text(app)
+
+    assert "前次快照變化" in player_text
+    assert "快照期間" in player_text
+    assert "累計資料差異" in player_text
 
 
 def test_player_page_renders_explainable_evidence_with_percentile_basis() -> None:
@@ -347,6 +452,32 @@ def test_accessibility_shell_and_chart_summaries_are_present():
     assert all("圖表摘要" in summary and "sr-only" in summary for summary in chart_summaries)
 
 
+def test_radar_chart_reserves_space_for_mobile_axis_labels() -> None:
+    import app as dashboard
+
+    figure = dashboard.radar_chart(
+        ["擊球接觸", "長打能力", "選球紀律", "綜合價值"],
+        [20.0, 40.0, 60.0, 80.0],
+    )
+
+    assert figure.layout.height >= 440
+    assert figure.layout.margin.l >= 72
+    assert figure.layout.margin.r >= 72
+    assert tuple(figure.layout.polar.domain.x) == (0.16, 0.84)
+
+
+def test_theme_styles_freshness_states_and_sidebar_search() -> None:
+    css = Path("src/theme.py").read_text(encoding="utf-8-sig")
+
+    for required_rule in [
+        ".status-recent",
+        ".status-stale",
+        ".status-unknown",
+        ".sidebar-search-label",
+    ]:
+        assert required_rule in css
+
+
 def test_theme_covers_safe_areas_native_controls_and_interaction_states():
     css = Path("src/theme.py").read_text(encoding="utf-8-sig")
 
@@ -363,6 +494,8 @@ def test_theme_covers_safe_areas_native_controls_and_interaction_states():
         "textarea",
         '[data-testid="stAppDeployButton"]',
         '[data-testid="stMainMenu"]',
+        '[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]',
+        "flex-direction: column !important",
     ]:
         assert required_rule in css
 

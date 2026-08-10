@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from src.fetch_cpbl_data import (
+    CPBL_BASE_URL,
     CURRENT_SEASON,
     build_cpbl_session,
     clean_player_name,
@@ -11,6 +12,10 @@ from src.fetch_cpbl_data import (
     normalize_batters,
     parse_rank_team_player,
 )
+
+
+def test_official_data_uses_canonical_cpbl_host():
+    assert CPBL_BASE_URL == "https://cpbl.com.tw"
 
 
 def test_clean_player_name_removes_cpbl_status_markers():

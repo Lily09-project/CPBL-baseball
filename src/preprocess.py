@@ -46,21 +46,40 @@ def build_player_summary(roster: pd.DataFrame, batters: pd.DataFrame, pitchers: 
     players["player_value_score"] = 0.0
 
     score_cols = ["player_value_score"]
-    hitter_cols = ["player_id", "position", *score_cols]
-    pitcher_cols = ["player_id", "role", *score_cols]
+    hitter_cols = ["player_id", "position", "pa", *score_cols]
+    pitcher_cols = ["player_id", "role", "innings_pitched", *score_cols]
     if not batters.empty and "player_id" in batters:
         hitters = batters[[col for col in hitter_cols if col in batters.columns]].copy()
         hitters = hitters.drop_duplicates(subset=["player_id"])
-        hitters = hitters.rename(columns={"position": "hitter_position", **{col: f"hitter_{col}" for col in score_cols}})
+        hitters = hitters.rename(
+            columns={
+                "position": "hitter_position",
+                "pa": "hitter_pa",
+                **{col: f"hitter_{col}" for col in score_cols},
+            }
+        )
         players = players.merge(hitters, on="player_id", how="left")
     if not pitchers.empty and "player_id" in pitchers:
         arms = pitchers[[col for col in pitcher_cols if col in pitchers.columns]].copy()
         arms = arms.drop_duplicates(subset=["player_id"])
-        arms = arms.rename(columns={"role": "pitcher_role", **{col: f"pitcher_{col}" for col in score_cols}})
+        arms = arms.rename(
+            columns={
+                "role": "pitcher_role",
+                "innings_pitched": "pitcher_innings_pitched",
+                **{col: f"pitcher_{col}" for col in score_cols},
+            }
+        )
         players = players.merge(arms, on="player_id", how="left")
 
-    pitcher_mask = players.get("pitcher_player_value_score", pd.Series(index=players.index, dtype=float)).notna()
-    hitter_mask = players.get("hitter_player_value_score", pd.Series(index=players.index, dtype=float)).notna()
+    pitcher_available = players.get("pitcher_player_value_score", pd.Series(index=players.index, dtype=float)).notna()
+    hitter_available = players.get("hitter_player_value_score", pd.Series(index=players.index, dtype=float)).notna()
+    empty_workload = pd.Series(0.0, index=players.index)
+    hitter_workload = pd.to_numeric(players.get("hitter_pa", empty_workload), errors="coerce").fillna(0)
+    pitcher_workload = pd.to_numeric(
+        players.get("pitcher_innings_pitched", empty_workload), errors="coerce"
+    ).fillna(0) * 4.25
+    pitcher_mask = pitcher_available & (~hitter_available | (pitcher_workload > hitter_workload))
+    hitter_mask = hitter_available & ~pitcher_mask
     players.loc[hitter_mask, "player_type"] = "打者"
     players.loc[pitcher_mask, "player_type"] = "投手"
     players.loc[hitter_mask, "role_or_position"] = players.loc[hitter_mask, "hitter_position"].fillna("野手")

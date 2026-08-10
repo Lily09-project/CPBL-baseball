@@ -15,11 +15,24 @@ REQUIRED_PROCESSED_FILES = (
     "pitchers_scored.csv",
     "players_scored.csv",
 )
+PUBLIC_PROCESSED_FILES = (*REQUIRED_PROCESSED_FILES, "player_movements.csv")
 
 
 def ensure_processed_data() -> None:
     if any(not project_path("data/processed", name).exists() for name in REQUIRED_PROCESSED_FILES):
         preprocess(mode="api")
+
+
+def processed_data_version() -> tuple[tuple[str, int | None, int | None], ...]:
+    signatures = []
+    for name in PUBLIC_PROCESSED_FILES:
+        path = project_path("data/processed", name)
+        if path.exists():
+            stat = path.stat()
+            signatures.append((name, stat.st_mtime_ns, stat.st_size))
+        else:
+            signatures.append((name, None, None))
+    return tuple(signatures)
 
 
 def load_csv(name: str) -> pd.DataFrame:

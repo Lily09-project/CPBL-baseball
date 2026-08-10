@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 
 from src.data_quality import generate_data_quality_report, save_data_quality_report
+from src.movements import generate_player_movements
 from src.preprocess import preprocess
 from src.snapshots import create_processed_snapshot
 from src.utils import project_path
@@ -34,6 +35,14 @@ def main() -> None:
             "diff",
         ]
     }
+    movement_path = project_path("data/processed/player_movements.csv")
+    movement = generate_player_movements(
+        project_path("data/snapshots"),
+        snapshot,
+        movement_path,
+    )
+    outputs["player_movements"] = str(movement_path)
+    report["movement"] = movement
     save_data_quality_report(report)
     print("processed files:")
     for name, path in outputs.items():

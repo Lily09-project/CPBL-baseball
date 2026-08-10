@@ -4,11 +4,11 @@
 
 ## 官方 CPBL 資料來源
 
-- [現役球員名單](https://www.cpbl.com.tw/player)
-- [球隊戰績](https://www.cpbl.com.tw/standings/season)
-- [打者與投手全記錄](https://www.cpbl.com.tw/stats/recordallaction)
+- [現役球員名單](https://cpbl.com.tw/player)
+- [球隊戰績](https://cpbl.com.tw/standings/season)
+- [打者與投手全記錄](https://cpbl.com.tw/stats/recordallaction)
 
-`reports/metrics/data_quality_report.json` 會記錄抓取時間、列數、欄位完整度、重複 ID 與數值範圍檢查結果。資料流程只接受 `www.cpbl.com.tw` 的官方來源，取得或解析失敗時不以展示資料取代。
+`reports/metrics/data_quality_report.json` 會記錄抓取時間、列數、欄位完整度、重複 ID 與數值範圍檢查結果。資料流程只接受 `cpbl.com.tw` 的官方來源，取得或解析失敗時不以展示資料取代。
 
 ## 資料管線
 
@@ -18,11 +18,14 @@ CPBL 官方公開頁面
   -> src/preprocess.py
   -> data/processed/*.csv
   -> src/data_quality.py
+  -> data/snapshots/（本機、已驗證快照）
+  -> src/movements.py
+  -> data/processed/player_movements.csv
   -> src/scouting.py
   -> Streamlit 介面
 ```
 
-`player_id` 全程保留為字串，避免前導零在讀取、篩選、排序與比較時遺失。前端僅讀取版本控制中的 `data/processed/` 成品；`data/raw/` 是暫存的官方原始回應，不作公開或前端資料來源。
+`player_id` 全程保留為字串，避免前導零在讀取、篩選、排序與比較時遺失。 若球員同時出現在打者與投手成績表，總表會以打席（PA）和 `投球局數 × 4.25` 的估算面對打者數比較主要工作量，避免野手短暫登板被誤標為投手；投打原始成績表仍各自保留。前端僅讀取版本控制中的 `data/processed/` 成品；`data/raw/` 是暫存的官方原始回應，不作公開或前端資料來源。
 
 ## 資料品質與可稽核性
 
@@ -67,9 +70,17 @@ run_project.bat --check
 
 一般啟動可使用 `run_project.bat`。資料刷新需要可連線至 CPBL 官方網站；若官方欄位或分頁參數異動，請先調整 `src/fetch_cpbl_data.py` 後再刷新。
 
+## 部署與營運
+
+本專案可部署到 Streamlit Community Cloud 或相容的 Python 3.12 平台；入口檔為 `app.py`，不需要 API 金鑰或私密設定。完整部署與驗收步驟見 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)。服務啟動後可使用 `/_stcore/health` 確認 Streamlit 程序健康狀態。
+
+`.github/workflows/data-health.yml` 每日以唯讀權限重新執行 CPBL 官方資料流程與測試，偵測來源格式、品質規則或應用程式回歸；它不會自動提交或推送資料。公開資料仍須在人工確認品質報告後發布。
+
+本平台為獨立資料分析作品，非 CPBL 官方服務；所有頁面均保留官方來源、資料時間、模型限制與非預測用途說明。
+
 ## 公開儲存庫政策
 
-可公開追蹤的內容包括原始碼、測試、`data/processed/` CSV、品質報告、文件、GitHub 工作流程與設定檔。永不追蹤 `data/raw/`、`notes/source_prompt.txt`、`.env`、`.streamlit/secrets.toml`、憑證、私鑰、本機資料庫、執行日誌、快取、偵錯輸出與 `.venv/`。
+可公開追蹤的內容包括原始碼、測試、`data/processed/` CSV（含衍生的 `player_movements.csv`）、品質報告、文件、GitHub 工作流程與設定檔。永不追蹤 `data/raw/`、`notes/source_prompt.txt`、`.env`、`.streamlit/secrets.toml`、憑證、私鑰、本機資料庫、執行日誌、快取、偵錯輸出與 `.venv/`。
 
 ## 可稽核資料快照
 
@@ -80,5 +91,11 @@ run_project.bat --check
 - 品質檢查結果與前一份快照的新增、移除、變更列數及 schema 漂移摘要
 
 快照寫入 `data/snapshots/`，此目錄與原始 HTML 一樣不會上傳 GitHub。相同輸出校驗碼會重用既有快照，避免因重跑產生重複歷史。儀表板的資料信任列會顯示快照 ID，以及和前一份不同的資料摘要。
+
+## 球員快照變化
+
+`src/movements.py` 比較相鄰兩份已通過品質檢查的本機快照，產生 `data/processed/player_movements.csv`。輸出採長表格式，保留球員 ID、指標、前次值、最新值、原始差值、有利方向差值，以及基準與目前快照 ID／時間；ERA、WHIP 等越低越好的指標會在 `favorable_delta` 反轉方向。
+
+首頁只呈現 `player_value_score` 變動幅度較大的焦點，球員個人頁則列出該球員的全部可比較指標。這些數字是兩次官方球季累計資料差異，不是逐場表現或未來預測；首次建立快照時會輸出具有固定 schema 的空檔，待下一份不同快照形成比較基準。
 
 此版本保存的是官方球季累計名單、球隊戰績、打者與投手成績輸出；它不宣稱提供逐場事件資料、近十場趨勢、守備位置細分或先發／後援角色。工作台僅保留可由目前官方來源驗證的球隊、PA／IP 資格與評估維度。

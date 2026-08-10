@@ -1,0 +1,47 @@
+name: CPBL data health
+
+on:
+  schedule:
+    - cron: "30 15 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpbl-data-health
+  cancel-in-progress: true
+
+jobs:
+  verify-live-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project dependencies
+        run: |
+          python -m pip install --upgrade "pip>=26.1.2"
+          python -m pip install -r requirements.txt
+
+      - name: Verify live official CPBL pipeline
+        run: python run_all.py --mode api
+
+      - name: Run product test suite
+        run: python -m pytest -q
+
+      - name: Summarize verified outputs
+        run: >-
+          python -c "import json; import pandas as pd; from pathlib import Path;
+          report=json.loads(Path('reports/metrics/data_quality_report.json').read_text(encoding='utf-8-sig'));
+          movements=pd.read_csv('data/processed/player_movements.csv');
+          print('quality_status=' + str(report['quality_status']));
+          print('players=' + str(report['available_player_count']));
+          print('movement_rows=' + str(len(movements)))"

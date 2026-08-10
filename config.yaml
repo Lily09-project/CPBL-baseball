@@ -5,6 +5,6 @@ data:
   processed_dir: data/processed
   raw_dir: data/raw
 api:
-  cpbl_base_url: https://www.cpbl.com.tw
+  cpbl_base_url: https://cpbl.com.tw
   timeout_seconds: 20
   fallback_reason: "api mode: 使用 CPBL 官方 /player、/standings/season、/stats/recordallaction"
