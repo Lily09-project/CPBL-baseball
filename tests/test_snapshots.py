@@ -31,6 +31,15 @@ def write_processed_fixture(directory: Path, *, changed: bool = False) -> None:
             ]
         ).to_csv(directory / "batters_scored.csv", index=False)
 
+    pd.DataFrame(
+        [{"season": 2026, "player_id": "0000000101", "player_name": "投手甲", "team": "測試隊", "era": 3.0, "whip": 1.1, "k_bb_ratio": 3.0}]
+    ).to_csv(directory / "pitchers_scored.csv", index=False)
+    pd.DataFrame(
+        [{"season": 2026, "player_id": "0000000001", "player_name": "打者甲", "team": "測試隊"}]
+    ).to_csv(directory / "roster.csv", index=False)
+    pd.DataFrame(
+        [{"season": 2026, "player_id": "0000000001", "player_name": "打者甲", "team": "測試隊", "player_type": "打者", "player_value_score": 70.0}]
+    ).to_csv(directory / "players_scored.csv", index=False)
 
 def test_compare_processed_directories_reports_key_changes_and_schema_drift(tmp_path: Path) -> None:
     previous = tmp_path / "previous"
@@ -52,6 +61,7 @@ def test_create_processed_snapshot_is_idempotent_and_keeps_lineage(tmp_path: Pat
     processed = tmp_path / "processed"
     snapshots = tmp_path / "snapshots"
     write_processed_fixture(processed)
+    pd.DataFrame([{"derived": 1}]).to_csv(processed / "player_movements.csv", index=False)
     captured_at = datetime(2026, 8, 5, 12, 30, tzinfo=timezone.utc)
     quality_report = {"quality_status": "pass", "generated_at": "2026-08-05T20:30:00+08:00"}
 
@@ -73,5 +83,6 @@ def test_create_processed_snapshot_is_idempotent_and_keeps_lineage(tmp_path: Pat
     assert first["quality_status"] == "pass"
     assert first["source_urls"]
     assert first["files"]["batters_scored.csv"]["sha256"]
+    assert "player_movements.csv" not in first["files"]
     assert (snapshots / first["relative_path"] / "manifest.json").exists()
     assert len(list(snapshots.rglob("manifest.json"))) == 1

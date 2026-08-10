@@ -12,9 +12,9 @@ import pandas as pd
 
 SNAPSHOT_SCHEMA_VERSION = "1.0"
 OFFICIAL_SOURCE_URLS = [
-    "https://www.cpbl.com.tw/player",
-    "https://www.cpbl.com.tw/standings/season",
-    "https://www.cpbl.com.tw/stats/recordallaction",
+    "https://cpbl.com.tw/player",
+    "https://cpbl.com.tw/standings/season",
+    "https://cpbl.com.tw/stats/recordallaction",
 ]
 KEY_COLUMNS = {
     "teams.csv": "team",
@@ -23,6 +23,7 @@ KEY_COLUMNS = {
     "pitchers_scored.csv": "player_id",
     "players_scored.csv": "player_id",
 }
+SNAPSHOT_FILE_NAMES = tuple(KEY_COLUMNS)
 
 
 def sha256_file(path: Path) -> str:
@@ -100,7 +101,7 @@ def _diff_frame(previous: pd.DataFrame, current: pd.DataFrame, key_column: str |
 
 
 def compare_processed_directories(previous_dir: Path, current_dir: Path) -> dict[str, Any]:
-    names = sorted({path.name for path in previous_dir.glob("*.csv")} | {path.name for path in current_dir.glob("*.csv")})
+    names = [name for name in SNAPSHOT_FILE_NAMES if (previous_dir / name).exists() or (current_dir / name).exists()]
     files: dict[str, dict[str, Any]] = {}
     for name in names:
         files[name] = _diff_frame(
@@ -165,7 +166,7 @@ def create_processed_snapshot(
 ) -> dict[str, Any]:
     if quality_report.get("quality_status") not in {"pass", "warning"}:
         raise ValueError("Only quality-checked processed data can be snapshotted")
-    source_files = sorted(processed_dir.glob("*.csv"))
+    source_files = [processed_dir / name for name in SNAPSHOT_FILE_NAMES if (processed_dir / name).exists()]
     if not source_files:
         raise FileNotFoundError("No processed CSV files available for snapshot")
 

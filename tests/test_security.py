@@ -35,14 +35,21 @@ def test_csv_export_neutralizes_spreadsheet_formulas():
 
 def test_cpbl_profile_urls_are_restricted_to_https_official_host():
     assert absolute_url("/team/person?acnt=0000000001") == (
-        "https://www.cpbl.com.tw/team/person?acnt=0000000001"
+        "https://cpbl.com.tw/team/person?acnt=0000000001"
     )
-    assert absolute_url("https://www.cpbl.com.tw/team/person?acnt=0000000001") == (
-        "https://www.cpbl.com.tw/team/person?acnt=0000000001"
+    assert absolute_url("https://cpbl.com.tw/team/person?acnt=0000000001") == (
+        "https://cpbl.com.tw/team/person?acnt=0000000001"
     )
-    assert absolute_url("http://www.cpbl.com.tw/team/person?acnt=1") == ""
+    assert absolute_url("http://cpbl.com.tw/team/person?acnt=1") == ""
     assert absolute_url("https://example.invalid/team/person?acnt=1") == ""
     assert absolute_url("//example.invalid/team/person?acnt=1") == ""
+
+
+def test_public_quality_report_does_not_expose_local_paths():
+    report = Path("reports/metrics/data_quality_report.json").read_text(encoding="utf-8-sig")
+
+    assert "C:\\\\Users\\\\" not in report
+    assert "output_path" not in report
 
 
 def test_repository_ignores_common_secret_and_internal_artifacts():
@@ -73,7 +80,7 @@ def test_launcher_enforces_secure_dependency_floors_and_loopback_binding():
         "requests>=2.34.2",
         "pytest>=9.1.1",
         "lxml>=6.1.1",
-        "gitpython>=3.1.57",
+        "gitpython>=3.1.58",
         "pillow>=12.3.0",
     ]:
         assert requirement in requirements
@@ -105,11 +112,11 @@ def test_csv_export_neutralizes_headers_and_whitespace_bypasses():
 
 def test_cpbl_profile_url_rejects_path_query_and_markdown_bypasses():
     rejected = [
-        "https://www.cpbl.com.tw/news?acnt=0000000001",
-        "https://www.cpbl.com.tw/team/person?acnt=0000000001&next=x",
-        "https://www.cpbl.com.tw/team/person?acnt=0000000001#fragment",
-        "https://www.cpbl.com.tw/team/person?acnt=0000000001)",
-        "https://www.cpbl.com.tw/team/person?acnt=1",
+        "https://cpbl.com.tw/news?acnt=0000000001",
+        "https://cpbl.com.tw/team/person?acnt=0000000001&next=x",
+        "https://cpbl.com.tw/team/person?acnt=0000000001#fragment",
+        "https://cpbl.com.tw/team/person?acnt=0000000001)",
+        "https://cpbl.com.tw/team/person?acnt=1",
     ]
 
     assert all(absolute_url(url) == "" for url in rejected)
@@ -133,6 +140,26 @@ def test_secret_artifacts_are_effectively_ignored_by_git():
             check=True,
         )
 
+
+
+def test_scheduled_data_health_check_is_read_only():
+    workflow_path = Path(".github/workflows/data-health.yml")
+    assert workflow_path.exists()
+    workflow = workflow_path.read_text(encoding="utf-8-sig")
+
+    for required in [
+        "schedule:",
+        "workflow_dispatch:",
+        "contents: read",
+        "python run_all.py --mode api",
+        "python -m pytest -q",
+        "quality_status",
+        "player_movements.csv",
+    ]:
+        assert required in workflow
+    assert "contents: write" not in workflow
+    assert "git push" not in workflow
+    assert "git add" not in workflow
 
 def test_streamlit_defaults_to_loopback_and_ci_runs_tests():
     config = tomllib.loads(Path(".streamlit/config.toml").read_text(encoding="utf-8-sig"))

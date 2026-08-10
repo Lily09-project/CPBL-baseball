@@ -15,7 +15,7 @@ from urllib3.util.retry import Retry
 from src.utils import ensure_dirs, project_path, safe_divide
 
 
-CPBL_BASE_URL = "https://www.cpbl.com.tw"
+CPBL_BASE_URL = "https://cpbl.com.tw"
 CURRENT_SEASON = date.today().year
 DEFAULT_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; CPBL analytics dashboard)"}
 PLAYER_MARKERS = {"*", "#", "＃", "◎", "✽", "▲"}
@@ -103,7 +103,7 @@ def absolute_url(path: str) -> str:
         parsed = urlparse(candidate)
         if (
             parsed.scheme != "https"
-            or parsed.hostname != "www.cpbl.com.tw"
+            or parsed.hostname != "cpbl.com.tw"
             or parsed.port not in (None, 443)
             or parsed.username
             or parsed.password

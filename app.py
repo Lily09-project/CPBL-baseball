@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime
 from html import escape
@@ -8,9 +8,10 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from src.app_helpers import load_csv
+from src.app_helpers import load_csv, processed_data_version
 from src.data_quality import load_data_quality_report
 from src.fetch_cpbl_data import absolute_url
+from src.freshness import data_freshness
 from src.log5_matchup import calculate_log5_probability, summarize_matchup_probability
 from src.rankings import get_bottom_players, get_team_rankings, get_top_players
 from src.scouting import (
@@ -56,6 +57,7 @@ def data_generated_time(report: dict | None = None) -> str:
 
 DATA_VERIFIED_DATE = data_verified_date()
 SOURCE_NOTE = source_note()
+
 
 PAGES = [
     "資料訊號總覽",
@@ -207,22 +209,24 @@ st.markdown(
 
 
 @st.cache_data(show_spinner=False)
-def load_data() -> dict[str, pd.DataFrame]:
+def load_data(_data_version: tuple[tuple[str, int | None, int | None], ...]) -> dict[str, pd.DataFrame]:
     return {
         "teams": load_csv("teams.csv"),
         "roster": load_csv("roster.csv"),
         "batters": load_csv("batters_scored.csv"),
         "pitchers": load_csv("pitchers_scored.csv"),
         "players": load_csv("players_scored.csv"),
+        "movements": load_csv("player_movements.csv"),
     }
 
 
-DATA = load_data()
+DATA = load_data(processed_data_version())
 TEAMS = DATA["teams"]
 ROSTER = DATA["roster"]
 BATTERS = DATA["batters"]
 PITCHERS = DATA["pitchers"]
 PLAYERS = DATA["players"]
+MOVEMENTS = DATA["movements"]
 TABLE_DOWNLOAD_INDEX = 0
 
 CHART_TEXT = "#e7efed"
@@ -263,6 +267,49 @@ def format_metric_value(metric: str, value: object) -> str:
     if isinstance(value, float):
         return f"{value:.1f}" if not value.is_integer() else f"{int(value)}"
     return str(value)
+
+
+def format_snapshot_time(value: object) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return "未記錄"
+    try:
+        return datetime.fromisoformat(raw).astimezone().strftime("%Y-%m-%d %H:%M")
+    except ValueError:
+        return raw
+
+
+def movement_period_label(frame: pd.DataFrame | None = None) -> str:
+    details = QUALITY_REPORT.get("movement", {})
+    baseline = details.get("baseline_captured_at", "")
+    current = details.get("current_captured_at", "")
+    if frame is not None and not frame.empty:
+        baseline = frame.iloc[0].get("baseline_captured_at", baseline)
+        current = frame.iloc[0].get("current_captured_at", current)
+    if not baseline:
+        return "尚待第二份已驗證快照"
+    return f"{format_snapshot_time(baseline)} → {format_snapshot_time(current)}"
+
+
+def movement_metric_label(metric: str) -> str:
+    return COLUMN_LABELS.get(metric, METRIC_LABELS.get(metric, metric.upper()))
+
+
+def format_movement_delta(metric: str, value: object) -> str:
+    if pd.isna(value):
+        return "N/A"
+    number = as_number(value)
+    formatted = format_metric_value(metric, abs(number))
+    return f"{'+' if number > 0 else '-' if number < 0 else ''}{formatted}"
+
+
+def movement_direction(row: pd.Series) -> str:
+    if row.get("movement_status") == "new":
+        return "新收錄"
+    favorable = row.get("favorable_delta")
+    if pd.isna(favorable) or as_number(favorable) == 0:
+        return "持平"
+    return "改善" if as_number(favorable) > 0 else "轉弱"
 
 
 def to_display_table(df: pd.DataFrame, columns: list[str] | None = None) -> pd.DataFrame:
@@ -431,10 +478,12 @@ def page_kicker(section: str) -> str:
 
 
 def page_intro(section: str, title: str, description: str) -> None:
+    freshness = data_freshness(QUALITY_REPORT.get("generated_at", ""))
     st.markdown(
         "<section class='page-masthead' aria-label='頁面資料狀態'><div>"
         + page_kicker(section)
-        + "</div><div class='data-status-line'>官方資料已核對</div></section>",
+        + f"</div><div class='data-status-line status-{escape(str(freshness['status']))}'>"
+        + f"官方資料已核對 · {escape(str(freshness['label']))}</div></section>",
         unsafe_allow_html=True,
     )
     st.title(title)
@@ -443,6 +492,56 @@ def page_intro(section: str, title: str, description: str) -> None:
 
 def switch_page(page: str) -> None:
     st.session_state["main_navigation"] = page
+
+
+def query_param_value(name: str) -> str:
+    value = st.query_params.get(name, "")
+    if isinstance(value, list):
+        value = value[0] if value else ""
+    return str(value)
+
+
+def sync_page_query(page: str) -> None:
+    if query_param_value("page") != page:
+        st.query_params["page"] = page
+    if page != "球員個人頁" and "player" in st.query_params:
+        del st.query_params["player"]
+
+
+def sync_player_query(player_id: object) -> None:
+    player_id_text = str(player_id)
+    if query_param_value("player") != player_id_text:
+        st.query_params["player"] = player_id_text
+
+
+def open_player_from_search(player_id: str) -> None:
+    if not player_id:
+        return
+    st.session_state["main_navigation"] = "球員個人頁"
+    st.session_state["player_type"] = "全體球員"
+    st.session_state.pop("applied_player_request", None)
+    st.session_state["requested_player_id"] = player_id
+
+
+def player_search_options(frame: pd.DataFrame) -> dict[str, str]:
+    required = {"player_id", "player_name", "team"}
+    if frame.empty or not required.issubset(frame.columns):
+        return {}
+    directory = frame.copy()
+    if "player_type" not in directory.columns:
+        directory["player_type"] = "官方現役名單"
+    directory["player_type"] = (
+        directory["player_type"]
+        .fillna("官方現役名單")
+        .replace({"": "官方現役名單", "名單": "官方現役名單"})
+    )
+    directory = directory.drop_duplicates("player_id").sort_values(
+        ["player_name", "team", "player_id"], kind="stable"
+    )
+    return {
+        f"{row.player_name} · {row.team} · {row.player_type} · {row.player_id}": str(row.player_id)
+        for row in directory[["player_id", "player_name", "team", "player_type"]].itertuples(index=False)
+    }
 
 
 def render_analysis_routes() -> None:
@@ -485,12 +584,18 @@ def radar_chart(labels: list[str], values: list[float], title: str = "能力雷�
         showlegend=False,
         polar=dict(
             bgcolor="rgba(0,0,0,0)",
+            domain=dict(x=[0.16, 0.84], y=[0.08, 0.92]),
             radialaxis=dict(visible=True, range=[0, 100], gridcolor="rgba(157,176,181,.32)"),
             angularaxis=dict(gridcolor="rgba(157,176,181,.36)"),
         ),
         height=420,
     )
-    return apply_chart_theme(fig)
+    fig = apply_chart_theme(fig)
+    fig.update_layout(
+        height=440,
+        margin=dict(l=72, r=72, t=64, b=54),
+    )
+    return fig
 
 
 def pitcher_allowed_rate(row: pd.Series) -> float:
@@ -547,9 +652,10 @@ def render_data_trust_surface(
     quality_status = str(report.get("quality_status", "unknown"))
     quality_label = {"pass": "通過", "warning": "需注意", "failed": "失敗"}.get(quality_status, "未知")
     details = [
-        "來源網域：www.cpbl.com.tw",
+        "來源網域：cpbl.com.tw",
         f"最後驗證：{data_generated_time(report)}",
         f"資料品質：{quality_label}",
+        f"資料新鮮度：{data_freshness(report.get('generated_at', ''))['label']}",
     ]
     snapshot = report.get("snapshot", {})
     if isinstance(snapshot, dict) and snapshot.get("snapshot_id"):
@@ -758,8 +864,77 @@ def render_player_header(row: pd.Series, player_type: str) -> None:
         unsafe_allow_html=True,
     )
     profile_url = absolute_url(str(directory_row.get("profile_url", "") or "") if directory_row is not None else "")
-    if profile_url.startswith("https://www.cpbl.com.tw/"):
+    if profile_url.startswith("https://cpbl.com.tw/"):
         st.link_button("開啟 CPBL 官方球員頁", profile_url, width="content")
+
+
+def render_movement_focus() -> None:
+    st.header("評估分數變化焦點")
+    st.caption(
+        f"快照期間：{movement_period_label(MOVEMENTS)}。比較最近兩份已驗證快照的累計資料差異；"
+        "不是逐場表現或未來預測。"
+    )
+    required = {"metric", "movement_status", "delta"}
+    if MOVEMENTS.empty or not required.issubset(MOVEMENTS.columns):
+        st.info("目前尚未形成兩份可比較快照；再次完成官方資料刷新後會建立差異基準。")
+        return
+    focus = MOVEMENTS[
+        (MOVEMENTS["metric"] == "player_value_score")
+        & (MOVEMENTS["movement_status"] == "changed")
+    ].copy()
+    focus["_magnitude"] = pd.to_numeric(focus["delta"], errors="coerce").abs()
+    focus = focus.dropna(subset=["_magnitude"]).sort_values(
+        ["_magnitude", "player_id"],
+        ascending=[False, True],
+        kind="stable",
+    ).head(8)
+    if focus.empty:
+        st.info("最近兩份快照的球員綜合分數沒有可顯示的變動。")
+        return
+    display = pd.DataFrame(
+        {
+            "球員": focus["player_name"],
+            "球隊": focus["team"],
+            "類型": focus["player_type"],
+            "前次分數": focus["previous_value"].map(lambda value: format_metric_value("player_value_score", value)),
+            "最新分數": focus["current_value"].map(lambda value: format_metric_value("player_value_score", value)),
+            "分數差": focus["delta"].map(lambda value: format_movement_delta("player_value_score", value)),
+            "有利方向": focus.apply(movement_direction, axis=1),
+        }
+    )
+    show_table(st, display)
+
+
+def render_player_movements(row: pd.Series, player_type: str) -> None:
+    st.header("前次快照變化")
+    player_id = str(row.get("player_id", ""))
+    subset = MOVEMENTS.copy()
+    if not subset.empty and {"player_id", "player_type"}.issubset(subset.columns):
+        subset = subset[
+            (subset["player_id"].astype("string") == player_id)
+            & (subset["player_type"] == player_type)
+        ].copy()
+    st.caption(
+        f"快照期間：{movement_period_label(subset)}。此表比較官方球季累計資料差異，"
+        "不是逐場表現或未來預測。"
+    )
+    if subset.empty:
+        st.info("這名球員目前沒有可比較的前次快照資料。")
+        return
+    display_rows = []
+    for _, movement in subset.iterrows():
+        metric = str(movement["metric"])
+        previous = movement.get("previous_value")
+        display_rows.append(
+            {
+                "指標": movement_metric_label(metric),
+                "前次快照": "未收錄" if pd.isna(previous) else format_metric_value(metric, previous),
+                "最新快照": format_metric_value(metric, movement.get("current_value")),
+                "差值": format_movement_delta(metric, movement.get("delta")),
+                "有利方向": movement_direction(movement),
+            }
+        )
+    show_table(st, pd.DataFrame(display_rows))
 
 
 def page_home() -> None:
@@ -773,6 +948,7 @@ def page_home() -> None:
             ("投手樣本", len(PITCHERS), "官方全記錄表"),
         ]
     )
+    render_movement_focus()
     st.header("分析入口")
     st.caption("從一項清楚的工作開始，避免在沒有資格門檻與母體基準的情況下直接比較數字。")
     render_analysis_routes()
@@ -976,16 +1152,27 @@ def page_player() -> None:
     source_status_panel(compact=True)
     st.caption("全體球員以 CPBL 官方現役名單與官方全記錄成績表的聯集為主；本季一軍成績表未列出的球員會顯示為「官方現役名單」。")
     player_type = st.radio("球員類型", ["全體球員", "打者", "投手"], horizontal=True, key="player_type")
+    requested_player_id = str(
+        st.session_state.pop("requested_player_id", "") or query_param_value("player")
+    )
 
     if player_type == "全體球員":
         directory = PLAYERS if not PLAYERS.empty else ROSTER
         if directory.empty:
             st.info("目前沒有可顯示的官方球員名單，請重新執行 API 資料抓取。")
             return
+        requested = directory[directory["player_id"].astype("string") == requested_player_id]
+        if not requested.empty and st.session_state.get("applied_player_request") != requested_player_id:
+            requested_row = requested.iloc[0]
+            requested_team = str(requested_row["team"])
+            st.session_state["player_directory_team"] = requested_team
+            st.session_state[f"player_directory_name_{requested_team}"] = str(requested_row["player_name"])
+            st.session_state["applied_player_request"] = requested_player_id
         team = st.selectbox("球隊選擇", sorted(directory["team"].dropna().unique()), key="player_directory_team")
         subset = directory[directory["team"] == team]
         player_name = st.selectbox("球員選擇", sorted(subset["player_name"].dropna().unique()), key=f"player_directory_name_{team}")
         roster_row = subset[subset["player_name"] == player_name].iloc[0]
+        sync_player_query(roster_row["player_id"])
         batter_row = find_stat_row_for_roster(roster_row, BATTERS)
         pitcher_row = find_stat_row_for_roster(roster_row, PITCHERS)
         if pitcher_row is not None and str(roster_row.get("player_type", "")) == "投手":
@@ -1013,6 +1200,7 @@ def page_player() -> None:
         subset = df[df["team"] == team]
         player_name = st.selectbox("球員選擇", sorted(subset["player_name"].dropna().unique()), key=f"player_{player_type}_name_{team}")
         row = subset[subset["player_name"] == player_name].iloc[0]
+        sync_player_query(row["player_id"])
 
     render_player_header(row, stat_type)
     if stat_type == "打者":
@@ -1093,6 +1281,7 @@ def page_player() -> None:
         radar_labels = ["失分壓制", "三振能力", "控球能力", "綜合價值"]
         radar_values = [row["run_prevention_score"], row["strikeout_score"], row["command_score"], row["pitcher_value_score"]]
 
+    render_player_movements(row, stat_type)
     st.header("本季成績")
     show_table(st, pd.DataFrame([row]), season_columns)
     evidence_threshold = DEFAULT_QUALIFICATION[stat_type]
@@ -1210,6 +1399,14 @@ def page_metric_rankings() -> None:
         c2.info("目前沒有符合條件的排行資料。")
 
 
+def render_product_footer() -> None:
+    st.markdown(
+        "<footer class='product-footer'><strong>獨立資料分析作品 · 非 CPBL 官方服務</strong>"
+        "<span>資料取自 CPBL 官方公開頁面；分析結果不構成投注、比賽結果或球員決策建議。</span></footer>",
+        unsafe_allow_html=True,
+    )
+
+
 PAGE_HANDLERS = {
     "資料訊號總覽": page_home,
     "聯盟總覽": page_league,
@@ -1224,10 +1421,32 @@ st.sidebar.markdown(
     "<div class='sidebar-brand'><div class='brand-mark'>CPBL</div><div><div class='sidebar-brand-title'>Scouting Desk</div><div class='sidebar-brand-subtitle'>官方賽季資料工作台</div></div></div>",
     unsafe_allow_html=True,
 )
+requested_page = query_param_value("page")
+if "main_navigation" not in st.session_state and requested_page in PAGE_HANDLERS:
+    st.session_state["main_navigation"] = requested_page
+
 st.sidebar.markdown("<div class='sidebar-nav-label'>頁面導覽</div>", unsafe_allow_html=True)
 selected = st.sidebar.radio("頁面導覽", PAGES, label_visibility="collapsed", key="main_navigation")
+sync_page_query(selected)
+
+search_map = player_search_options(PLAYERS if not PLAYERS.empty else ROSTER)
+search_labels = ["選擇球員", *search_map]
+st.sidebar.markdown("<div class='sidebar-nav-label sidebar-search-label'>球員搜尋</div>", unsafe_allow_html=True)
+quick_player = st.sidebar.selectbox("快速尋找球員", search_labels, key="player_quick_search")
+st.sidebar.button(
+    "開啟球員頁",
+    key="open_quick_player",
+    on_click=open_player_from_search,
+    args=(search_map.get(quick_player, ""),),
+    disabled=quick_player == "選擇球員",
+    width="stretch",
+)
+
+freshness = data_freshness(QUALITY_REPORT.get("generated_at", ""))
 st.sidebar.markdown(
-    f"<div class='sidebar-status'><strong>官方資料已核對</strong><br>更新日期：{escape(data_verified_date())}<br>術語：OPS · ISO · AVG · OBP · SLG · ERA · WHIP · K/BB · LOG5</div>",
+    f"<div class='sidebar-status status-{escape(str(freshness['status']))}'><strong>官方資料已核對 · {escape(str(freshness['label']))}</strong><br>"
+    f"更新日期：{escape(data_verified_date())}<br>術語：OPS · ISO · AVG · OBP · SLG · ERA · WHIP · K/BB · LOG5</div>",
     unsafe_allow_html=True,
 )
 PAGE_HANDLERS[selected]()
+render_product_footer()
