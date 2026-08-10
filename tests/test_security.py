@@ -166,3 +166,15 @@ def test_streamlit_defaults_to_loopback_and_ci_runs_tests():
     assert config["server"]["address"] == "127.0.0.1"
 
     workflow = Path(".github/workflows/security.yml").read_text(encoding="utf-8-sig")
+
+    for required in [
+        "contents: read",
+        "gitleaks/gitleaks-action@",
+        '"detect-secrets==1.5.0"',
+        "git ls-files -z",
+        "snapshot_id|previous_snapshot_id|relative_path",
+        "python -m pip_audit -r requirements.txt",
+        "python -m bandit -r app.py src run_all.py -ll",
+        "python -m pytest -q",
+    ]:
+        assert required in workflow
