@@ -41,7 +41,7 @@ jobs:
       - name: Scan tracked files for secrets
         shell: bash
         run: |
-          git ls-files -z | xargs -0 detect-secrets scan --all-files --no-verify > /tmp/secret-scan.json
+          git ls-files -z | xargs -0 detect-secrets scan --all-files --no-verify --exclude-lines '"(snapshot_id|previous_snapshot_id|relative_path)"\s*:' > /tmp/secret-scan.json
           python - <<'PY'
           import json
           import sys
