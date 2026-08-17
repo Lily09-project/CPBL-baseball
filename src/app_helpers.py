@@ -15,7 +15,12 @@ REQUIRED_PROCESSED_FILES = (
     "pitchers_scored.csv",
     "players_scored.csv",
 )
-PUBLIC_PROCESSED_FILES = (*REQUIRED_PROCESSED_FILES, "player_movements.csv")
+PUBLIC_PROCESSED_FILES = (
+    *REQUIRED_PROCESSED_FILES,
+    "player_movements.csv",
+    "snapshot_history.csv",
+    "player_metric_history.csv",
+)
 
 
 def ensure_processed_data() -> None:
@@ -47,3 +52,38 @@ def load_csv(name: str) -> pd.DataFrame:
 
 def file_exists(rel: str) -> bool:
     return Path(project_path(rel)).exists()
+
+
+def win_rate_series(wins: pd.Series, losses: pd.Series) -> pd.Series:
+    numeric_wins = pd.to_numeric(wins, errors="coerce").fillna(0.0)
+    numeric_losses = pd.to_numeric(losses, errors="coerce").fillna(0.0)
+    games = numeric_wins + numeric_losses
+    result = pd.Series(0.0, index=numeric_wins.index, dtype=float)
+    played = games > 0
+    result.loc[played] = numeric_wins.loc[played].div(games.loc[played])
+    return result
+
+def player_choice_options(frame: pd.DataFrame) -> dict[str, str]:
+    required = {"player_id", "player_name", "team"}
+    if frame.empty or not required.issubset(frame.columns):
+        return {}
+
+    players = frame.dropna(subset=["player_id", "player_name", "team"]).copy()
+    if players.empty:
+        return {}
+    players["player_id"] = players["player_id"].astype("string")
+    players = players.drop_duplicates("player_id", keep="last").sort_values(
+        ["player_name", "team", "player_id"], kind="stable"
+    )
+
+    def role_label(row: pd.Series) -> str:
+        for column in ("role_or_position", "position", "role", "player_type"):
+            value = str(row.get(column, "") or "").strip()
+            if value and value.lower() != "nan":
+                return value
+        return "未標示"
+
+    return {
+        f"{row.player_name} · {row.team} · {role_label(row)} · {row.player_id}": str(row.player_id)
+        for _, row in players.iterrows()
+    }

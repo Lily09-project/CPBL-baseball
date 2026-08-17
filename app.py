@@ -8,10 +8,16 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from src.app_helpers import load_csv, processed_data_version
+from src.app_helpers import (
+    load_csv,
+    player_choice_options,
+    processed_data_version,
+    win_rate_series,
+)
 from src.data_quality import load_data_quality_report
 from src.fetch_cpbl_data import absolute_url
 from src.freshness import data_freshness
+from src.history import compare_metric_versions, later_snapshot_ids
 from src.log5_matchup import calculate_log5_probability, summarize_matchup_probability
 from src.rankings import get_bottom_players, get_team_rankings, get_top_players
 from src.scouting import (
@@ -62,6 +68,7 @@ SOURCE_NOTE = source_note()
 PAGES = [
     "資料訊號總覽",
     "聯盟總覽",
+    "版本趨勢",
     "球探工作台",
     "球員排行榜",
     "球員個人頁",
@@ -217,6 +224,8 @@ def load_data(_data_version: tuple[tuple[str, int | None, int | None], ...]) -> 
         "pitchers": load_csv("pitchers_scored.csv"),
         "players": load_csv("players_scored.csv"),
         "movements": load_csv("player_movements.csv"),
+        "snapshot_history": load_csv("snapshot_history.csv"),
+        "player_metric_history": load_csv("player_metric_history.csv"),
     }
 
 
@@ -227,6 +236,8 @@ BATTERS = DATA["batters"]
 PITCHERS = DATA["pitchers"]
 PLAYERS = DATA["players"]
 MOVEMENTS = DATA["movements"]
+SNAPSHOT_HISTORY = DATA["snapshot_history"]
+PLAYER_METRIC_HISTORY = DATA["player_metric_history"]
 TABLE_DOWNLOAD_INDEX = 0
 
 CHART_TEXT = "#e7efed"
@@ -235,6 +246,16 @@ CHART_GRID = "rgba(157,176,181,.22)"
 CHART_ACCENT = "#d85a52"
 CHART_SECONDARY = "#79b6bc"
 CHART_HIGHLIGHT = "#d3a354"
+HISTORY_METRICS = {
+    "打者": ["ops", "batting_average", "obp", "slg", "iso", "bb_rate", "k_rate", "player_value_score"],
+    "投手": ["era", "whip", "k_bb_ratio", "k_rate", "bb_rate", "player_value_score"],
+}
+VERSION_STATUS_LABELS = {
+    "changed": "有變動",
+    "new": "新增",
+    "removed": "移除",
+    "unchanged": "未變動",
+}
 
 
 def metric_name(metric: str) -> str:
@@ -612,7 +633,7 @@ def sorted_standings(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def source_status_panel(compact: bool = False) -> None:
-    report = load_data_quality_report()
+    report = QUALITY_REPORT
     text = source_note(report)
     verified_date = data_verified_date(report)
     generated_at = data_generated_time(report)
@@ -982,6 +1003,236 @@ def page_home() -> None:
     source_status_panel()
 
 
+def snapshot_option_label(snapshot_id: str) -> str:
+    if SNAPSHOT_HISTORY.empty or "snapshot_id" not in SNAPSHOT_HISTORY:
+        return snapshot_id
+    matched = SNAPSHOT_HISTORY.loc[SNAPSHOT_HISTORY["snapshot_id"] == snapshot_id]
+    if matched.empty:
+        return snapshot_id
+    return f"{format_snapshot_time(matched.iloc[0].get('captured_at'))} · {snapshot_id[-12:]}"
+
+
+def snapshot_activity_chart(history: pd.DataFrame) -> go.Figure:
+    frame = history.copy()
+    frame["版本時間"] = frame["captured_at"].map(format_snapshot_time)
+    fig = px.bar(
+        frame,
+        x="版本時間",
+        y="changed_rows",
+        title="各版本資料異動列數",
+        labels={"changed_rows": "異動列數", "版本時間": "版本時間"},
+        color="changed_rows",
+        color_continuous_scale=[CHART_SECONDARY, CHART_ACCENT],
+    )
+    fig.update_layout(height=350, coloraxis_showscale=False)
+    return fig
+
+
+def player_history_chart(frame: pd.DataFrame, metric: str, player_name: str) -> go.Figure:
+    values = frame.sort_values("captured_at", kind="stable").copy()
+    values["版本時間"] = values["captured_at"].map(format_snapshot_time)
+    fig = go.Figure(
+        go.Scatter(
+            x=values["版本時間"],
+            y=pd.to_numeric(values[metric], errors="coerce"),
+            mode="lines+markers",
+            name=metric_name(metric),
+            line=dict(color=CHART_ACCENT, width=3),
+            marker=dict(color=CHART_HIGHLIGHT, size=9, line=dict(color=CHART_TEXT, width=1)),
+            hovertemplate="%{x}<br>%{y}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        title=f"{player_name} · {metric_name(metric)} 版本走勢",
+        xaxis_title="版本時間",
+        yaxis_title=metric_name(metric),
+        height=390,
+        showlegend=False,
+    )
+    return fig
+
+
+def version_change_chart(frame: pd.DataFrame, metric: str) -> go.Figure:
+    changed = frame.loc[frame["movement_status"] == "changed"].copy()
+    changed = changed.sort_values("favorable_delta", ascending=True, kind="stable").tail(12)
+    colors = [CHART_SECONDARY if value >= 0 else CHART_ACCENT for value in changed["favorable_delta"]]
+    fig = go.Figure(
+        go.Bar(
+            x=changed["favorable_delta"],
+            y=changed["player_name"],
+            orientation="h",
+            marker_color=colors,
+            name="有利變化",
+            hovertemplate="%{y}<br>%{x}<extra></extra>",
+        )
+    )
+    fig.update_layout(
+        title=f"{metric_name(metric)} 有利變化幅度",
+        xaxis_title="有利變化量",
+        yaxis_title="球員",
+        height=max(360, 46 * len(changed)),
+        showlegend=False,
+    )
+    return fig
+
+
+def page_snapshot_trends() -> None:
+    page_intro(
+        "版本趨勢",
+        "版本趨勢",
+        "以可稽核的 CPBL 官方資料快照檢視資料血緣、球員指標走勢與任意兩版差異。",
+    )
+    if SNAPSHOT_HISTORY.empty or PLAYER_METRIC_HISTORY.empty:
+        st.info("目前尚未建立足夠的公開歷史資料。請先執行 python run_all.py --mode api。")
+        return
+
+    history = SNAPSHOT_HISTORY.sort_values("captured_at", kind="stable").reset_index(drop=True)
+    players = PLAYER_METRIC_HISTORY.copy()
+    version_ids = history["snapshot_id"].astype(str).tolist()
+    oldest = format_snapshot_time(history.iloc[0]["captured_at"])
+    latest = format_snapshot_time(history.iloc[-1]["captured_at"])
+    schema_drift_count = int(history["schema_changed_files"].fillna("").astype(str).ne("").sum())
+    metric_cards(
+        [
+            ("資料版本", len(history), "通過品質檢查的官方快照"),
+            ("歷史球員", players["player_id"].nunique(), "依 CPBL 官方球員 ID 去重"),
+            ("涵蓋期間", f"{oldest[:10]} → {latest[:10]}", "時間採快照 captured_at"),
+            ("Schema 漂移", schema_drift_count, "欄位新增或移除的版本數"),
+        ]
+    )
+
+    st.header("資料版本血緣")
+    st.caption("每個版本由處理後資料的 SHA-256 指紋識別；內部原始 HTML 與本機路徑不會出現在公開輸出。")
+    nodes = []
+    for index, row in history.iterrows():
+        current_class = " snapshot-node-current" if index == len(history) - 1 else ""
+        nodes.append(
+            f"<div class='snapshot-node{current_class}' role='listitem'>"
+            f"<span class='snapshot-date'>{escape(format_snapshot_time(row['captured_at']))}</span>"
+            f"<strong>{escape(str(row['snapshot_id'])[-12:])}</strong>"
+            f"<span>異動 {int(row['changed_rows'])} 列 · 新增 {int(row['added_rows'])} · 移除 {int(row['removed_rows'])}</span>"
+            "</div>"
+        )
+    st.markdown(
+        f"<div class='snapshot-timeline' role='list' aria-label='資料版本時間軸'>{''.join(nodes)}</div>",
+        unsafe_allow_html=True,
+    )
+    show_chart(st, snapshot_activity_chart(history))
+    lineage_table = pd.DataFrame(
+        {
+            "版本時間": history["captured_at"].map(format_snapshot_time),
+            "版本 ID": history["snapshot_id"],
+            "前一版本": history["previous_snapshot_id"].fillna("—"),
+            "總列數": history["total_rows"],
+            "異動列數": history["changed_rows"],
+            "品質狀態": history["quality_status"].map({"pass": "通過", "warning": "警示"}).fillna("未知"),
+        }
+    )
+    show_table(st, lineage_table)
+
+    st.header("球員指標走勢")
+    control_type, control_player, control_metric = st.columns(3, gap="medium")
+    player_type = control_type.selectbox("球員類型", ["打者", "投手"], key="history_player_type")
+    type_history = players.loc[players["player_type"] == player_type].copy()
+    directory = (
+        type_history[["player_id", "player_name", "team"]]
+        .drop_duplicates("player_id")
+        .sort_values(["player_name", "team", "player_id"], kind="stable")
+    )
+    player_labels = {
+        str(row.player_id): f"{row.player_name} · {row.team} · {row.player_id}"
+        for row in directory.itertuples(index=False)
+    }
+    player_ids = list(player_labels)
+    if not player_ids:
+        st.info(f"目前沒有可比較的{player_type}歷史資料。")
+        return
+    player_id = control_player.selectbox(
+        "球員",
+        player_ids,
+        format_func=lambda value: player_labels.get(value, value),
+        key=f"history_player_{player_type}",
+    )
+    metric_options = [
+        metric
+        for metric in HISTORY_METRICS[player_type]
+        if metric in type_history.columns and type_history[metric].notna().any()
+    ]
+    metric = control_metric.selectbox(
+        "指標",
+        metric_options,
+        format_func=metric_name,
+        key=f"history_metric_{player_type}",
+    )
+    selected_history = type_history.loc[type_history["player_id"].astype(str) == str(player_id)].copy()
+    player_name = str(selected_history.iloc[-1]["player_name"])
+    st.caption(f"{metric_name(metric)} 僅反映各次官方彙總資料快照，不代表單場或逐打席表現。")
+    show_chart(st, player_history_chart(selected_history, metric, player_name))
+    trend_table = pd.DataFrame(
+        {
+            "版本時間": selected_history["captured_at"].map(format_snapshot_time),
+            "球員": selected_history["player_name"],
+            "球隊": selected_history["team"],
+            metric_name(metric): selected_history[metric].map(lambda value: format_metric_value(metric, value)),
+            "版本 ID": selected_history["snapshot_id"],
+        }
+    )
+    show_table(st, trend_table)
+
+    st.header("版本差異比較")
+    if len(version_ids) < 2:
+        st.info("至少需要兩個通過品質檢查的版本才能進行差異比較。")
+        return
+    baseline_control, current_control = st.columns(2, gap="medium")
+    baseline_id = baseline_control.selectbox(
+        "基準版本",
+        version_ids[:-1],
+        index=0,
+        format_func=snapshot_option_label,
+        key="history_baseline_version",
+        help="基準版本必須早於比較版本。",
+    )
+    current_options = later_snapshot_ids(version_ids, baseline_id)
+    current_id = current_control.selectbox(
+        "比較版本",
+        current_options,
+        index=len(current_options) - 1,
+        format_func=snapshot_option_label,
+        key=f"history_current_version_{baseline_id}",
+        help="只顯示晚於目前基準的資料版本。",
+    )
+    st.caption("已限制為時間順序有效的版本組合，避免反向或同版本比較。")
+    comparison = compare_metric_versions(players, baseline_id, current_id, player_type, metric)
+    if comparison.empty:
+        st.info("所選版本沒有可比較的球員指標。")
+        return
+    counts = comparison["movement_status"].value_counts()
+    metric_cards(
+        [
+            ("有變動", int(counts.get("changed", 0)), metric_name(metric)),
+            ("新增", int(counts.get("new", 0)), "只存在比較版本"),
+            ("移除", int(counts.get("removed", 0)), "只存在基準版本"),
+            ("未變動", int(counts.get("unchanged", 0)), "兩版數值相同"),
+        ]
+    )
+    changed = comparison.loc[comparison["movement_status"] == "changed"]
+    if not changed.empty:
+        show_chart(st, version_change_chart(comparison, metric))
+    else:
+        st.info("兩個版本之間沒有球員指標數值變動。")
+    comparison_table = pd.DataFrame(
+        {
+            "球員": comparison["player_name"],
+            "球隊": comparison["team"],
+            "狀態": comparison["movement_status"].map(VERSION_STATUS_LABELS),
+            "基準值": comparison["previous_value"].map(lambda value: format_metric_value(metric, value)),
+            "比較值": comparison["current_value"].map(lambda value: format_metric_value(metric, value)),
+            "差值": comparison["delta"].map(lambda value: format_movement_delta(metric, value)),
+            "有利變化": comparison["favorable_delta"].map(lambda value: format_movement_delta(metric, value)),
+            "CPBL 球員 ID": comparison["player_id"],
+        }
+    )
+    show_table(st, comparison_table)
 def page_league() -> None:
     page_intro("聯盟總覽", "聯盟總覽", "以球隊戰績、得失分與主客場差異，建立本季聯盟的可比較基準。")
     if TEAMS.empty:
@@ -1052,8 +1303,8 @@ def page_league() -> None:
         ),
     )
     venue = teams[["team", "home_wins", "home_losses", "away_wins", "away_losses"]].copy()
-    venue["主場勝率"] = venue.apply(lambda row: as_number(row["home_wins"]) / max(as_number(row["home_wins"]) + as_number(row["home_losses"]), 1), axis=1)
-    venue["客場勝率"] = venue.apply(lambda row: as_number(row["away_wins"]) / max(as_number(row["away_wins"]) + as_number(row["away_losses"]), 1), axis=1)
+    venue["主場勝率"] = win_rate_series(venue["home_wins"], venue["home_losses"])
+    venue["客場勝率"] = win_rate_series(venue["away_wins"], venue["away_losses"])
     venue_long = venue.melt(id_vars="team", value_vars=["主場勝率", "客場勝率"], var_name="場地", value_name="勝率")
     show_chart(c4, px.bar(venue_long, x="勝率", y="team", color="場地", orientation="h", barmode="group", title="主客場勝率", labels={"team": "球隊"}))
 
@@ -1163,16 +1414,27 @@ def page_player() -> None:
             return
         requested = directory[directory["player_id"].astype("string") == requested_player_id]
         if not requested.empty and st.session_state.get("applied_player_request") != requested_player_id:
-            requested_row = requested.iloc[0]
-            requested_team = str(requested_row["team"])
+            requested_team = str(requested.iloc[0]["team"])
             st.session_state["player_directory_team"] = requested_team
-            st.session_state[f"player_directory_name_{requested_team}"] = str(requested_row["player_name"])
-            st.session_state["applied_player_request"] = requested_player_id
         team = st.selectbox("球隊選擇", sorted(directory["team"].dropna().unique()), key="player_directory_team")
         subset = directory[directory["team"] == team]
-        player_name = st.selectbox("球員選擇", sorted(subset["player_name"].dropna().unique()), key=f"player_directory_name_{team}")
-        roster_row = subset[subset["player_name"] == player_name].iloc[0]
-        sync_player_query(roster_row["player_id"])
+        choices = player_choice_options(subset)
+        if not choices:
+            st.info("這支球隊目前沒有可選擇的官方球員資料。")
+            return
+        selector_key = f"player_directory_choice_{team}"
+        if not requested.empty and st.session_state.get("applied_player_request") != requested_player_id:
+            requested_label = next(
+                (label for label, player_id in choices.items() if player_id == requested_player_id),
+                None,
+            )
+            if requested_label is not None:
+                st.session_state[selector_key] = requested_label
+            st.session_state["applied_player_request"] = requested_player_id
+        selected_label = st.selectbox("球員選擇", list(choices), key=selector_key)
+        selected_player_id = choices[selected_label]
+        roster_row = subset[subset["player_id"].astype("string") == selected_player_id].iloc[0]
+        sync_player_query(selected_player_id)
         batter_row = find_stat_row_for_roster(roster_row, BATTERS)
         pitcher_row = find_stat_row_for_roster(roster_row, PITCHERS)
         if pitcher_row is not None and str(roster_row.get("player_type", "")) == "投手":
@@ -1198,9 +1460,18 @@ def page_player() -> None:
             return
         team = st.selectbox("球隊選擇", sorted(df["team"].dropna().unique()), key=f"player_{player_type}_team")
         subset = df[df["team"] == team]
-        player_name = st.selectbox("球員選擇", sorted(subset["player_name"].dropna().unique()), key=f"player_{player_type}_name_{team}")
-        row = subset[subset["player_name"] == player_name].iloc[0]
-        sync_player_query(row["player_id"])
+        choices = player_choice_options(subset)
+        if not choices:
+            st.info(f"這支球隊目前沒有可選擇的{player_type}成績。")
+            return
+        selected_label = st.selectbox(
+            "球員選擇",
+            list(choices),
+            key=f"player_{player_type}_choice_{team}",
+        )
+        selected_player_id = choices[selected_label]
+        row = subset[subset["player_id"].astype("string") == selected_player_id].iloc[0]
+        sync_player_query(selected_player_id)
 
     render_player_header(row, stat_type)
     if stat_type == "打者":
@@ -1313,13 +1584,38 @@ def page_matchup() -> None:
     if BATTERS.empty or PITCHERS.empty:
         st.info("目前缺少官方打者或投手資料，請重新執行 API 資料抓取。")
         return
-    hitter_team = st.selectbox("打者球隊", sorted(BATTERS["team"].unique()), key="matchup_hitter_team")
+    selector_hitter, selector_pitcher = st.columns(2, gap="medium")
+    hitter_team = selector_hitter.selectbox(
+        "打者球隊", sorted(BATTERS["team"].unique()), key="matchup_hitter_team"
+    )
     hitter_df = BATTERS[BATTERS["team"] == hitter_team]
-    hitter = hitter_df[hitter_df["player_name"] == st.selectbox("打者", sorted(hitter_df["player_name"].unique()), key=f"matchup_hitter_{hitter_team}")].iloc[0]
-    pitcher_team = st.selectbox("投手球隊", sorted(PITCHERS["team"].unique()), key="matchup_pitcher_team")
-    pitcher_df = PITCHERS[PITCHERS["team"] == pitcher_team]
-    pitcher = pitcher_df[pitcher_df["player_name"] == st.selectbox("投手", sorted(pitcher_df["player_name"].unique()), key=f"matchup_pitcher_{pitcher_team}")].iloc[0]
+    hitter_choices = player_choice_options(hitter_df)
+    if not hitter_choices:
+        st.info("所選球隊目前沒有可用的打者資料。")
+        return
+    hitter_label = selector_hitter.selectbox(
+        "打者",
+        list(hitter_choices),
+        key=f"matchup_hitter_{hitter_team}",
+    )
+    hitter_id = hitter_choices[hitter_label]
+    hitter = hitter_df[hitter_df["player_id"].astype("string") == hitter_id].iloc[0]
 
+    pitcher_team = selector_pitcher.selectbox(
+        "投手球隊", sorted(PITCHERS["team"].unique()), key="matchup_pitcher_team"
+    )
+    pitcher_df = PITCHERS[PITCHERS["team"] == pitcher_team]
+    pitcher_choices = player_choice_options(pitcher_df)
+    if not pitcher_choices:
+        st.info("所選球隊目前沒有可用的投手資料。")
+        return
+    pitcher_label = selector_pitcher.selectbox(
+        "投手",
+        list(pitcher_choices),
+        key=f"matchup_pitcher_{pitcher_team}",
+    )
+    pitcher_id = pitcher_choices[pitcher_label]
+    pitcher = pitcher_df[pitcher_df["player_id"].astype("string") == pitcher_id].iloc[0]
     hitter_obp = as_number(hitter["obp"])
     pitcher_obp_allowed = pitcher_allowed_rate(pitcher)
     league_obp = as_number(BATTERS["obp"].mean())
@@ -1410,6 +1706,7 @@ def render_product_footer() -> None:
 PAGE_HANDLERS = {
     "資料訊號總覽": page_home,
     "聯盟總覽": page_league,
+    "版本趨勢": page_snapshot_trends,
     "球探工作台": page_scouting_workbench,
     "球員排行榜": page_rankings,
     "球員個人頁": page_player,

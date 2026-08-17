@@ -32,6 +32,12 @@ def test_run_all_defaults_to_api(monkeypatch, capsys):
         lambda snapshot_root, snapshot, output_path: {"status": "ready", "row_count": 3},
         raising=False,
     )
+    monkeypatch.setattr(
+        run_all,
+        "generate_history_outputs",
+        lambda snapshot_root, processed_dir: {"snapshot_count": 1, "player_history_rows": 2},
+        raising=False,
+    )
     monkeypatch.setattr(run_all, "save_data_quality_report", lambda report: None, raising=False)
 
     main()
@@ -101,9 +107,23 @@ def test_run_all_attaches_snapshot_only_after_quality_passes(monkeypatch):
         },
         raising=False,
     )
+    monkeypatch.setattr(
+        run_all,
+        "generate_history_outputs",
+        lambda snapshot_root, processed_dir: {
+            "snapshot_count": 2,
+            "player_history_rows": 636,
+            "latest_snapshot_id": "snapshot-1",
+            "snapshot_output_file": "snapshot_history.csv",
+            "player_output_file": "player_metric_history.csv",
+        },
+        raising=False,
+    )
 
     main()
 
     assert calls["report"]["snapshot"]["snapshot_id"] == "snapshot-1"
     assert calls["report"]["movement"]["row_count"] == 12
     assert calls["report"]["movement"]["current_snapshot_id"] == "snapshot-1"
+    assert calls["report"]["history"]["snapshot_count"] == 2
+    assert calls["report"]["history"]["player_history_rows"] == 636
