@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 import pandas as pd
 
 
@@ -47,6 +49,30 @@ def qualification_upper_bound(df: pd.DataFrame, player_type: str) -> float:
     return max(float(maximum), default)
 
 
+def percentile_ranks(
+    population: pd.DataFrame,
+    metric: str,
+    lower_is_better: bool = False,
+) -> pd.Series:
+    """Return favorable percentile ranks for an entire population in one pass."""
+    result = pd.Series(float("nan"), index=population.index, dtype=float)
+    if population.empty or metric not in population.columns:
+        return result
+
+    values = pd.to_numeric(population[metric], errors="coerce")
+    valid = values.notna()
+    if not valid.any():
+        return result
+
+    result.loc[valid] = (
+        values.loc[valid]
+        .rank(method="max", pct=True, ascending=not lower_is_better)
+        .mul(100)
+        .round(1)
+    )
+    return result
+
+
 def percentile_rank(
     population: pd.DataFrame,
     row: pd.Series,
@@ -78,6 +104,16 @@ PRIORITY_WEIGHTS = {
     },
 }
 
+EVIDENCE_METRICS = {
+    "打者": (("obp", False), ("iso", False), ("k_rate", True)),
+    "投手": (
+        ("era", True),
+        ("whip", True),
+        ("k_bb_ratio", False),
+        ("hr_allowed_rate", True),
+    ),
+}
+
 
 def priority_options(player_type: str) -> list[str]:
     qualification_column(player_type)
@@ -89,6 +125,7 @@ def build_evidence_signals(
     population: pd.DataFrame,
     player_type: str,
     threshold: float,
+    percentile_values: Mapping[str, float | None] | None = None,
 ) -> dict[str, list[str]]:
     usage_column = qualification_column(player_type)
     usage_label = qualification_label(player_type)
@@ -99,7 +136,11 @@ def build_evidence_signals(
     basis: list[str] = []
 
     def percentile(metric: str, lower_is_better: bool = False) -> float | None:
-        value = percentile_rank(population, row, metric, lower_is_better)
+        if percentile_values is not None and metric in percentile_values:
+            raw_value = percentile_values[metric]
+            value = None if raw_value is None or pd.isna(raw_value) else float(raw_value)
+        else:
+            value = percentile_rank(population, row, metric, lower_is_better)
         if value is None:
             missing.append(metric)
         return value
@@ -174,15 +215,28 @@ def rank_scouting_candidates(
 
     population["priority_score"] = _priority_score(population, player_type, priority)
     population = population.dropna(subset=["priority_score"])
-    population["qualified_percentile"] = population.apply(
-        lambda row: percentile_rank(population, row, "priority_score") or 0.0,
-        axis=1,
-    )
+    population["qualified_percentile"] = percentile_ranks(
+        population, "priority_score"
+    ).fillna(0.0)
     role_column = "position" if player_type == "打者" else "role"
     population["role_or_position"] = population[role_column].fillna("未記錄")
-    evidence = population.apply(
-        lambda row: build_evidence_signals(row, population, player_type, threshold),
-        axis=1,
+    percentile_cache = {
+        metric: percentile_ranks(population, metric, lower_is_better)
+        for metric, lower_is_better in EVIDENCE_METRICS[player_type]
+    }
+    evidence = pd.Series(
+        (
+            build_evidence_signals(
+                row,
+                population,
+                player_type,
+                threshold,
+                {metric: ranks.loc[index] for metric, ranks in percentile_cache.items()},
+            )
+            for index, row in population.iterrows()
+        ),
+        index=population.index,
+        dtype=object,
     )
     population["evidence_strengths"] = evidence.map(lambda item: "；".join(item["strengths"]) or "無")
     population["evidence_risks"] = evidence.map(lambda item: "；".join(item["risks"]) or "無")

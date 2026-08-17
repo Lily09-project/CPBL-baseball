@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 
 from src.data_quality import generate_data_quality_report, save_data_quality_report
+from src.history import generate_history_outputs
 from src.movements import generate_player_movements
 from src.preprocess import preprocess
 from src.snapshots import create_processed_snapshot
@@ -43,6 +44,13 @@ def main() -> None:
     )
     outputs["player_movements"] = str(movement_path)
     report["movement"] = movement
+    history = generate_history_outputs(
+        project_path("data/snapshots"),
+        project_path("data/processed"),
+    )
+    outputs["snapshot_history"] = str(project_path("data/processed/snapshot_history.csv"))
+    outputs["player_metric_history"] = str(project_path("data/processed/player_metric_history.csv"))
+    report["history"] = history
     save_data_quality_report(report)
     print("processed files:")
     for name, path in outputs.items():

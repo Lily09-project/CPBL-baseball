@@ -888,6 +888,59 @@ button:disabled,
   display: none;
 }
 
+.snapshot-timeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 24px;
+  margin: 1rem 0 1.6rem;
+}
+
+.snapshot-node {
+  display: flex;
+  min-height: 132px;
+  height: 100%;
+  box-sizing: border-box;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: .48rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--blue);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.snapshot-node strong {
+  color: var(--ink);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.snapshot-node span {
+  color: var(--muted);
+  font-size: .86rem;
+  line-height: 1.45;
+}
+
+.snapshot-node .snapshot-date {
+  color: var(--muted-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.snapshot-node-current {
+  border-top-color: var(--mint);
+  background: var(--surface-raised);
+}
+
+.snapshot-node-current::after {
+  color: var(--mint);
+  font-size: .78rem;
+  font-weight: 760;
+  content: "目前版本";
+}
 @media (max-width: 1100px) and (min-width: 721px) {
   .cpbl-card-grid,
   .route-grid,
@@ -1021,6 +1074,7 @@ button:disabled,
 }
 
 @media (max-width: 1100px) and (min-width: 721px) {
+  [data-testid="stMarkdownContainer"] .metric-grid,
   [data-testid="stMarkdownContainer"] .cpbl-card-grid,
   [data-testid="stMarkdownContainer"] .route-grid,
   [data-testid="stMarkdownContainer"] .evidence-grid {
@@ -1038,6 +1092,16 @@ button:disabled,
   }
 }
 
+@media (max-width: 720px) {
+  .snapshot-timeline {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .snapshot-node {
+    min-height: 0;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   * {
     animation-duration: .01ms !important;
@@ -1260,6 +1324,11 @@ STREAMLIT_LAYOUT_CSS = """
   [data-testid="stMarkdownContainer"] .evidence-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
 }
 
+@media (max-width: 1100px) and (min-width: 721px) {
+  [data-testid="stMarkdownContainer"] .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
 @media (max-width: 720px) {
   [data-testid="stMarkdownContainer"] .page-masthead,
   [data-testid="stMarkdownContainer"] .player-identity { grid-template-columns: 1fr !important; gap: .8rem; }
