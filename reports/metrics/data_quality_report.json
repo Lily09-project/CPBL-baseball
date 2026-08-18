@@ -1,7 +1,7 @@
 {
   "mode": "api",
   "fallback_reason": "api mode: 使用 CPBL 官方 /player、/standings/season、/stats/recordallaction",
-  "generated_at": "2026-08-12T21:05:49+08:00",
+  "generated_at": "2026-08-18T15:47:42+08:00",
   "files": {
     "teams.csv": {
       "row_count": 6,
@@ -29,7 +29,7 @@
       }
     },
     "roster.csv": {
-      "row_count": 456,
+      "row_count": 457,
       "missing_ratio": {
         "season": 0.0,
         "player_id": 0.0,
@@ -76,7 +76,7 @@
       }
     },
     "pitchers_scored.csv": {
-      "row_count": 150,
+      "row_count": 154,
       "missing_ratio": {
         "season": 0.0,
         "player_name": 0.0,
@@ -105,7 +105,7 @@
       }
     },
     "players_scored.csv": {
-      "row_count": 457,
+      "row_count": 458,
       "missing_ratio": {
         "season": 0.0,
         "player_id": 0.0,
@@ -121,21 +121,21 @@
     }
   },
   "available_team_count": 6,
-  "available_player_count": 457,
+  "available_player_count": 458,
   "available_hitter_count": 168,
-  "available_pitcher_count": 150,
-  "official_roster_count": 456,
-  "player_summary_count": 457,
+  "available_pitcher_count": 154,
+  "official_roster_count": 457,
+  "player_summary_count": 458,
   "model_status": "official-derived scoring ready",
   "quality_status": "pass",
   "warnings": [],
   "snapshot": {
     "schema_version": "1.0",
-    "snapshot_id": "20260812T130059Z-0c9e69f68de8",
-    "captured_at": "2026-08-12T13:00:59+00:00",
+    "snapshot_id": "20260818T074743Z-3bbd649a480b",
+    "captured_at": "2026-08-18T07:47:43+00:00",
     "season": 2026,
-    "relative_path": "season=2026/snapshot_id=20260812T130059Z-0c9e69f68de8",
-    "previous_snapshot_id": "20260809T155513Z-f8f05a1c4870",
+    "relative_path": "season=2026/snapshot_id=20260818T074743Z-3bbd649a480b",
+    "previous_snapshot_id": "20260812T130059Z-0c9e69f68de8",
     "diff": {
       "files": {
         "teams.csv": {
@@ -150,14 +150,14 @@
           "key_column": "team"
         },
         "roster.csv": {
-          "previous_row_count": 453,
-          "current_row_count": 456,
-          "row_count_delta": 3,
+          "previous_row_count": 456,
+          "current_row_count": 457,
+          "row_count_delta": 1,
           "schema_added_columns": [],
           "schema_removed_columns": [],
-          "added_rows": 3,
+          "added_rows": 1,
           "removed_rows": 0,
-          "changed_rows": 0,
+          "changed_rows": 1,
           "key_column": "player_id"
         },
         "batters_scored.csv": {
@@ -168,56 +168,56 @@
           "schema_removed_columns": [],
           "added_rows": 0,
           "removed_rows": 0,
-          "changed_rows": 37,
+          "changed_rows": 127,
           "key_column": "player_id"
         },
         "pitchers_scored.csv": {
           "previous_row_count": 150,
-          "current_row_count": 150,
-          "row_count_delta": 0,
+          "current_row_count": 154,
+          "row_count_delta": 4,
           "schema_added_columns": [],
           "schema_removed_columns": [],
-          "added_rows": 0,
+          "added_rows": 4,
           "removed_rows": 0,
-          "changed_rows": 15,
+          "changed_rows": 137,
           "key_column": "player_id"
         },
         "players_scored.csv": {
-          "previous_row_count": 454,
-          "current_row_count": 457,
-          "row_count_delta": 3,
+          "previous_row_count": 457,
+          "current_row_count": 458,
+          "row_count_delta": 1,
           "schema_added_columns": [],
           "schema_removed_columns": [],
-          "added_rows": 3,
+          "added_rows": 1,
           "removed_rows": 0,
-          "changed_rows": 46,
+          "changed_rows": 248,
           "key_column": "player_id"
         }
       },
       "added_rows": 6,
       "removed_rows": 0,
-      "changed_rows": 104,
+      "changed_rows": 519,
       "schema_changed_files": []
     }
   },
   "movement": {
     "status": "ready",
-    "row_count": 2076,
-    "changed_player_count": 52,
-    "new_player_count": 0,
-    "baseline_snapshot_id": "20260809T155513Z-f8f05a1c4870",
-    "current_snapshot_id": "20260812T130059Z-0c9e69f68de8",
-    "baseline_captured_at": "2026-08-09T15:55:13+00:00",
-    "current_captured_at": "2026-08-12T13:00:59+00:00",
+    "row_count": 2100,
+    "changed_player_count": 245,
+    "new_player_count": 4,
+    "baseline_snapshot_id": "20260812T130059Z-0c9e69f68de8",
+    "current_snapshot_id": "20260818T074743Z-3bbd649a480b",
+    "baseline_captured_at": "2026-08-12T13:00:59+00:00",
+    "current_captured_at": "2026-08-18T07:47:43+00:00",
     "output_file": "player_movements.csv"
   },
   "history": {
-    "snapshot_count": 5,
-    "player_history_rows": 1589,
+    "snapshot_count": 6,
+    "player_history_rows": 1911,
     "oldest_snapshot_id": "20260806T062528Z-205080b25390",
-    "latest_snapshot_id": "20260812T130059Z-0c9e69f68de8",
+    "latest_snapshot_id": "20260818T074743Z-3bbd649a480b",
     "oldest_captured_at": "2026-08-06T06:25:28+00:00",
-    "latest_captured_at": "2026-08-12T13:00:59+00:00",
+    "latest_captured_at": "2026-08-18T07:47:43+00:00",
     "snapshot_output_file": "snapshot_history.csv",
     "player_output_file": "player_metric_history.csv"
   }
