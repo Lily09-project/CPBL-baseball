@@ -293,16 +293,75 @@ def compare_metric_versions(
     return merged.reindex(columns=VERSION_COMPARISON_COLUMNS).reset_index(drop=True)
 
 
+def _read_public_history(
+    path: Path,
+    columns: tuple[str, ...],
+    *,
+    dtype: dict[str, str] | None = None,
+) -> pd.DataFrame:
+    if not path.exists():
+        return _empty(columns)
+    try:
+        frame = pd.read_csv(path, dtype=dtype)
+    except pd.errors.EmptyDataError:
+        return _empty(columns)
+    missing = sorted(set(columns) - set(frame.columns))
+    if missing:
+        raise ValueError(f"{path.name} is missing columns: {missing}")
+    return frame.reindex(columns=columns)
+
+
+def _merge_history_frames(
+    existing: pd.DataFrame,
+    generated: pd.DataFrame,
+    *,
+    keys: list[str],
+) -> pd.DataFrame:
+    if existing.empty:
+        return generated
+    if generated.empty:
+        return existing
+    merged = pd.concat([existing, generated], ignore_index=True)
+    merged = merged.drop_duplicates(keys, keep="last")
+    merged["_captured_sort"] = pd.to_datetime(
+        merged["captured_at"],
+        utc=True,
+        errors="coerce",
+    )
+    merged = merged.sort_values(
+        ["_captured_sort", "snapshot_id"],
+        kind="stable",
+        na_position="last",
+    )
+    return merged.drop(columns="_captured_sort").reset_index(drop=True)
+
 def generate_history_outputs(snapshot_root: Path, processed_dir: Path) -> dict[str, object]:
     manifests = _read_manifests(snapshot_root)
-    snapshots = build_snapshot_history(snapshot_root, manifests=manifests)
-    players = build_player_metric_history(snapshot_root, manifests=manifests)
     processed_dir.mkdir(parents=True, exist_ok=True)
     snapshot_path = processed_dir / "snapshot_history.csv"
     player_path = processed_dir / "player_metric_history.csv"
+
+    generated_snapshots = build_snapshot_history(snapshot_root, manifests=manifests)
+    generated_players = build_player_metric_history(snapshot_root, manifests=manifests)
+    existing_snapshots = _read_public_history(snapshot_path, SNAPSHOT_HISTORY_COLUMNS)
+    existing_players = _read_public_history(
+        player_path,
+        PLAYER_HISTORY_COLUMNS,
+        dtype={"player_id": "string"},
+    )
+
+    snapshots = _merge_history_frames(
+        existing_snapshots,
+        generated_snapshots,
+        keys=["snapshot_id"],
+    )
+    players = _merge_history_frames(
+        existing_players,
+        generated_players,
+        keys=["snapshot_id", "player_id", "player_type"],
+    )
     snapshots.to_csv(snapshot_path, index=False, encoding="utf-8-sig")
     players.to_csv(player_path, index=False, encoding="utf-8-sig")
-
     first = snapshots.iloc[0] if not snapshots.empty else None
     last = snapshots.iloc[-1] if not snapshots.empty else None
     return {

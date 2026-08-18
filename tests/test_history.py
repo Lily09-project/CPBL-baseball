@@ -256,6 +256,64 @@ def test_generate_history_outputs_indexes_manifests_once(tmp_path: Path, monkeyp
 
     assert calls == 1
 
+def test_generate_history_outputs_preserves_committed_history_without_local_snapshots(tmp_path: Path) -> None:
+    root = tmp_path / "snapshots"
+    processed = tmp_path / "processed"
+    write_snapshot(root, "snapshot-current", "2026-08-14T02:00:00+00:00")
+    processed.mkdir(parents=True)
+
+    existing_snapshot_history = pd.DataFrame(
+        [
+            {
+                "snapshot_id": "snapshot-previous",
+                "captured_at": "2026-08-12T02:00:00+00:00",
+                "season": 2026,
+                "quality_status": "pass",
+                "previous_snapshot_id": "",
+                "file_count": 5,
+                "total_rows": 4,
+                "hitter_rows": 1,
+                "pitcher_rows": 1,
+                "roster_rows": 2,
+                "added_rows": 0,
+                "removed_rows": 0,
+                "changed_rows": 0,
+                "schema_changed_files": "",
+            }
+        ],
+        columns=SNAPSHOT_HISTORY_COLUMNS,
+    )
+    existing_snapshot_history.to_csv(processed / "snapshot_history.csv", index=False)
+
+    existing_player_history = pd.DataFrame(
+        [
+            {
+                "snapshot_id": "snapshot-previous",
+                "captured_at": "2026-08-12T02:00:00+00:00",
+                "season": 2026,
+                "player_id": "0000000001",
+                "player_name": "甲",
+                "team": "A",
+                "player_type": "打者",
+                "role_or_position": "內野手",
+                "ops": 0.8,
+            }
+        ]
+    ).reindex(columns=PLAYER_HISTORY_COLUMNS)
+    existing_player_history.to_csv(processed / "player_metric_history.csv", index=False)
+
+    metadata = generate_history_outputs(root, processed)
+
+    assert metadata["snapshot_count"] == 2
+    assert metadata["oldest_snapshot_id"] == "snapshot-previous"
+    assert metadata["latest_snapshot_id"] == "snapshot-current"
+    assert set(pd.read_csv(processed / "snapshot_history.csv")["snapshot_id"]) == {
+        "snapshot-previous",
+        "snapshot-current",
+    }
+    loaded = pd.read_csv(processed / "player_metric_history.csv", dtype={"player_id": "string"})
+    assert set(loaded["snapshot_id"]) == {"snapshot-previous", "snapshot-current"}
+
 def test_later_snapshot_ids_only_returns_valid_comparison_versions() -> None:
     versions = ["v1", "v2", "v3", "v4"]
 
