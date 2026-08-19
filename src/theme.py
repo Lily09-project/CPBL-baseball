@@ -253,6 +253,10 @@ div {
   color: var(--ink);
 }
 
+.mobile-product-brand {
+  display: none;
+}
+
 .page-masthead {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -950,6 +954,16 @@ button:disabled,
 }
 
 @media (max-width: 720px) {
+  .mobile-product-brand {
+    display: block;
+    margin: 0 0 .85rem;
+    color: var(--gold);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: .78rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+  }
+
   .stApp {
     font-size: 18.5px;
   }
@@ -1115,7 +1129,7 @@ button:disabled,
 
 STREAMLIT_LAYOUT_CSS = """
 <style>
-[data-testid="stMarkdownContainer"] .page-masthead {
+.page-masthead {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto !important;
   gap: 1.5rem;

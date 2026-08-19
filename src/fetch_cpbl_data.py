@@ -12,13 +12,16 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from src.source_contract import CPBL_BASE_URL, OFFICIAL_SOURCE_PATHS
 from src.utils import ensure_dirs, project_path, safe_divide
 
 
-CPBL_BASE_URL = "https://cpbl.com.tw"
 CURRENT_SEASON = date.today().year
 DEFAULT_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; CPBL analytics dashboard)"}
 PLAYER_MARKERS = {"*", "#", "＃", "◎", "✽", "▲"}
+MAX_PAGINATION_PAGES = 100
+MAX_OFFICIAL_RESPONSE_BYTES = 8 * 1024 * 1024
+OFFICIAL_HOSTNAMES = frozenset({"cpbl.com.tw", "www.cpbl.com.tw"})
 PLAYER_STATUS_LABELS = {
     "*": "合約所屬球員（二軍）",
     "✽": "合約所屬球員（二軍）",
@@ -187,11 +190,46 @@ def split_wtl(value: Any) -> tuple[int, int, int]:
     return wins, ties, losses
 
 
-def fetch_text(session: requests.Session, url: str, timeout: int) -> str:
-    response = session.get(url, timeout=timeout)
-    response.raise_for_status()
-    return response.text
+def _validate_official_url(url: str, context: str) -> None:
+    try:
+        parsed = urlparse(url)
+        valid = (
+            parsed.scheme == "https"
+            and parsed.hostname in OFFICIAL_HOSTNAMES
+            and parsed.port in (None, 443)
+            and not parsed.username
+            and not parsed.password
+        )
+    except ValueError:
+        valid = False
+    if not valid:
+        raise RuntimeError(f"{context} 必須使用 CPBL 官方 HTTPS 網址。")
 
+
+def _checked_response_text(response: Any, context: str) -> str:
+    response.raise_for_status()
+    response_url = str(getattr(response, "url", ""))
+    parsed = urlparse(response_url)
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname not in {"cpbl.com.tw", "www.cpbl.com.tw"}
+        or parsed.port not in (None, 443)
+        or parsed.username
+        or parsed.password
+    ):
+        raise RuntimeError(f"{context} 回應網域不是 CPBL 官方網域。")
+    text = response.text
+    if len(text.encode("utf-8")) > MAX_OFFICIAL_RESPONSE_BYTES:
+        raise RuntimeError(
+            f"{context} 回應內容超過安全上限：{MAX_OFFICIAL_RESPONSE_BYTES} bytes。"
+        )
+    return text
+
+
+def fetch_text(session: requests.Session, url: str, timeout: int) -> str:
+    _validate_official_url(url, "CPBL 官方請求")
+    response = session.get(url, timeout=timeout)
+    return _checked_response_text(response, "CPBL 官方頁面")
 
 def build_cpbl_session(retries: int = 3) -> requests.Session:
     retry_policy = Retry(
@@ -232,17 +270,28 @@ def extract_verification_token(html: str) -> str:
 
 
 def parse_html_table(html: str) -> pd.DataFrame:
-    tables = pd.read_html(StringIO(html))
+    if len(html.encode("utf-8")) > MAX_OFFICIAL_RESPONSE_BYTES:
+        raise RuntimeError(
+            f"CPBL 官方資料表格內容超過安全上限：{MAX_OFFICIAL_RESPONSE_BYTES} bytes。"
+        )
+    try:
+        tables = pd.read_html(StringIO(html))
+    except (ImportError, ValueError) as exc:
+        raise RuntimeError("CPBL 官方資料表格解析失敗。") from exc
     if not tables:
         return pd.DataFrame()
     return tables[0]
 
 
 def fetch_recordall(session: requests.Session, position: str, sortby: str, timeout: int = 20, page_size: int = 60) -> pd.DataFrame:
-    start_url = f"{CPBL_BASE_URL}/stats/recordall?year={CURRENT_SEASON}&kindcode=A&position={position}&sortby={sortby}"
+    if not re.fullmatch(r"\d{2}", str(position)) or not re.fullmatch(r"\d{2}", str(sortby)):
+        raise ValueError("CPBL recordall 查詢參數格式不正確。")
+    if type(page_size) is not int or not 1 <= page_size <= 500:
+        raise ValueError("CPBL 分頁大小必須介於 1 到 500。")
+    start_url = f"{CPBL_BASE_URL}{OFFICIAL_SOURCE_PATHS['statistics']}?year={CURRENT_SEASON}&kindcode=A&position={position}&sortby={sortby}"
     page = session.get(start_url, timeout=timeout)
-    page.raise_for_status()
-    token = extract_verification_token(page.text)
+    page_text = _checked_response_text(page, "CPBL recordall 初始頁")
+    token = extract_verification_token(page_text)
     rows: list[pd.DataFrame] = []
     total_pages = 1
     page_index = 0
@@ -260,24 +309,28 @@ def fetch_recordall(session: requests.Session, position: str, sortby: str, timeo
             "PageSize": str(page_size),
         }
         response = session.post(
-            f"{CPBL_BASE_URL}/stats/recordallaction",
+            f"{CPBL_BASE_URL}{OFFICIAL_SOURCE_PATHS['statistics_action']}",
             data=data,
             timeout=timeout,
             headers={"Referer": page.url},
         )
-        response.raise_for_status()
+        response_text = _checked_response_text(response, f"CPBL recordall 第 {page_index + 1} 頁")
         raw_path = project_path(f"data/raw/cpbl_recordall_position_{position}_page_{page_index + 1}.html")
-        raw_path.write_text(response.text, encoding="utf-8")
-        table = parse_html_table(response.text)
+        raw_path.write_text(response_text, encoding="utf-8")
+        table = parse_html_table(response_text)
         if table.empty:
             raise RuntimeError(
                 f"CPBL recordall position={position} 第 {page_index + 1} 頁分頁資料不完整。"
             )
         rows.append(table)
-        page_matches = re.findall(r'total-paging="(\d+)"', response.text)
+        page_matches = re.findall(r'total-paging="(\d+)"', response_text)
         if not page_matches:
             raise RuntimeError(f"CPBL recordall position={position} 缺少分頁資訊。")
         reported_pages = int(page_matches[0])
+        if reported_pages > MAX_PAGINATION_PAGES:
+            raise RuntimeError(
+                f"CPBL recordall position={position} 分頁數量超過安全上限：{MAX_PAGINATION_PAGES}。"
+            )
         if reported_pages < 1:
             raise RuntimeError(f"CPBL recordall position={position} 分頁數量無效：{reported_pages}。")
         if page_index > 0 and reported_pages != total_pages:
@@ -294,7 +347,10 @@ def fetch_recordall(session: requests.Session, position: str, sortby: str, timeo
 def fetch_standings(session: requests.Session, timeout: int = 20) -> pd.DataFrame:
     html = fetch_text(session, f"{CPBL_BASE_URL}/standings/season", timeout)
     project_path("data/raw/cpbl_standings_season.html").write_text(html, encoding="utf-8")
-    tables = pd.read_html(StringIO(html))
+    try:
+        tables = pd.read_html(StringIO(html))
+    except (ImportError, ValueError) as exc:
+        raise RuntimeError("CPBL 球隊戰績頁表格解析失敗。") from exc
     if len(tables) < 3:
         raise RuntimeError("CPBL 球隊戰績頁表格不足。")
     standings = tables[0].copy()

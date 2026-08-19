@@ -1,7 +1,7 @@
 {
   "mode": "api",
-  "fallback_reason": "api mode: 使用 CPBL 官方 /player、/standings/season、/stats/recordallaction",
-  "generated_at": "2026-08-18T22:13:40+08:00",
+  "fallback_reason": "api mode: 使用 CPBL 官方公開頁面與表單分頁擷取",
+  "generated_at": "2026-08-19T19:25:36+08:00",
   "files": {
     "teams.csv": {
       "row_count": 6,
@@ -131,11 +131,11 @@
   "warnings": [],
   "snapshot": {
     "schema_version": "1.0",
-    "snapshot_id": "20260818T141342Z-24a743f995f0",
-    "captured_at": "2026-08-18T14:13:42+00:00",
+    "snapshot_id": "20260819T084104Z-e3f9f1e437fa",
+    "captured_at": "2026-08-19T08:41:04+00:00",
     "season": 2026,
-    "relative_path": "season=2026/snapshot_id=20260818T141342Z-24a743f995f0",
-    "previous_snapshot_id": "20260818T074743Z-3bbd649a480b",
+    "relative_path": "season=2026/snapshot_id=20260819T084104Z-e3f9f1e437fa",
+    "previous_snapshot_id": "20260818T141342Z-24a743f995f0",
     "diff": {
       "files": {
         "teams.csv": {
@@ -146,7 +146,7 @@
           "schema_removed_columns": [],
           "added_rows": 0,
           "removed_rows": 0,
-          "changed_rows": 4,
+          "changed_rows": 2,
           "key_column": "team"
         },
         "roster.csv": {
@@ -168,18 +168,18 @@
           "schema_removed_columns": [],
           "added_rows": 0,
           "removed_rows": 0,
-          "changed_rows": 45,
+          "changed_rows": 0,
           "key_column": "player_id"
         },
         "pitchers_scored.csv": {
-          "previous_row_count": 154,
+          "previous_row_count": 155,
           "current_row_count": 155,
-          "row_count_delta": 1,
+          "row_count_delta": 0,
           "schema_added_columns": [],
           "schema_removed_columns": [],
-          "added_rows": 1,
+          "added_rows": 0,
           "removed_rows": 0,
-          "changed_rows": 15,
+          "changed_rows": 0,
           "key_column": "player_id"
         },
         "players_scored.csv": {
@@ -190,34 +190,34 @@
           "schema_removed_columns": [],
           "added_rows": 0,
           "removed_rows": 0,
-          "changed_rows": 58,
+          "changed_rows": 0,
           "key_column": "player_id"
         }
       },
-      "added_rows": 1,
+      "added_rows": 0,
       "removed_rows": 0,
-      "changed_rows": 122,
+      "changed_rows": 2,
       "schema_changed_files": []
     }
   },
   "movement": {
     "status": "ready",
     "row_count": 2106,
-    "changed_player_count": 60,
-    "new_player_count": 1,
-    "baseline_snapshot_id": "20260818T074743Z-3bbd649a480b",
-    "current_snapshot_id": "20260818T141342Z-24a743f995f0",
-    "baseline_captured_at": "2026-08-18T07:47:43+00:00",
-    "current_captured_at": "2026-08-18T14:13:42+00:00",
+    "changed_player_count": 0,
+    "new_player_count": 0,
+    "baseline_snapshot_id": "20260818T141342Z-24a743f995f0",
+    "current_snapshot_id": "20260819T084104Z-e3f9f1e437fa",
+    "baseline_captured_at": "2026-08-18T14:13:42+00:00",
+    "current_captured_at": "2026-08-19T08:41:04+00:00",
     "output_file": "player_movements.csv"
   },
   "history": {
-    "snapshot_count": 7,
-    "player_history_rows": 2234,
+    "snapshot_count": 8,
+    "player_history_rows": 2557,
     "oldest_snapshot_id": "20260806T062528Z-205080b25390",
-    "latest_snapshot_id": "20260818T141342Z-24a743f995f0",
+    "latest_snapshot_id": "20260819T084104Z-e3f9f1e437fa",
     "oldest_captured_at": "2026-08-06T06:25:28+00:00",
-    "latest_captured_at": "2026-08-18T14:13:42+00:00",
+    "latest_captured_at": "2026-08-19T08:41:04+00:00",
     "snapshot_output_file": "snapshot_history.csv",
     "player_output_file": "player_metric_history.csv"
   }

@@ -149,7 +149,7 @@ def test_report_manifest_is_stable_and_machine_readable() -> None:
     assert first["report_id"] == second["report_id"]
     assert first["report_id"].startswith("rpt-")
     assert first["report_id"] != changed["report_id"]
-    assert payload["schema_version"] == "1.0"
+    assert payload["schema_version"] == "1.1"
     assert payload["data_provenance"]["snapshot_id"] == "snapshot-20260818-abcd"
     assert payload["analysis"]["qualification"] == "PA ≥ 30"
     assert [player["player_id"] for player in payload["players"]] == ["0000000002", "0000000003"]

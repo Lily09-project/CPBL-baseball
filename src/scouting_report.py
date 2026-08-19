@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 
 import pandas as pd
 
@@ -24,7 +25,13 @@ REPORT_COLUMNS = (
 
 _USAGE_COLUMNS = {"打者": ("pa", "PA", "position"), "投手": ("innings_pitched", "IP", "role")}
 _TYPE_SLUGS = {"打者": "hitter", "投手": "pitcher"}
-MANIFEST_SCHEMA_VERSION = "1.0"
+MANIFEST_SCHEMA_VERSION = "1.1"
+SUPPORTED_MANIFEST_SCHEMA_VERSIONS = {"1.0", MANIFEST_SCHEMA_VERSION}
+MANIFEST_REQUIRED_FIELDS = frozenset(
+    {"report_id", "schema_version", "data_provenance", "analysis", "players", "methodology"}
+)
+MAX_MANIFEST_BYTES = 2 * 1024 * 1024
+MAX_MANIFEST_PLAYERS = 4
 
 
 def _empty_report() -> pd.DataFrame:
@@ -130,8 +137,22 @@ def _validate_report_columns(report: pd.DataFrame) -> None:
         raise ValueError("球探報告輸出缺少欄位：" + ", ".join(invalid))
 
 
-def build_report_manifest(report: pd.DataFrame, metadata: Mapping[str, object]) -> dict[str, object]:
-    """Build a reproducibility manifest for one rendered scouting report."""
+def _report_methodology() -> dict[str, object]:
+    return {
+        "score_source": "src.scouting.PRIORITY_WEIGHTS",
+        "percentile_scope": "qualified_population(player_type, threshold)",
+        "evidence_source": "src.scouting.build_evidence_signals",
+        "limitations": [
+            "目前官方累計成績不代表傷勢、戰術、守備細節或未來表現。",
+            "本報告不是逐場對戰資料，也不是未來表現預測。",
+        ],
+    }
+
+
+def _manifest_identity(
+    report: pd.DataFrame,
+    metadata: Mapping[str, object],
+) -> dict[str, object]:
     _validate_report_columns(report)
     players: list[dict[str, object]] = []
     if not report.empty:
@@ -151,30 +172,45 @@ def build_report_manifest(report: pd.DataFrame, metadata: Mapping[str, object]) 
         "snapshot_id": _json_value(metadata.get("snapshot_id")),
         "quality_status": _json_value(metadata.get("quality_status")),
     }
-    identity = {
+    return {
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "data_provenance": provenance,
         "analysis": analysis,
         "players": players,
+        "methodology": _report_methodology(),
     }
+
+
+def _manifest_identity_from_payload(manifest: Mapping[str, object]) -> dict[str, object]:
+    schema_version = str(manifest.get("schema_version", ""))
+    identity = {
+        "schema_version": manifest.get("schema_version"),
+        "data_provenance": manifest.get("data_provenance"),
+        "analysis": manifest.get("analysis"),
+        "players": manifest.get("players"),
+    }
+    if schema_version != "1.0":
+        identity["methodology"] = manifest.get("methodology")
+    return identity
+
+
+def _report_id_for_identity(identity: Mapping[str, object]) -> str:
     canonical = json.dumps(identity, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    report_id = "rpt-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+    return "rpt-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+
+
+def build_report_manifest(report: pd.DataFrame, metadata: Mapping[str, object]) -> dict[str, object]:
+    """Build a reproducibility manifest for one rendered scouting report."""
+    identity = _manifest_identity(report, metadata)
+    report_id = _report_id_for_identity(identity)
     return {
         "report_id": report_id,
         "schema_version": MANIFEST_SCHEMA_VERSION,
         "generated_at": _json_value(metadata.get("generated_at")),
-        "data_provenance": provenance,
-        "analysis": analysis,
-        "players": players,
-        "methodology": {
-            "score_source": "src.scouting.PRIORITY_WEIGHTS",
-            "percentile_scope": "qualified_population(player_type, threshold)",
-            "evidence_source": "src.scouting.build_evidence_signals",
-            "limitations": [
-                "目前官方累計成績不代表傷勢、戰術、守備細節或未來表現。",
-                "本報告不是逐場對戰資料，也不是未來表現預測。",
-            ],
-        },
+        "data_provenance": identity["data_provenance"],
+        "analysis": identity["analysis"],
+        "players": identity["players"],
+        "methodology": identity["methodology"],
     }
 
 
@@ -186,6 +222,80 @@ def report_manifest_json(manifest: Mapping[str, object]) -> str:
         raise ValueError("報告 Manifest 缺少必要欄位：" + ", ".join(missing))
     return json.dumps(dict(manifest), ensure_ascii=False, indent=2, sort_keys=True) + "\n"
 
+
+def verify_report_manifest(manifest: Mapping[str, object]) -> dict[str, object]:
+    """Verify a report Manifest and return a compact machine-readable summary."""
+    if not isinstance(manifest, Mapping):
+        raise ValueError("Manifest 頂層內容必須是 JSON 物件")
+
+    missing = sorted(MANIFEST_REQUIRED_FIELDS.difference(manifest))
+    if missing:
+        raise ValueError("Manifest 缺少必要欄位：" + ", ".join(missing))
+
+    schema_version = str(manifest.get("schema_version", ""))
+    if schema_version not in SUPPORTED_MANIFEST_SCHEMA_VERSIONS:
+        supported = ", ".join(sorted(SUPPORTED_MANIFEST_SCHEMA_VERSIONS))
+        raise ValueError(f"不支援的 Manifest schema version：{schema_version}；可驗證版本：{supported}")
+
+    report_id = manifest.get("report_id")
+    if not isinstance(report_id, str) or not re.fullmatch(r"rpt-[0-9a-f]{16}", report_id):
+        raise ValueError("Manifest 的 report_id 格式不正確")
+    if not isinstance(manifest.get("data_provenance"), Mapping):
+        raise ValueError("Manifest 的 data_provenance 必須是 JSON 物件")
+    if not isinstance(manifest.get("analysis"), Mapping):
+        raise ValueError("Manifest 的 analysis 必須是 JSON 物件")
+    if not isinstance(manifest.get("players"), list):
+        raise ValueError("Manifest 的 players 必須是 JSON 陣列")
+    if len(manifest["players"]) > MAX_MANIFEST_PLAYERS:
+        raise ValueError(f"Manifest 的 players 最多 {MAX_MANIFEST_PLAYERS} 位")
+    if not isinstance(manifest.get("methodology"), Mapping):
+        raise ValueError("Manifest 的 methodology 必須是 JSON 物件")
+
+    for index, player in enumerate(manifest["players"]):
+        if not isinstance(player, Mapping):
+            raise ValueError(f"Manifest 的 players[{index}] 必須是 JSON 物件")
+        player_missing = sorted(set(REPORT_COLUMNS).difference(player))
+        if player_missing:
+            raise ValueError(
+                f"Manifest 的 players[{index}] 缺少必要欄位：" + ", ".join(player_missing)
+            )
+
+    expected_report_id = _report_id_for_identity(_manifest_identity_from_payload(manifest))
+    if report_id != expected_report_id:
+        raise ValueError(f"報告 ID 不一致：檔案 {report_id}；重算結果 {expected_report_id}")
+
+    provenance = manifest["data_provenance"]
+    return {
+        "valid": True,
+        "report_id": report_id,
+        "schema_version": schema_version,
+        "snapshot_id": provenance.get("snapshot_id"),
+        "player_count": len(manifest["players"]),
+    }
+
+
+def verify_report_manifest_file(path: str | Path) -> dict[str, object]:
+    """Read and verify one UTF-8 JSON Manifest without modifying the file."""
+    manifest_path = Path(path)
+    try:
+        file_size = manifest_path.stat().st_size
+    except OSError as exc:
+        raise ValueError(f"Manifest 無法讀取：{manifest_path.name}") from exc
+    if file_size > MAX_MANIFEST_BYTES:
+        raise ValueError(f"Manifest 檔案過大：上限 {MAX_MANIFEST_BYTES} bytes")
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Manifest JSON 無法解析：{manifest_path.name}") from exc
+    except UnicodeError as exc:
+        raise ValueError(f"Manifest 必須是 UTF-8 JSON：{manifest_path.name}") from exc
+    except OSError as exc:
+        raise ValueError(f"Manifest 無法讀取：{manifest_path.name}") from exc
+    except RecursionError as exc:
+        raise ValueError(f"Manifest JSON 結構過深：{manifest_path.name}") from exc
+    if not isinstance(payload, Mapping):
+        raise ValueError("Manifest 頂層內容必須是 JSON 物件")
+    return verify_report_manifest(payload)
 def report_markdown(report: pd.DataFrame, metadata: Mapping[str, object]) -> str:
     """Render a portable Markdown report with explicit provenance and limits."""
     _validate_report_columns(report)
