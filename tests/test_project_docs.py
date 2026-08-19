@@ -12,6 +12,8 @@ def test_readme_explains_auditable_data_product_and_limits() -> None:
         "觀察名單",
         "report_threshold",
         "下載球探報告 Markdown",
+        "下載稽核 Manifest JSON",
+        "report_id",
         "評估公式",
         "資料限制",
         "重現與測試",

@@ -31,7 +31,14 @@ from src.scouting import (
     qualified_population,
     rank_scouting_candidates,
 )
-from src.scouting_report import build_watchlist_report, report_filename, report_markdown
+from src.scouting_report import (
+    build_report_manifest,
+    build_watchlist_report,
+    manifest_filename,
+    report_filename,
+    report_manifest_json,
+    report_markdown,
+)
 from src.similarity import find_similar_players
 from src.theme import STREAMLIT_CSS, STREAMLIT_LAYOUT_CSS
 
@@ -1477,7 +1484,9 @@ def page_scouting_report() -> None:
     report = build_watchlist_report(candidates, selected_ids, player_type)
     st.header("評估報告")
     st.caption("資料版本與品質狀態會隨下載球探報告一併保留。")
+    st.caption("下載稽核 Manifest JSON 會保留報告條件與資料血緣。")
     st.caption("建立可分享連結後，網址會保留目前的球員與評估條件。")
+    st.caption("選取球員後會顯示報告 ID，方便核對同一份分析成果。")
     if report.empty:
         st.info("選擇候選球員後，這裡會產生可下載的球探報告。")
         return
@@ -1494,7 +1503,9 @@ def page_scouting_report() -> None:
         "generated_at": data_generated_time(),
         "quality_status": quality_status,
     }
-    st.caption(f"資料版本：{snapshot_id} · 產生時間：{metadata['generated_at']} · 品質狀態：{quality_status}")
+    manifest = build_report_manifest(report, {**metadata, "team": team})
+    report_id = str(manifest["report_id"])
+    st.caption(f"資料版本：{snapshot_id} · 產生時間：{metadata['generated_at']} · 品質狀態：{quality_status} · 報告 ID：{report_id}")
     chart = report.sort_values("priority_score", ascending=True)
     show_chart(
         st,
@@ -1527,7 +1538,8 @@ def page_scouting_report() -> None:
         ],
     )
 
-    markdown = report_markdown(report, {**metadata, "team": team})
+    markdown = report_markdown(report, {**metadata, "team": team, "report_id": report_id})
+    manifest_json = report_manifest_json(manifest)
     display_report = to_display_table(
         report,
         [
@@ -1544,7 +1556,7 @@ def page_scouting_report() -> None:
             "evidence_notes",
         ],
     )
-    download_markdown, download_csv = st.columns(2, gap="medium")
+    download_markdown, download_csv, download_manifest = st.columns(3, gap="medium")
     download_markdown.download_button(
         "下載球探報告 Markdown",
         data=markdown.encode("utf-8"),
@@ -1554,6 +1566,16 @@ def page_scouting_report() -> None:
         width="stretch",
         key="download_scouting_report_markdown",
     )
+    download_manifest.download_button(
+        "下載稽核 Manifest JSON",
+        data=manifest_json.encode("utf-8"),
+        file_name=manifest_filename(player_type, snapshot_id),
+        mime="application/json",
+        icon=":material/fact_check:",
+        width="stretch",
+        key="download_scouting_report_manifest",
+    )
+
     download_csv.download_button(
         "下載球探報告 CSV",
         data=dataframe_to_csv_bytes(display_report),

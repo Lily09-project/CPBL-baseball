@@ -1,9 +1,13 @@
+import json
 import pandas as pd
 
 from src.scouting_report import (
     REPORT_COLUMNS,
+    build_report_manifest,
     build_watchlist_report,
+    manifest_filename,
     report_filename,
+    report_manifest_json,
     report_markdown,
 )
 
@@ -123,6 +127,34 @@ def test_report_markdown_contains_metadata_and_escapes_table_values() -> None:
     assert "## 判讀限制" in markdown
     assert "不是逐場對戰資料，也不是未來表現預測" in markdown
 
+
+
+def test_report_manifest_is_stable_and_machine_readable() -> None:
+    report = build_watchlist_report(sample_candidates(), ["0000000002", "0000000003"], "打者")
+    metadata = {
+        "player_type": "打者",
+        "team": "全部",
+        "qualification": "PA ≥ 30",
+        "priority": "長打",
+        "qualified_count": 128,
+        "snapshot_id": "snapshot-20260818-abcd",
+        "quality_status": "通過",
+        "generated_at": "2026-08-18 22:13",
+    }
+    first = build_report_manifest(report, metadata)
+    second = build_report_manifest(report, {**metadata, "generated_at": "2026-08-19 09:00"})
+    changed = build_report_manifest(report, {**metadata, "priority": "綜合價值"})
+    payload = json.loads(report_manifest_json(first))
+
+    assert first["report_id"] == second["report_id"]
+    assert first["report_id"].startswith("rpt-")
+    assert first["report_id"] != changed["report_id"]
+    assert payload["schema_version"] == "1.0"
+    assert payload["data_provenance"]["snapshot_id"] == "snapshot-20260818-abcd"
+    assert payload["analysis"]["qualification"] == "PA ≥ 30"
+    assert [player["player_id"] for player in payload["players"]] == ["0000000002", "0000000003"]
+    assert "C:\\Users\\" not in report_manifest_json(first)
+    assert manifest_filename("打者", "snapshot/2026:08") == "cpbl_scouting_report_hitter_snapshot-2026-08.manifest.json"
 
 def test_report_filename_is_stable_and_does_not_accept_path_segments() -> None:
     assert report_filename("打者", "snapshot/2026:08") == "cpbl_scouting_report_hitter_snapshot-2026-08.md"

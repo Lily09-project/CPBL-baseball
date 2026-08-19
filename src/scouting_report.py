@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import re
 from collections.abc import Mapping, Sequence
 
@@ -22,6 +24,7 @@ REPORT_COLUMNS = (
 
 _USAGE_COLUMNS = {"打者": ("pa", "PA", "position"), "投手": ("innings_pitched", "IP", "role")}
 _TYPE_SLUGS = {"打者": "hitter", "投手": "pitcher"}
+MANIFEST_SCHEMA_VERSION = "1.0"
 
 
 def _empty_report() -> pd.DataFrame:
@@ -110,11 +113,82 @@ def _markdown_number(value: object) -> str:
     return f"{float(number):.1f}" if float(number) % 1 else str(int(number))
 
 
-def report_markdown(report: pd.DataFrame, metadata: Mapping[str, object]) -> str:
-    """Render a portable Markdown report with explicit provenance and limits."""
+def _json_value(value: object) -> object:
+    if value is None or pd.isna(value):
+        return None
+    if hasattr(value, "item"):
+        try:
+            return value.item()
+        except ValueError:
+            pass
+    return value
+
+
+def _validate_report_columns(report: pd.DataFrame) -> None:
     invalid = sorted(set(REPORT_COLUMNS).difference(report.columns))
     if invalid and not report.empty:
         raise ValueError("球探報告輸出缺少欄位：" + ", ".join(invalid))
+
+
+def build_report_manifest(report: pd.DataFrame, metadata: Mapping[str, object]) -> dict[str, object]:
+    """Build a reproducibility manifest for one rendered scouting report."""
+    _validate_report_columns(report)
+    players: list[dict[str, object]] = []
+    if not report.empty:
+        for row in report[list(REPORT_COLUMNS)].to_dict(orient="records"):
+            players.append({column: _json_value(row.get(column)) for column in REPORT_COLUMNS})
+
+    analysis = {
+        "player_type": _json_value(metadata.get("player_type")),
+        "team": _json_value(metadata.get("team", "全部")),
+        "qualification": _json_value(metadata.get("qualification")),
+        "priority": _json_value(metadata.get("priority")),
+        "qualified_count": _json_value(metadata.get("qualified_count")),
+        "population_definition": "同一球員類型與資格門檻下的官方累計成績母體",
+    }
+    provenance = {
+        "source": "CPBL 官方處理後資料",
+        "snapshot_id": _json_value(metadata.get("snapshot_id")),
+        "quality_status": _json_value(metadata.get("quality_status")),
+    }
+    identity = {
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "data_provenance": provenance,
+        "analysis": analysis,
+        "players": players,
+    }
+    canonical = json.dumps(identity, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    report_id = "rpt-" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
+    return {
+        "report_id": report_id,
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "generated_at": _json_value(metadata.get("generated_at")),
+        "data_provenance": provenance,
+        "analysis": analysis,
+        "players": players,
+        "methodology": {
+            "score_source": "src.scouting.PRIORITY_WEIGHTS",
+            "percentile_scope": "qualified_population(player_type, threshold)",
+            "evidence_source": "src.scouting.build_evidence_signals",
+            "limitations": [
+                "目前官方累計成績不代表傷勢、戰術、守備細節或未來表現。",
+                "本報告不是逐場對戰資料，也不是未來表現預測。",
+            ],
+        },
+    }
+
+
+def report_manifest_json(manifest: Mapping[str, object]) -> str:
+    """Serialize a manifest as deterministic, UTF-8-friendly JSON."""
+    required = {"report_id", "schema_version", "data_provenance", "analysis", "players", "methodology"}
+    missing = sorted(required.difference(manifest))
+    if missing:
+        raise ValueError("報告 Manifest 缺少必要欄位：" + ", ".join(missing))
+    return json.dumps(dict(manifest), ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+
+def report_markdown(report: pd.DataFrame, metadata: Mapping[str, object]) -> str:
+    """Render a portable Markdown report with explicit provenance and limits."""
+    _validate_report_columns(report)
 
     def meta(label: str, key: str, default: str = "未記錄") -> str:
         value = metadata.get(key, default)
@@ -136,6 +210,7 @@ def report_markdown(report: pd.DataFrame, metadata: Mapping[str, object]) -> str
         meta("資料快照", "snapshot_id"),
         meta("資料產生時間", "generated_at"),
         meta("品質狀態", "quality_status"),
+        meta("報告 ID", "report_id"),
         "",
         "## 觀察名單",
         "",
@@ -187,3 +262,7 @@ def report_filename(player_type: str, snapshot_id: object) -> str:
     raw_snapshot = str(snapshot_id or "latest").strip()
     safe_snapshot = re.sub(r"[^A-Za-z0-9_-]+", "-", raw_snapshot).strip("-") or "latest"
     return f"cpbl_scouting_report_{_TYPE_SLUGS[player_type]}_{safe_snapshot}.md"
+
+
+def manifest_filename(player_type: str, snapshot_id: object) -> str:
+    return report_filename(player_type, snapshot_id).replace(".md", ".manifest.json")
