@@ -9,13 +9,16 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from src.app_helpers import (
+    ProcessedDataError,
     load_csv,
+    missing_processed_files,
     player_choice_options,
     processed_data_version,
     win_rate_series,
 )
 from src.data_quality import load_data_quality_report
 from src.fetch_cpbl_data import absolute_url
+from src.source_contract import SOURCE_DISPLAY_NAME, build_source_note
 from src.freshness import data_freshness
 from src.history import compare_metric_versions, later_snapshot_ids
 from src.log5_matchup import calculate_log5_probability, summarize_matchup_probability
@@ -53,11 +56,7 @@ def data_verified_date(report: dict | None = None) -> str:
 
 
 def source_note(report: dict | None = None) -> str:
-    return (
-        "球隊戰績、現役球員名單、打擊成績與投手成績取自 CPBL 官方網站 "
-        f"/player、/standings/season、/stats/recordallaction；資料抓取日期：{data_verified_date(report)}。"
-    )
-
+    return build_source_note(data_verified_date(report))
 
 def data_generated_time(report: dict | None = None) -> str:
     raw = str((report or QUALITY_REPORT).get("generated_at", ""))
@@ -240,7 +239,22 @@ def load_data(_data_version: tuple[tuple[str, int | None, int | None], ...]) -> 
     }
 
 
-DATA = load_data(processed_data_version())
+MISSING_PROCESSED_FILES = missing_processed_files()
+if MISSING_PROCESSED_FILES:
+    st.error(
+        "官方處理後資料不完整，已停止載入。請先在專案根目錄執行 run_project.bat --check。"
+    )
+    st.stop()
+if QUALITY_REPORT.get("quality_status") == "failed":
+    st.error("資料品質報告未通過或無法讀取，已停止顯示目前資料。請先重新執行 run_project.bat --check。")
+    st.stop()
+try:
+    DATA = load_data(processed_data_version())
+except ProcessedDataError as error:
+    st.error(
+        f"官方處理後資料無法讀取（{error}），已停止載入。請重新執行 run_project.bat --check。"
+    )
+    st.stop()
 TEAMS = DATA["teams"]
 ROSTER = DATA["roster"]
 BATTERS = DATA["batters"]
@@ -512,7 +526,7 @@ def page_kicker(section: str) -> str:
 def page_intro(section: str, title: str, description: str) -> None:
     freshness = data_freshness(QUALITY_REPORT.get("generated_at", ""))
     st.markdown(
-        "<section class='page-masthead' aria-label='頁面資料狀態'><div>"
+        "<div class='mobile-product-brand'>CPBL / SCOUTING DESK</div><section class='page-masthead' aria-label='頁面資料狀態'><div>"
         + page_kicker(section)
         + f"</div><div class='data-status-line status-{escape(str(freshness['status']))}'>"
         + f"官方資料已核對 · {escape(str(freshness['label']))}</div></section>",
@@ -671,28 +685,38 @@ def source_status_panel(compact: bool = False) -> None:
     text = source_note(report)
     verified_date = data_verified_date(report)
     generated_at = data_generated_time(report)
-    hitter_count = int(report.get("available_hitter_count", 0) or 0)
-    pitcher_count = int(report.get("available_pitcher_count", 0) or 0)
+    hitter_count = report.get("available_hitter_count", 0)
+    pitcher_count = report.get("available_pitcher_count", 0)
     quality_label = {"pass": "通過", "warning": "需注意", "failed": "失敗"}.get(str(report.get("quality_status")), "未知")
     if compact:
         st.caption(f"{text} 產生時間：{generated_at}。")
         return
+    safe_text = escape(str(text))
+    safe_verified_date = escape(str(verified_date))
+    safe_generated_at = escape(str(generated_at))
+    safe_quality_label = escape(str(quality_label))
+    safe_source_display_name = escape(str(SOURCE_DISPLAY_NAME))
+    safe_team_count = escape(str(report.get("available_team_count", 0)))
+    safe_player_count = escape(str(report.get("player_summary_count", report.get("available_player_count", 0))))
+    safe_roster_count = escape(str(report.get("official_roster_count", 0)))
+    safe_hitter_count = escape(str(hitter_count))
+    safe_pitcher_count = escape(str(pitcher_count))
     st.markdown(
-        f"<div class='source-ribbon'><strong>CPBL 官方資料</strong><span>品質 {escape(quality_label)} · 更新 {escape(generated_at)}</span></div>",
+        f"<div class='source-ribbon'><strong>CPBL 官方資料</strong><span>品質 {safe_quality_label} · 更新 {safe_generated_at}</span></div>",
         unsafe_allow_html=True,
     )
     st.markdown(
         f"""
         <section class="cpbl-card source-card" aria-labelledby="source-status-heading">
           <h2 id="source-status-heading" class="card-heading">資料來源狀態</h2>
-          <p>{text}</p>
+          <p>{safe_text}</p>
           <div class="source-facts" role="list" aria-label="資料來源摘要">
-            <div role="listitem"><strong>資料模式</strong><span>CPBL 官方 API</span></div>
-            <div role="listitem"><strong>品質狀態</strong><span>{quality_label}</span></div>
-            <div role="listitem"><strong>資料量</strong><span>球隊 {report.get("available_team_count", 0)} 隊 · 球員 {report.get("player_summary_count", report.get("available_player_count", 0))} 人</span></div>
-            <div role="listitem"><strong>最後更新</strong><span>{generated_at}</span></div>
+            <div role="listitem"><strong>資料模式</strong><span>{safe_source_display_name}（HTML／表單分頁）</span></div>
+            <div role="listitem"><strong>品質狀態</strong><span>{safe_quality_label}</span></div>
+            <div role="listitem"><strong>資料量</strong><span>球隊 {safe_team_count} 隊 · 球員 {safe_player_count} 人</span></div>
+            <div role="listitem"><strong>最後更新</strong><span>{safe_generated_at}</span></div>
           </div>
-          <p class="source-footnote">官方現役名單 {report.get("official_roster_count", 0)} 人；打者 {hitter_count} 人；投手 {pitcher_count} 人。核對日期：{verified_date}。</p>
+          <p class="source-footnote">官方現役名單 {safe_roster_count} 人；打者 {safe_hitter_count} 人；投手 {safe_pitcher_count} 人。核對日期：{safe_verified_date}。</p>
         </section>
         """,
         unsafe_allow_html=True,
@@ -914,13 +938,24 @@ def render_player_header(row: pd.Series, player_type: str) -> None:
     st.markdown(
         f"<section class='player-identity' aria-label='球員基本資料'><div>"
         f"<div class='identity-label'>PLAYER DOSSIER</div><h2>{escape(str(row['player_name']))}</h2>"
-        f"<p>{escape(identity_line)} · 資料核對 {data_verified_date()}</p></div>"
+        f"<p>{escape(identity_line)} · 資料核對 {escape(data_verified_date())}</p></div>"
         f"<div class='identity-status'>{escape(str(status))}</div></section>",
         unsafe_allow_html=True,
     )
     profile_url = absolute_url(str(directory_row.get("profile_url", "") or "") if directory_row is not None else "")
     if profile_url.startswith("https://cpbl.com.tw/"):
         st.link_button("開啟 CPBL 官方球員頁", profile_url, width="content")
+
+
+def render_version_trend_cta() -> None:
+    st.button(
+        "查看版本趨勢",
+        icon=":material/timeline:",
+        key="movement_trends_go",
+        on_click=switch_page,
+        args=("版本趨勢",),
+        width="content",
+    )
 
 
 def render_movement_focus() -> None:
@@ -932,6 +967,7 @@ def render_movement_focus() -> None:
     required = {"metric", "movement_status", "delta"}
     if MOVEMENTS.empty or not required.issubset(MOVEMENTS.columns):
         st.info("目前尚未形成兩份可比較快照；再次完成官方資料刷新後會建立差異基準。")
+        render_version_trend_cta()
         return
     focus = MOVEMENTS[
         (MOVEMENTS["metric"] == "player_value_score")
@@ -944,7 +980,8 @@ def render_movement_focus() -> None:
         kind="stable",
     ).head(8)
     if focus.empty:
-        st.info("最近兩份快照的球員綜合分數沒有可顯示的變動。")
+        st.info("最近兩份快照沒有球員綜合分數變化；可在「版本趨勢」查看其他指標差異。")
+        render_version_trend_cta()
         return
     display = pd.DataFrame(
         {
@@ -1270,7 +1307,7 @@ def page_snapshot_trends() -> None:
 def page_league() -> None:
     page_intro("聯盟總覽", "聯盟總覽", "以球隊戰績、得失分與主客場差異，建立本季聯盟的可比較基準。")
     if TEAMS.empty:
-        st.info("目前沒有可顯示的官方球隊戰績，請重新執行 API 資料抓取。")
+        st.info("目前沒有可顯示的官方球隊戰績，請重新執行官方資料刷新。")
         return
     source_status_panel(compact=True)
     st.caption("戰績表包含勝差、近況、勝率、得失分差與資料來源欄位。")
@@ -1573,6 +1610,7 @@ def page_scouting_report() -> None:
         mime="application/json",
         icon=":material/fact_check:",
         width="stretch",
+        help="下載後可用 python -m src.verify_report_manifest 驗證報告完整性。",
         key="download_scouting_report_manifest",
     )
 
@@ -1590,7 +1628,7 @@ def page_scouting_report() -> None:
 def page_rankings() -> None:
     page_intro("球員排行榜", "球員排行榜", "以清楚的門檻與單一指標縮小候選範圍，再回到球員檔案查看完整脈絡。")
     if BATTERS.empty or PITCHERS.empty:
-        st.info("目前缺少官方打者或投手資料，請重新執行 API 資料抓取。")
+        st.info("目前缺少官方打者或投手資料，請重新執行官方資料刷新。")
         return
     tab_b, tab_p = st.tabs(["打者", "投手"])
     with tab_b:
@@ -1632,7 +1670,7 @@ def page_player() -> None:
     if player_type == "全體球員":
         directory = PLAYERS if not PLAYERS.empty else ROSTER
         if directory.empty:
-            st.info("目前沒有可顯示的官方球員名單，請重新執行 API 資料抓取。")
+            st.info("目前沒有可顯示的官方球員名單，請重新執行官方資料刷新。")
             return
         requested = directory[directory["player_id"].astype("string") == requested_player_id]
         if not requested.empty and st.session_state.get("applied_player_request") != requested_player_id:
@@ -1678,7 +1716,7 @@ def page_player() -> None:
         stat_type = player_type
         df = BATTERS if player_type == "打者" else PITCHERS
         if df.empty:
-            st.info(f"目前沒有可顯示的{player_type}成績資料，請重新執行 API 資料抓取。")
+            st.info(f"目前沒有可顯示的{player_type}成績資料，請重新執行官方資料刷新。")
             return
         team = st.selectbox("球隊選擇", sorted(df["team"].dropna().unique()), key=f"player_{player_type}_team")
         subset = df[df["team"] == team]
@@ -1804,7 +1842,7 @@ def page_player() -> None:
 def page_matchup() -> None:
     page_intro("投打對決", "投打對決", "以本季官方彙總成績建構受限的 LOG5 情境，協助閱讀投打差異，不作比賽預測。")
     if BATTERS.empty or PITCHERS.empty:
-        st.info("目前缺少官方打者或投手資料，請重新執行 API 資料抓取。")
+        st.info("目前缺少官方打者或投手資料，請重新執行官方資料刷新。")
         return
     selector_hitter, selector_pitcher = st.columns(2, gap="medium")
     hitter_team = selector_hitter.selectbox(

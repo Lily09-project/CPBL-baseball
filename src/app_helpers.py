@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.preprocess import preprocess
 from src.utils import project_path
 
 
@@ -23,9 +22,21 @@ PUBLIC_PROCESSED_FILES = (
 )
 
 
-def ensure_processed_data() -> None:
-    if any(not project_path("data/processed", name).exists() for name in REQUIRED_PROCESSED_FILES):
-        preprocess(mode="api")
+class ProcessedDataError(RuntimeError):
+    """Raised when a tracked processed CSV cannot be read safely."""
+
+
+def missing_processed_files() -> tuple[str, ...]:
+    return tuple(
+        name
+        for name in REQUIRED_PROCESSED_FILES
+        if not project_path("data/processed", name).exists()
+    )
+
+
+def ensure_processed_data() -> tuple[str, ...]:
+    """Check local processed outputs without triggering a network refresh."""
+    return missing_processed_files()
 
 
 def processed_data_version() -> tuple[tuple[str, int | None, int | None], ...]:
@@ -40,14 +51,31 @@ def processed_data_version() -> tuple[tuple[str, int | None, int | None], ...]:
     return tuple(signatures)
 
 
+def _processed_csv_path(name: str) -> Path:
+    root = project_path("data/processed").resolve()
+    candidate = (root / name).resolve()
+    name_path = Path(name)
+    if (
+        not name
+        or name_path.name != name
+        or name_path.suffix.lower() != ".csv"
+        or candidate.parent != root
+    ):
+        raise ValueError("processed CSV path must be a direct CSV filename")
+    return candidate
+
+
 def load_csv(name: str) -> pd.DataFrame:
+    path = _processed_csv_path(name)
     ensure_processed_data()
-    path = project_path("data/processed", name)
     if not path.exists():
         return pd.DataFrame()
-    columns = pd.read_csv(path, nrows=0).columns
-    dtypes = {column: "string" for column in ["player_id"] if column in columns}
-    return pd.read_csv(path, dtype=dtypes)
+    try:
+        columns = pd.read_csv(path, nrows=0).columns
+        dtypes = {column: "string" for column in ["player_id"] if column in columns}
+        return pd.read_csv(path, dtype=dtypes)
+    except (OSError, UnicodeError, pd.errors.ParserError, pd.errors.EmptyDataError, ValueError) as exc:
+        raise ProcessedDataError(f"處理後資料檔案無法讀取：{name}") from exc
 
 
 def file_exists(rel: str) -> bool:

@@ -9,7 +9,7 @@ from src.utils import ensure_dirs, project_path
 
 def preprocess(mode: str = "api") -> dict[str, str]:
     if mode != "api":
-        raise ValueError("正式資料流程只支援 api 模式。")
+        raise ValueError("官方資料流程只支援 mode=api（保留的 CLI 相容名稱）。")
     ensure_dirs()
     processed = project_path("data/processed")
     official = fetch_cpbl_official_data()

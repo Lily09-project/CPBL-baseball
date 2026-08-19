@@ -18,8 +18,11 @@
 3. **每次刷新都有血緣**：處理後資料以內容指紋建立快照，保存 SHA-256、版本時間、前一版本與異動摘要，支援回答「這次刷新改變了什麼」。
 4. **分析結果可解釋**：資格門檻、聯盟母體百分位、固定評估分數、強項／風險訊號與 LOG5 限制都直接呈現在產品介面。
 5. **產品流程是真實可操作**：完整球員搜尋、深連結、篩選、比較、版本切換、空資料狀態、CSV 下載、響應式版面與可及性細節都有測試。
+6. **分析交付可以被獨立驗證**：球探報告會輸出含方法版本的 Manifest，使用者不需要相信畫面當下的結果，可以在本機重新計算 `report_id` 檢查檔案是否被修改。
 
 這是一個可重跑的資料產品，而不是依賴 Sample Data、Mock Data 或一次性手動整理的展示頁。
+
+審查者可直接依照 [Review Guide](docs/REVIEW_GUIDE.md) 重現資料流程、品質閘門與發布驗收。
 
 ## 最新驗證摘要
 
@@ -27,14 +30,15 @@
 
 | 項目 | 最新結果 |
 | --- | --- |
-| 資料來源 | CPBL 官方公開頁面，mode=api |
-| 最後驗證時間 | 2026-08-18（Asia/Taipei） |
+| 資料來源 | CPBL 官方公開頁面擷取；mode=api 為相容的流程參數 |
+| 最後驗證時間 | 2026-08-19 19:25（Asia/Taipei） |
 | 品質狀態 | pass |
 | 官方現役名單 | 457 人 |
 | 打者／投手成績聯集 | 458 位球員 |
-| 已驗證資料快照 | 7 份 |
+| 已驗證資料快照 | 8 份 |
+| 最新資料快照 | `20260819T084104Z-e3f9f1e437fa` |
 | 球員版本變化紀錄 | 2,106 筆 |
-| 完整測試 | 119 passed |
+| 完整測試 | 147 passed |
 | Smoke test | passed |
 
 ## 實際使用畫面
@@ -131,7 +135,13 @@ CPBL 公開資料分散在不同頁面，原始表格格式可能變動，同一
 - 報告明確寫入品質狀態、資料產生時間、資料快照 ID、資格門檻與評估重點，讓下載檔案離開網頁後仍然可追溯。
 - 「建立可分享連結」會把 `report_type`、`report_team`、`report_threshold`、`report_focus` 與 `watchlist` 寫入網址參數；重新整理或分享網址時，系統會從目前已驗證資料版本重新產生報告。
 - 提供「下載球探報告 Markdown」與「下載球探報告 CSV」兩個實際操作；下載內容不包含 API 金鑰、登入資訊或本機路徑，報告也不會偷偷寫入本機資料庫。
-- 另提供「下載稽核 Manifest JSON」，包含穩定 `report_id`、資料快照、品質狀態、查詢條件、選取球員與分析限制；同一資料版本與條件重建時，`report_id` 不受產生時間影響。
+- 另提供「下載稽核 Manifest JSON」，包含穩定 `report_id`、資料快照、品質狀態、查詢條件、選取球員、分析方法與限制；同一資料版本與條件重建時，`report_id` 不受產生時間影響。
+- Manifest schema `1.1` 會把評估方法識別、資料血緣、查詢條件與球員內容納入完整性指紋；舊版 schema `1.0` 仍可驗證。
+- 下載檔案後，可在專案根目錄執行以下命令；成功時輸出 `valid: true`、報告 ID、快照 ID 與球員數量，任何內容被修改都會以非零退出碼失敗：
+
+~~~powershell
+python -m src.verify_report_manifest .\cpbl_scouting_report_hitter_<snapshot>.manifest.json
+~~~
 
 範例深連結格式：
 
@@ -177,7 +187,8 @@ CPBL 公開資料分散在不同頁面，原始表格格式可能變動，同一
 
 - [現役球員名單](https://cpbl.com.tw/player)
 - [球隊戰績](https://cpbl.com.tw/standings/season)
-- [打者與投手全記錄](https://cpbl.com.tw/stats/recordallaction)
+- [打者與投手全記錄入口](https://cpbl.com.tw/stats/recordall)
+- 分頁請求端點（官方表單）：https://cpbl.com.tw/stats/recordallaction
 
 資料流程只接受 cpbl.com.tw 官方來源。來源無法連線、解析失敗、分頁不完整或資料品質檢查失敗時，流程會停止，不會用展示資料掩蓋錯誤。
 
@@ -225,6 +236,7 @@ Streamlit 互動分析介面
 | --- | --- |
 | app.py | Streamlit 入口、頁面路由、互動狀態與畫面組合 |
 | src/fetch_cpbl_data.py | 官方資料擷取、來源與分頁驗證 |
+| src/source_contract.py | 集中管理官方來源路徑、來源描述與相容流程說明 |
 | src/preprocess.py | 原始回應轉換為穩定的處理後 CSV |
 | src/data_quality.py | 資料品質報告與失敗閘門 |
 | src/snapshots.py | 已驗證資料快照、manifest、內容指紋與版本 diff |
@@ -232,9 +244,11 @@ Streamlit 互動分析介面
 | src/history.py | 版本趨勢與時間旅行用衍生資料 |
 | src/features.py | 打者／投手進階指標與可解釋特徵 |
 | src/scouting.py | 資格門檻、百分位、評估分數與說明訊號 |
+| src/scouting_report.py | 球探報告、Manifest 產生、canonical report_id 與分析交付格式 |
+| src/verify_report_manifest.py | 不依賴 Streamlit 的 Manifest schema、內容指紋與檔案完整性驗證 CLI |
 | src/rankings.py | 排行榜資料與指標排序 |
 | src/log5_matchup.py | LOG5 情境計算 |
-| src/app_helpers.py | 前端資料載入、球員選項與共用輔助邏輯 |
+| src/app_helpers.py | 前端唯讀資料載入、缺檔與損毀檔防護、球員選項與共用輔助邏輯 |
 | src/theme.py | Streamlit 共用樣式、響應式版面與可讀性設計 |
 | data/processed/ | 可供前端與部署使用的處理後資料 |
 | reports/metrics/ | 品質報告與可審查的資料指標 |
@@ -243,9 +257,9 @@ Streamlit 互動分析介面
 
 ## 資料管線與資料契約
 
-執行 python run_all.py --mode api 時，流程依序完成：
+執行 python run_all.py --mode api 時，流程依序完成（api 是保留的 CLI 相容名稱，實際為官方公開頁面擷取流程）：
 
-1. 從 CPBL 官方 /player、/standings/season 與 /stats/recordallaction 取得資料。
+1. 從 CPBL 官方 /player、/standings/season 與 /stats/recordall 取得統計頁面，再以官方表單分頁 /stats/recordallaction 取得完整資料。
 2. 驗證來源主機、HTTP 回應、分頁資訊與必要欄位。
 3. 清理欄位名稱、轉換數值欄位、統一球員與球隊識別方式。
 4. 產生 data/processed/ 下的處理後 CSV。
@@ -271,6 +285,8 @@ Streamlit 互動分析介面
 player_id 全程保留為字串，避免前導零在讀取、篩選、排序與版本比較時遺失。若球員同時出現在打者與投手成績表，統一摘要會使用打席 PA 與投球局數 × 4.25 的估算面對打者數比較主要工作量，避免野手短暫登板被誤標為投手；原始打者與投手輸出仍分開保留。
 
 前端只讀取版本控制中的 data/processed/ 成品。data/raw/ 與 data/snapshots/ 是本機資料工程與稽核用目錄，不是公開網站的資料來源。
+
+前端採離線唯讀策略：缺少必要處理檔、CSV 損毀或品質報告無法驗證時，畫面會停止載入並要求先執行 run_project.bat --check；Streamlit 不會在使用者開頁時隱式連線抓取 CPBL 資料。
 
 ## 評估公式與方法
 
@@ -391,6 +407,18 @@ run_project.bat --check
 - 評估分數、百分位、排行榜、相似球員與 LOG5。
 - Streamlit 頁面、搜尋、篩選、選擇器、CSV 下載與頁面間路由。
 - run_project.bat 啟動流程、文件契約與安全規則。
+- 球探報告 Manifest 的 schema、canonical ID、UTF-8 round-trip、舊版相容性與竄改失敗路徑。
+
+### 報告完整性驗證
+
+這個驗證器刻意放在 Streamlit 之外，因為稽核者不應依賴同一個 UI 來驗證 UI 產出的檔案。驗證流程只讀取指定的 UTF-8 JSON，不會修改檔案，也不會連線外部服務：
+
+~~~powershell
+# 在專案根目錄執行
+python -m src.verify_report_manifest .\path\to\report.manifest.json
+~~~
+
+輸出為成功摘要時，代表 `report_id` 與 Manifest 的 schema、資料血緣、分析條件、方法內容及球員清單一致；若任一欄位被竄改，CLI 會輸出錯誤並回傳退出碼 `1`。這是完整性驗證，不是資料來源重新抓取，也不能證明官方網站在當時沒有更改歷史資料。
 
 ### 瀏覽器驗收重點
 

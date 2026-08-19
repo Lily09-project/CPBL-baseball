@@ -7,6 +7,7 @@ from src.history import generate_history_outputs
 from src.movements import generate_player_movements
 from src.preprocess import preprocess
 from src.snapshots import create_processed_snapshot
+from src.source_contract import build_pipeline_source_reason
 from src.utils import project_path
 
 
@@ -14,7 +15,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["api"], default="api")
     args = parser.parse_args()
-    fallback_reason = "api mode: 使用 CPBL 官方 /player、/standings/season、/stats/recordallaction"
+    fallback_reason = build_pipeline_source_reason(args.mode)
     outputs = preprocess(mode=args.mode)
     report = generate_data_quality_report(mode=args.mode, fallback_reason=fallback_reason)
     if report["quality_status"] == "failed":

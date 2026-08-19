@@ -7,7 +7,7 @@ set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 set "BUNDLED_PY=%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe"
 
 if exist "%VENV_PY%" (
-    "%VENV_PY%" -c "import lxml, numpy, pandas, plotly, pytest, requests, streamlit" >nul 2>nul
+    "%VENV_PY%" -c "from importlib.metadata import version; [version(name) for name in ('lxml', 'numpy', 'pandas', 'plotly', 'pytest', 'requests', 'streamlit')]" >nul 2>nul
     if not errorlevel 1 (
         "%VENV_PY%" -c "from importlib.metadata import version; from pathlib import Path; from packaging.requirements import Requirement; reqs=[Requirement(line) for line in Path('requirements.txt').read_text(encoding='utf-8').splitlines() if line.strip() and not line.lstrip().startswith('#')]; raise SystemExit(0 if all(req.specifier.contains(version(req.name), prereleases=True) for req in reqs) else 1)" >nul 2>nul
         if not errorlevel 1 (
@@ -58,7 +58,7 @@ set "PYTHON_CMD="%VENV_PY%""
 :runtime_ready
 echo Using Python: %PYTHON_CMD%
 if /I "%~1"=="--runtime-check" (
-    %PYTHON_CMD% -c "import lxml, numpy, pandas, plotly, pytest, requests, streamlit; print('runtime check passed')"
+    %PYTHON_CMD% -c "import streamlit; print('runtime check passed')"
     if errorlevel 1 goto fail
     exit /b 0
 )

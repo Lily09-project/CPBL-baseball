@@ -9,13 +9,10 @@ from typing import Any
 
 import pandas as pd
 
+from src.source_contract import OFFICIAL_SOURCE_URLS
+
 
 SNAPSHOT_SCHEMA_VERSION = "1.0"
-OFFICIAL_SOURCE_URLS = [
-    "https://cpbl.com.tw/player",
-    "https://cpbl.com.tw/standings/season",
-    "https://cpbl.com.tw/stats/recordallaction",
-]
 KEY_COLUMNS = {
     "teams.csv": "team",
     "roster.csv": "player_id",
