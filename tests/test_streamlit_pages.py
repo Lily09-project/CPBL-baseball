@@ -26,7 +26,7 @@ REQUIRED_FRONTEND_TERMS = {
     "聯盟總覽": ["聯盟總覽", "戰績表", "勝差", "近況"],
     "版本趨勢": ["版本趨勢", "資料版本血緣", "球員指標走勢", "版本差異比較", "SHA-256", "OPS"],
     "球探工作台": ["球探工作台", "最低打席 (PA)", "評估重點", "符合門檻母體", "最多選擇 4 位球員"],
-    "球探報告": ["球探報告", "觀察名單", "建立可分享連結", "下載球探報告", "資料版本", "資格門檻", "評估重點", "最多選擇 4 位球員"],
+    "球探報告": ["球探報告", "觀察名單", "建立可分享連結", "下載球探報告", "下載稽核 Manifest JSON", "資料版本", "報告 ID", "資格門檻", "評估重點", "最多選擇 4 位球員"],
     "球員排行榜": ["球員排行榜", "打者", "投手", "OPS"],
     "球員個人頁": ["球員個人頁", "全體球員", "官方現役名單", "本季成績", "前次快照變化", "累計資料差異", "評估依據", "進階指標", "聯盟平均比較", "排行摘要", "聯盟百分位", "能力雷達圖", "相似球員推薦"],
     "投打對決": ["投打對決", "LOG5", "OBP", "SLG", "OPS", "ERA", "WHIP", "K/BB"],
@@ -402,6 +402,7 @@ def test_scouting_report_page_builds_downloadable_watchlist() -> None:
     assert len(app.dataframe) >= 1
     assert any(button.label == "下載球探報告 Markdown" for button in app.download_button)
     assert any(button.label == "下載球探報告 CSV" for button in app.download_button)
+    assert any(button.label == "下載稽核 Manifest JSON" for button in app.download_button)
 
 def test_scouting_report_deep_link_restores_watchlist_conditions() -> None:
     import app as dashboard
