@@ -31,6 +31,7 @@ from src.scouting import (
     qualified_population,
     rank_scouting_candidates,
 )
+from src.scouting_report import build_watchlist_report, report_filename, report_markdown
 from src.similarity import find_similar_players
 from src.theme import STREAMLIT_CSS, STREAMLIT_LAYOUT_CSS
 
@@ -70,6 +71,7 @@ PAGES = [
     "聯盟總覽",
     "版本趨勢",
     "球探工作台",
+    "球探報告",
     "球員排行榜",
     "球員個人頁",
     "投打對決",
@@ -185,6 +187,8 @@ COLUMN_LABELS = {
     "player_value_score": "綜合分數",
     "priority_score": "評估分數",
     "qualified_percentile": "符合門檻母體百分位",
+    "usage_label": "資格量單位",
+    "usage_value": "資格量",
     "evidence_strengths": "強項依據",
     "evidence_risks": "風險依據",
     "evidence_notes": "資料註記",
@@ -520,6 +524,29 @@ def query_param_value(name: str) -> str:
     if isinstance(value, list):
         value = value[0] if value else ""
     return str(value)
+
+
+def query_param_values(name: str) -> list[str]:
+    raw = query_param_value(name)
+    return [value.strip() for value in raw.split(",") if value.strip()]
+
+
+def set_report_query(player_type: str, team: str, threshold: float, priority: str, player_ids: list[str]) -> None:
+    st.query_params["page"] = "球探報告"
+    st.query_params["report_type"] = player_type
+    st.query_params["report_team"] = team
+    st.query_params["report_threshold"] = f"{threshold:g}"
+    st.query_params["report_focus"] = priority
+    if player_ids:
+        st.query_params["watchlist"] = ",".join(player_ids[:4])
+    elif "watchlist" in st.query_params:
+        del st.query_params["watchlist"]
+
+
+def clear_report_query() -> None:
+    for name in ("watchlist", "report_type", "report_team", "report_threshold", "report_focus"):
+        if name in st.query_params:
+            del st.query_params[name]
 
 
 def sync_page_query(page: str) -> None:
@@ -1365,6 +1392,179 @@ def page_scouting_workbench() -> None:
         show_table(st, comparison)
 
 
+def page_scouting_report() -> None:
+    page_intro(
+        "球探報告",
+        "球探報告",
+        "把目前的球探候選人固定成一份具備資料版本、資格門檻與判讀依據的可下載觀察名單。",
+    )
+    report_type_param = query_param_value("report_type")
+    type_index = 1 if report_type_param == "投手" else 0
+    player_type = st.radio("球員類型", ["打者", "投手"], index=type_index, horizontal=True, key="scouting_report_type")
+    source = BATTERS if player_type == "打者" else PITCHERS
+    if source.empty:
+        st.info(f"目前缺少官方{player_type}成績，無法建立球探報告。")
+        return
+
+    usage_label = qualification_label(player_type)
+    default_threshold = float(DEFAULT_QUALIFICATION[player_type])
+    maximum = qualification_upper_bound(source, player_type)
+    try:
+        requested_threshold = float(query_param_value("report_threshold"))
+    except ValueError:
+        requested_threshold = default_threshold
+    threshold_value = min(max(requested_threshold, default_threshold), maximum)
+
+    team_options = ["全部", *sorted(source["team"].dropna().astype(str).unique())]
+    requested_team = query_param_value("report_team")
+    team_index = team_options.index(requested_team) if requested_team in team_options else 0
+    control_team, control_threshold, control_priority = st.columns(3, gap="medium")
+    team = control_team.selectbox("球隊", team_options, index=team_index, key=f"report_team_{player_type}")
+    if player_type == "打者":
+        threshold = control_threshold.number_input(
+            "最低打席 (PA)",
+            min_value=int(default_threshold),
+            max_value=max(int(maximum), int(default_threshold)),
+            value=int(threshold_value),
+            step=5,
+            key="report_min_pa",
+        )
+    else:
+        threshold = control_threshold.number_input(
+            "最低投球局數 (IP)",
+            min_value=default_threshold,
+            max_value=maximum,
+            value=float(threshold_value),
+            step=1.0,
+            key="report_min_ip",
+        )
+    priorities = priority_options(player_type)
+    requested_priority = query_param_value("report_focus")
+    priority_index = priorities.index(requested_priority) if requested_priority in priorities else 0
+    priority = control_priority.selectbox("評估重點", priorities, index=priority_index, key=f"report_priority_{player_type}")
+
+    qualified = qualified_population(source, player_type, float(threshold))
+    render_data_trust_surface(QUALITY_REPORT, player_type, float(threshold), len(qualified))
+    candidates = rank_scouting_candidates(source, player_type, float(threshold), priority, team)
+    if candidates.empty:
+        st.info(f"目前沒有符合條件的球員。資格門檻維持 {usage_label} ≥ {float(threshold):g}，請調整球隊或門檻。")
+        return
+
+    st.header("觀察名單")
+    st.caption("最多選擇 4 位球員；報告會保留選取順序，並只使用同一資格母體的評估結果。")
+    options = player_choice_options(candidates)
+    requested_ids = query_param_values("watchlist")
+    option_by_id = {player_id: label for label, player_id in options.items()}
+    default_labels = [option_by_id[player_id] for player_id in requested_ids if player_id in option_by_id]
+    selected_labels = st.multiselect(
+        "觀察名單",
+        list(options),
+        default=default_labels[:4],
+        max_selections=4,
+        help="最多選擇 4 位球員；選取順序會保留在下載報告中。",
+        key=f"report_watchlist_{player_type}",
+    )
+    selected_ids = [options[label] for label in selected_labels]
+
+    action_share, action_clear = st.columns(2, gap="medium")
+    if action_share.button("建立可分享連結", icon=":material/link:", width="stretch", key="report_share"):
+        set_report_query(player_type, team, float(threshold), priority, selected_ids)
+        st.success("已將球員、資格門檻與評估重點寫入目前網址參數。")
+    if action_clear.button("清除觀察名單", icon=":material/clear_all:", width="stretch", key="report_clear"):
+        clear_report_query()
+        st.rerun()
+
+    report = build_watchlist_report(candidates, selected_ids, player_type)
+    st.header("評估報告")
+    st.caption("資料版本與品質狀態會隨下載球探報告一併保留。")
+    st.caption("建立可分享連結後，網址會保留目前的球員與評估條件。")
+    if report.empty:
+        st.info("選擇候選球員後，這裡會產生可下載的球探報告。")
+        return
+
+    snapshot = QUALITY_REPORT.get("snapshot", {})
+    snapshot_id = str(snapshot.get("snapshot_id", "latest")) if isinstance(snapshot, dict) else "latest"
+    quality_status = {"pass": "通過", "warning": "需注意", "failed": "失敗"}.get(str(QUALITY_REPORT.get("quality_status")), "未知")
+    metadata = {
+        "player_type": player_type,
+        "qualification": f"{usage_label} ≥ {float(threshold):g}",
+        "priority": priority,
+        "qualified_count": len(qualified),
+        "snapshot_id": snapshot_id,
+        "generated_at": data_generated_time(),
+        "quality_status": quality_status,
+    }
+    st.caption(f"資料版本：{snapshot_id} · 產生時間：{metadata['generated_at']} · 品質狀態：{quality_status}")
+    chart = report.sort_values("priority_score", ascending=True)
+    show_chart(
+        st,
+        px.bar(
+            chart,
+            x="priority_score",
+            y="player_name",
+            orientation="h",
+            title="觀察名單評估分數",
+            labels={"priority_score": "評估分數", "player_name": "球員"},
+            color="priority_score",
+            color_continuous_scale=["#79b6bc", CHART_HIGHLIGHT],
+        ),
+    )
+    show_table(
+        st,
+        report,
+        [
+            "player_id",
+            "player_name",
+            "team",
+            "role_or_position",
+            "usage_value",
+            "usage_label",
+            "priority_score",
+            "qualified_percentile",
+            "evidence_strengths",
+            "evidence_risks",
+            "evidence_notes",
+        ],
+    )
+
+    markdown = report_markdown(report, {**metadata, "team": team})
+    display_report = to_display_table(
+        report,
+        [
+            "player_id",
+            "player_name",
+            "team",
+            "role_or_position",
+            "usage_value",
+            "usage_label",
+            "priority_score",
+            "qualified_percentile",
+            "evidence_strengths",
+            "evidence_risks",
+            "evidence_notes",
+        ],
+    )
+    download_markdown, download_csv = st.columns(2, gap="medium")
+    download_markdown.download_button(
+        "下載球探報告 Markdown",
+        data=markdown.encode("utf-8"),
+        file_name=report_filename(player_type, snapshot_id),
+        mime="text/markdown",
+        icon=":material/description:",
+        width="stretch",
+        key="download_scouting_report_markdown",
+    )
+    download_csv.download_button(
+        "下載球探報告 CSV",
+        data=dataframe_to_csv_bytes(display_report),
+        file_name=report_filename(player_type, snapshot_id).replace(".md", ".csv"),
+        mime="text/csv",
+        icon=":material/table_view:",
+        width="stretch",
+        key="download_scouting_report_csv",
+    )
+
+
 def page_rankings() -> None:
     page_intro("球員排行榜", "球員排行榜", "以清楚的門檻與單一指標縮小候選範圍，再回到球員檔案查看完整脈絡。")
     if BATTERS.empty or PITCHERS.empty:
@@ -1708,6 +1908,7 @@ PAGE_HANDLERS = {
     "聯盟總覽": page_league,
     "版本趨勢": page_snapshot_trends,
     "球探工作台": page_scouting_workbench,
+    "球探報告": page_scouting_report,
     "球員排行榜": page_rankings,
     "球員個人頁": page_player,
     "投打對決": page_matchup,

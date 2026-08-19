@@ -12,6 +12,7 @@ PAGES = [
     "聯盟總覽",
     "版本趨勢",
     "球探工作台",
+    "球探報告",
     "球員排行榜",
     "球員個人頁",
     "投打對決",
@@ -25,6 +26,7 @@ REQUIRED_FRONTEND_TERMS = {
     "聯盟總覽": ["聯盟總覽", "戰績表", "勝差", "近況"],
     "版本趨勢": ["版本趨勢", "資料版本血緣", "球員指標走勢", "版本差異比較", "SHA-256", "OPS"],
     "球探工作台": ["球探工作台", "最低打席 (PA)", "評估重點", "符合門檻母體", "最多選擇 4 位球員"],
+    "球探報告": ["球探報告", "觀察名單", "建立可分享連結", "下載球探報告", "資料版本", "資格門檻", "評估重點", "最多選擇 4 位球員"],
     "球員排行榜": ["球員排行榜", "打者", "投手", "OPS"],
     "球員個人頁": ["球員個人頁", "全體球員", "官方現役名單", "本季成績", "前次快照變化", "累計資料差異", "評估依據", "進階指標", "聯盟平均比較", "排行摘要", "聯盟百分位", "能力雷達圖", "相似球員推薦"],
     "投打對決": ["投打對決", "LOG5", "OBP", "SLG", "OPS", "ERA", "WHIP", "K/BB"],
@@ -379,6 +381,58 @@ def test_scouting_workbench_filters_and_compares_without_errors() -> None:
     assert any(box.label == "評估重點" for box in app.selectbox)
     assert any(box.label == "比較球員" for box in app.multiselect)
 
+
+def test_scouting_report_page_builds_downloadable_watchlist() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    app.sidebar.radio[0].set_value("球探報告")
+    app.run(timeout=20)
+
+    assert len(app.exception) == 0
+    text = visible_text(app)
+    assert "觀察名單" in text
+    assert "最多選擇 4 位球員" in text
+    assert any(button.label == "建立可分享連結" for button in app.button)
+
+    watchlist = next(box for box in app.multiselect if box.label == "觀察名單")
+    watchlist.set_value(list(watchlist.options[:2]))
+    app.run(timeout=20)
+    assert len(app.exception) == 0
+    assert "評估報告" in visible_text(app)
+    assert len(app.dataframe) >= 1
+    assert any(button.label == "下載球探報告 Markdown" for button in app.download_button)
+    assert any(button.label == "下載球探報告 CSV" for button in app.download_button)
+
+def test_scouting_report_deep_link_restores_watchlist_conditions() -> None:
+    import app as dashboard
+
+    candidates = dashboard.rank_scouting_candidates(
+        dashboard.BATTERS,
+        "打者",
+        dashboard.DEFAULT_QUALIFICATION["打者"],
+        "綜合價值",
+    )
+    selected_ids = candidates["player_id"].astype(str).head(2).tolist()
+    assert len(selected_ids) == 2
+
+    app = AppTest.from_file(APP_PATH)
+    app.query_params["page"] = "球探報告"
+    app.query_params["report_type"] = "打者"
+    app.query_params["report_threshold"] = "30"
+    app.query_params["report_focus"] = "綜合價值"
+    app.query_params["watchlist"] = ",".join(selected_ids)
+    app.run(timeout=20)
+
+    assert len(app.exception) == 0
+    assert app.sidebar.radio[0].value == "球探報告"
+    watchlist = next(box for box in app.multiselect if box.label == "觀察名單")
+    assert len(watchlist.value) == 2
+    assert all(str(player_id) in " ".join(watchlist.value) for player_id in selected_ids)
+
+    next(button for button in app.button if button.label == "建立可分享連結").click()
+    app.run(timeout=20)
+    assert app.query_params["page"] == ["球探報告"]
+    assert app.query_params["watchlist"] == [",".join(selected_ids)]
 
 def test_metric_ranking_team_view_renders_balanced_top_and_bottom_sections():
     app = AppTest.from_file(APP_PATH)
