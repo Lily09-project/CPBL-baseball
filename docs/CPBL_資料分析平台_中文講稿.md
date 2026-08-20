@@ -8,7 +8,7 @@
 - **展示對象**：資料分析、資料工程、Analytics Engineering、全端產品工程職缺的面試官。
 - **展示主軸**：資料來源可信度 → 品質閘門 → 可追溯快照 → 可解釋分析 → 可交付報告 → 測試與安全。
 - **語氣**：用第一人稱說明設計決策，不把專案包裝成預測模型，也不誇大資料能力。
-- **最新驗證基準**：2026-08-20 23:22（Asia/Taipei）本機 `run_project.bat --check` 的結果：官方現役名單 459 人、打者／投手成績聯集 461 位球員、已驗證快照 11 份、品質狀態 `pass`、Release Health 7/7 通過、公開發布 `release_id` 為 `rel-00fdf3a7edc5c76244f240bd`、完整測試 183 passed。
+- **最新驗證基準**：2026-08-20 23:47（Asia/Taipei）本機 `run_project.bat --check` 的結果：官方現役名單 459 人、打者／投手成績聯集 461 位球員、已驗證快照 11 份、品質狀態 `pass`、Release Health 7/7 通過、公開發布 `release_id` 為 `rel-536611e4b9a04f4173023471`、完整測試 183 passed。
 
 ## 開場前準備
 
@@ -101,7 +101,7 @@ CPBL 公開資料分散、格式可能變動、同一球員可能出現在多張
 
 每次通過驗證的處理後資料都會留下快照，包含時間、來源、前一版本與 SHA-256 內容指紋。現在已累積 11 份已驗證快照，最新快照 ID 是 `20260820T145729Z-02041d39eeea`。所以我可以回答『這個結果是哪一版資料算的』，也可以回答『相鄰版本到底改了什麼』。」
 
-「快照解決本機資料血緣，公開發布 Manifest 則解決 GitHub 交付完整性。它只接受固定的 11 個公開 CSV／JSON，記錄每個檔案的 SHA-256、大小、CSV 列數與欄位，再以 canonical JSON 產生 `release_id`。目前 `release_id` 是 `rel-00fdf3a7edc5c76244f240bd`。審查者可執行 `python -m src.verify_public_release reports/metrics/public_release_manifest.json`；只要其中一個檔案被替換、漏掉或混入非 allowlist 路徑，驗證與 release gate 都會失敗。這是完整性校驗而不是數位簽章，發布者身分仍由 Git 與 Pull Request 審查鏈確認。」
+「快照解決本機資料血緣，公開發布 Manifest 則解決 GitHub 交付完整性。它只接受固定的 11 個公開 CSV／JSON，記錄每個檔案的 SHA-256、大小、CSV 列數與欄位，再以 canonical JSON 產生 `release_id`。目前 `release_id` 是 `rel-536611e4b9a04f4173023471`。審查者可執行 `python -m src.verify_public_release reports/metrics/public_release_manifest.json`；只要其中一個檔案被替換、漏掉或混入非 allowlist 路徑，驗證與 release gate 都會失敗。這是完整性校驗而不是數位簽章，發布者身分仍由 Git 與 Pull Request 審查鏈確認。」
 
 ### 面試官可能追問
 
