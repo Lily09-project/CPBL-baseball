@@ -78,6 +78,13 @@ def run_release_gate(root: Path | None = None) -> dict[str, Any]:
             analysis = {}
 
     if analysis:
+        analysis_generated_at = str(analysis.get("generated_at", ""))
+        try:
+            datetime.fromisoformat(analysis_generated_at)
+        except ValueError:
+            failures.append("分析驗證報告 generated_at 不是有效 ISO-8601 時間")
+        if analysis_generated_at != generated_at:
+            failures.append("品質報告與分析驗證報告的 generated_at 不一致")
         if analysis.get("schema_version") != ANALYSIS_SCHEMA_VERSION:
             failures.append("分析驗證報告 schema_version 不相容")
         if int(analysis.get("snapshot_count", 0)) < 1:

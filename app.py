@@ -69,6 +69,17 @@ def data_generated_time(report: dict | None = None) -> str:
         return raw
 
 
+def quality_status_label(value: object) -> str:
+    status = str(value)
+    if status == "pass":
+        return "通過"
+    if status == "warning":
+        return "需注意"
+    if status == "failed":
+        return "失敗"
+    return "未知"
+
+
 DATA_VERIFIED_DATE = data_verified_date()
 SOURCE_NOTE = source_note()
 
@@ -689,7 +700,7 @@ def source_status_panel(compact: bool = False) -> None:
     generated_at = data_generated_time(report)
     hitter_count = report.get("available_hitter_count", 0)
     pitcher_count = report.get("available_pitcher_count", 0)
-    quality_label = {"pass": "通過", "warning": "需注意", "failed": "失敗"}.get(str(report.get("quality_status")), "未知")
+    quality_label = quality_status_label(report.get("quality_status"))
     if compact:
         st.caption(f"{text} 產生時間：{generated_at}。")
         return
@@ -731,7 +742,7 @@ def render_data_trust_surface(
     population_count: int | None = None,
 ) -> None:
     quality_status = str(report.get("quality_status", "unknown"))
-    quality_label = {"pass": "通過", "warning": "需注意", "failed": "失敗"}.get(quality_status, "未知")
+    quality_label = quality_status_label(quality_status)
     details = [
         "來源網域：cpbl.com.tw",
         f"最後驗證：{data_generated_time(report)}",
@@ -1198,7 +1209,9 @@ def page_snapshot_trends() -> None:
             "前一版本": history["previous_snapshot_id"].fillna("—"),
             "總列數": history["total_rows"],
             "異動列數": history["changed_rows"],
-            "品質狀態": history["quality_status"].map({"pass": "通過", "warning": "警示"}).fillna("未知"),
+            "品質狀態": history["quality_status"].map(
+                lambda value: "通過" if value == "pass" else "警示" if value == "warning" else "未知"
+            ),
         }
     )
     show_table(st, lineage_table)
@@ -1785,7 +1798,7 @@ def page_scouting_report() -> None:
 
     snapshot = QUALITY_REPORT.get("snapshot", {})
     snapshot_id = str(snapshot.get("snapshot_id", "latest")) if isinstance(snapshot, dict) else "latest"
-    quality_status = {"pass": "通過", "warning": "需注意", "failed": "失敗"}.get(str(QUALITY_REPORT.get("quality_status")), "未知")
+    quality_status = quality_status_label(QUALITY_REPORT.get("quality_status"))
     metadata = {
         "player_type": player_type,
         "qualification": f"{usage_label} ≥ {float(threshold):g}",
