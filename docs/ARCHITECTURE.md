@@ -40,6 +40,12 @@ src/data_quality.py
                        +--> reports/metrics/analysis_validation.json
                        |
                        v
+             src/release_health.py
+               schema + row-count + lineage checks
+                       |
+                       +--> reports/metrics/release_health.json
+                       |
+                       v
                  app.py / Streamlit
 ```
 
@@ -52,6 +58,7 @@ src/data_quality.py
 | Quality | acceptance or rejection of processed data | visual presentation |
 | Snapshot/history | lineage, hashes, version comparisons | source retrieval |
 | Analysis validation | descriptive stability, drift, sensitivity | future prediction |
+| Release health | source regression, schema drift, row-count and lineage checks | changing business metrics |
 | Scouting | qualification, weights, evidence signals | HTTP requests |
 | App | navigation, filters, display, downloads | hidden data mutation |
 | Release gate | artifact consistency before release | deployment |
@@ -62,7 +69,8 @@ src/data_quality.py
 2. Required files or quality rules fail: `run_all.py` stops before creating a trusted snapshot.
 3. Processed data cannot be loaded: the Streamlit app stops with an actionable error instead of rendering partial data.
 4. Historical inputs contain duplicate IDs or invalid timestamps: analysis validation raises a clear error.
-5. Release artifacts are inconsistent: `src.release_gate` returns non-zero and CI blocks the change.
+5. Release health detects schema drift, a large row-count drop or mismatched artifact lineage: the pipeline records the reason and stops before release.
+6. Release artifacts are inconsistent: `src.release_gate` returns non-zero and CI blocks the change.
 
 ## Public Repository Boundary
 
@@ -74,6 +82,8 @@ Tracked outputs are limited to source code, tests, documentation, sanitized proc
 - `data-health.yml`: scheduled official API verification with read-only repository permission.
 - `data-refresh.yml`: scheduled official API refresh, quality gate and reviewable PR for data outputs only.
 - `release-quality.yml`: locked environment, `pip check`, compile, tests and release artifact gate.
+
+`src/release_health.py` intentionally separates base data quality from release regression checks. A real roster change may produce a warning, while a likely pagination failure or schema drift blocks publication.
 
 ## Design Decisions
 

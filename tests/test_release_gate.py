@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.release_health import build_release_health_report
 from src.release_gate import run_release_gate
 
 
@@ -44,29 +45,35 @@ def _write_release_fixture(root: Path, *, quality_time: str, analysis_time: str)
     for name in REQUIRED_PROCESSED_FILES:
         frames[name].to_csv(processed / name, index=False)
 
-    (metrics / "data_quality_report.json").write_text(
-        json.dumps(
-            {
-                "mode": "api",
-                "generated_at": quality_time,
-                "quality_status": "pass",
-                "analysis_validation": {"schema_version": "1.0", "snapshot_count": 2},
-            }
-        ),
-        encoding="utf-8",
-    )
-    (metrics / "analysis_validation.json").write_text(
-        json.dumps(
-            {
-                "schema_version": "1.0",
-                "generated_at": analysis_time,
-                "snapshot_count": 2,
-                "limitations": ["test"],
-                "interpretation": {"test": "test"},
-            }
-        ),
-        encoding="utf-8",
-    )
+    quality = {
+        "mode": "api",
+        "generated_at": quality_time,
+        "quality_status": "pass",
+        "analysis_validation": {
+            "schema_version": "1.0",
+            "snapshot_count": 2,
+            "latest_snapshot_id": "snapshot-2",
+        },
+        "snapshot": {
+            "snapshot_id": "snapshot-2",
+            "previous_snapshot_id": "snapshot-1",
+            "diff": {"schema_changed_files": [], "files": {}},
+        },
+        "history": {"snapshot_count": 2, "latest_snapshot_id": "snapshot-2"},
+    }
+    health = build_release_health_report(quality)
+    quality["release_health"] = health
+    (metrics / "data_quality_report.json").write_text(json.dumps(quality), encoding="utf-8")
+    analysis = {
+        "schema_version": "1.0",
+        "generated_at": analysis_time,
+        "snapshot_count": 2,
+        "latest_snapshot_id": "snapshot-2",
+        "limitations": ["test"],
+        "interpretation": {"test": "test"},
+    }
+    (metrics / "analysis_validation.json").write_text(json.dumps(analysis), encoding="utf-8")
+    (metrics / "release_health.json").write_text(json.dumps(health), encoding="utf-8")
 
 
 def test_release_gate_accepts_aligned_report_timestamps(tmp_path: Path) -> None:

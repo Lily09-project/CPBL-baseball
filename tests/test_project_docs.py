@@ -41,6 +41,8 @@ def test_readme_explains_auditable_data_product_and_limits() -> None:
         ".env",
         ".streamlit/secrets.toml",
         "data/processed/",
+        "release_health.json",
+        "發布健康",
         "player_movements.csv",
         "累計資料差異",
         "不是逐場表現或未來預測",

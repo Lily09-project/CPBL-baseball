@@ -80,6 +80,17 @@ def quality_status_label(value: object) -> str:
     return "未知"
 
 
+def release_health_label(value: object) -> str:
+    status = str(value)
+    if status == "passed":
+        return "通過"
+    if status == "warning":
+        return "需注意"
+    if status == "failed":
+        return "失敗"
+    return "未知"
+
+
 DATA_VERIFIED_DATE = data_verified_date()
 SOURCE_NOTE = source_note()
 
@@ -757,6 +768,14 @@ def render_data_trust_surface(
             details.append(
                 f"本次異動：新增 {diff.get('added_rows', 0)}、移除 {diff.get('removed_rows', 0)}、變更 {diff.get('changed_rows', 0)}"
             )
+    release_health = report.get("release_health")
+    health_issues: list[str] = []
+    if isinstance(release_health, dict):
+        health_status = str(release_health.get("status", "unknown"))
+        details.append(f"發布健康：{release_health_label(health_status)}")
+        for check in release_health.get("checks", []):
+            if isinstance(check, dict) and check.get("status") in {"warning", "failed"}:
+                health_issues.append(str(check.get("summary", check.get("name", "未知檢查"))))
     if player_type is not None and threshold is not None and population_count is not None:
         details.append(f"符合門檻母體：{population_count} 人（{qualification_label(player_type)} ≥ {threshold:g}）")
     trust_items = "".join(f"<span class='trust-item'>{escape(item)}</span>" for item in details)
@@ -764,6 +783,13 @@ def render_data_trust_surface(
     warnings = [str(item) for item in report.get("warnings", []) if str(item)]
     if quality_status != "pass" and warnings:
         st.warning("資料品質警示：" + "；".join(warnings))
+    if isinstance(release_health, dict) and health_issues:
+        health_status = str(release_health.get("status", "unknown"))
+        message = "；".join(health_issues)
+        if health_status == "failed":
+            st.error("發布健康檢查失敗：" + message)
+        else:
+            st.warning("發布健康提醒：" + message)
     st.caption("LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。")
 
 

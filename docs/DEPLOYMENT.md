@@ -31,6 +31,7 @@ run_project.bat --check
 
 - `data/processed/*.csv`
 - `reports/metrics/data_quality_report.json`
+- `reports/metrics/release_health.json`
 - `data/processed/player_movements.csv`
 
 不要發布 `data/raw/`、`data/snapshots/`、`.env`、`.streamlit/secrets.toml`、`.venv/` 或本機執行日誌。
@@ -41,8 +42,9 @@ run_project.bat --check
 
 1. 連線 CPBL 官方公開頁面並重建處理後資料。
 2. 執行資料品質閘門與球員變化資料檢查。
-3. 執行完整 pytest 測試。
-4. 輸出品質狀態、球員數與變化資料筆數。
+3. 執行 Release Health，檢查 schema 漂移、列數驟降與跨報告血緣。
+4. 執行完整 pytest 測試。
+5. 輸出品質狀態、發布健康、球員數與變化資料筆數。
 
 此工作流程不會自行提交或推送資料。正式發布前仍要人工檢查品質報告與變更內容。
 

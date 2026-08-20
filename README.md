@@ -28,20 +28,21 @@
 
 ## 最新驗證摘要
 
-以下數字來自本次以 CPBL 官方資料執行 run_project.bat --check 後的本地驗證。資料檔案更新時，README 的數字應與 reports/metrics/data_quality_report.json 一起重新檢查。
+以下數字來自本次以 CPBL 官方資料執行 run_project.bat --check 後的本地驗證。資料檔案更新時，README 的數字應與 reports/metrics/data_quality_report.json、reports/metrics/release_health.json 一起重新檢查。
 
 | 項目 | 最新結果 |
 | --- | --- |
 | 資料來源 | CPBL 官方公開頁面擷取；mode=api 為相容的流程參數 |
-| 最後驗證時間 | 2026-08-20 18:08（Asia/Taipei） |
+| 最後驗證時間 | 2026-08-20 22:57（Asia/Taipei） |
 | 品質狀態 | pass |
+| 發布健康 | pass；schema、列數驟降與血緣檢查通過 |
 | 官方現役名單 | 459 人 |
 | 打者／投手成績聯集 | 461 位球員 |
-| 已驗證資料快照 | 10 份 |
-| 最新資料快照 | `20260820T094818Z-61f8537c2130` |
+| 已驗證資料快照 | 11 份 |
+| 最新資料快照 | `20260820T145729Z-02041d39eeea` |
 | 球員版本變化紀錄 | 2,106 筆 |
-| 分析驗證摘要 | schema 1.0；歷史列 3,203；最新快照與資料品質報告一致 |
-| 完整測試 | 161 passed |
+| 分析驗證摘要 | schema 1.0；歷史列 3,526；最新快照與資料品質報告一致 |
+| 完整測試 | 166 passed |
 | Smoke test | passed |
 
 ## 實際使用畫面
@@ -206,7 +207,7 @@ python -m src.verify_report_manifest .\cpbl_scouting_report_hitter_<snapshot>.ma
 
 資料流程只接受 cpbl.com.tw 官方來源。來源無法連線、解析失敗、分頁不完整或資料品質檢查失敗時，流程會停止，不會用展示資料掩蓋錯誤。
 
-reports/metrics/data_quality_report.json 會記錄抓取模式、驗證時間、資料列數、涵蓋球隊／球員數、欄位檢查、重複 ID、數值範圍、快照與衍生資料結果。
+reports/metrics/data_quality_report.json 會記錄抓取模式、驗證時間、資料列數、涵蓋球隊／球員數、欄位檢查、重複 ID、數值範圍、快照與衍生資料結果。reports/metrics/release_health.json 會另外檢查相鄰快照的 schema 漂移、資料列數驟降與快照／歷史／分析報告血緣；警示需要人工確認，失敗會阻止 release gate 通過。
 
 ## 系統架構
 
@@ -238,7 +239,11 @@ src/data_quality.py          schema、主鍵、重複資料、數值範圍與品
 src/features.py / src/scouting.py / src/rankings.py / src/log5_matchup.py
         |
         v
-app.py + src/theme.py + src/app_helpers.py
+src/release_health.py        schema 漂移、列數驟降、血緣與發布摘要
+        |
+        +--> reports/metrics/release_health.json
+        |
+        app.py + src/theme.py + src/app_helpers.py
         |
         v
 Streamlit 互動分析介面
@@ -253,6 +258,7 @@ Streamlit 互動分析介面
 | src/source_contract.py | 集中管理官方來源路徑、來源描述與相容流程說明 |
 | src/preprocess.py | 原始回應轉換為穩定的處理後 CSV |
 | src/data_quality.py | 資料品質報告與失敗閘門 |
+| src/release_health.py | 相鄰快照異常預警、血緣一致性與發布健康摘要 |
 | src/snapshots.py | 已驗證資料快照、manifest、內容指紋與版本 diff |
 | src/movements.py | 相鄰快照的球員指標變化 |
 | src/history.py | 版本趨勢與時間旅行用衍生資料
@@ -284,8 +290,9 @@ Streamlit 互動分析介面
 7. 產生 player_movements.csv，比較相鄰已驗證快照的球員指標。
 8. 產生版本趨勢所需的 snapshot_history.csv 與 player_metric_history.csv。
 9. 產生 reports/metrics/analysis_validation.json，摘要歷史穩定性、分布變化與分析限制。
-10. 寫入 reports/metrics/data_quality_report.json，供前端與 CI 使用。
-11. 由 src/release_gate.py 檢查官方 API 模式、處理後資料、品質報告與分析驗證輸出一致。
+10. 由 src/release_health.py 檢查 schema 漂移、相鄰版本列數驟降、基準版本與分析血緣，寫入 reports/metrics/release_health.json。
+11. 寫入 reports/metrics/data_quality_report.json，供前端與 CI 使用。
+12. 由 src/release_gate.py 檢查官方 API 模式、處理後資料、品質報告、發布健康與分析驗證輸出一致。
 
 ### 主要公開資料表
 
@@ -300,6 +307,7 @@ Streamlit 互動分析介面
 | snapshot_history.csv | 資料版本血緣與版本級異動 |
 | player_metric_history.csv | 球員跨版本指標走勢 |
 | analysis_validation.json | 描述性穩定性、分布變化與敏感度摘要 |
+| release_health.json | 發布前的 schema、列數與血緣異常檢查摘要 |
 
 player_id 全程保留為字串，避免前導零在讀取、篩選、排序與版本比較時遺失。若球員同時出現在打者與投手成績表，統一摘要會使用打席 PA 與投球局數 × 4.25 的估算面對打者數比較主要工作量，避免野手短暫登板被誤標為投手；原始打者與投手輸出仍分開保留。
 
@@ -481,6 +489,7 @@ Streamlit Community Cloud 基本設定：
 - data/processed/ 下可由官方公開資料重建的 CSV。
 - reports/metrics/data_quality_report.json。
 - reports/metrics/analysis_validation.json。
+- reports/metrics/release_health.json。
 - README.md、SECURITY.md、docs/、PR template 與 GitHub Actions workflow。
 - 不含秘密的設定檔，例如 config.yaml 與 .streamlit/config.toml。
 
