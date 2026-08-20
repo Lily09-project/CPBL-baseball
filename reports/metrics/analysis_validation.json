@@ -1,0 +1,73 @@
+{
+  "generated_at": "2026-08-05T20:30:00+08:00",
+  "history_rows": 3203,
+  "interpretation": {
+    "distribution_drift": "中位數、平均數與涵蓋量描述資料分布變化，不會單獨判定資料錯誤。",
+    "priority_sensitivity": "權重敏感度只評估排序對小幅權重調整的反應，不代表未來表現。",
+    "rank_stability": "Spearman ρ 與 Top-K 重疊率描述相鄰資料快照的一致程度，不是準確率。"
+  },
+  "latest_snapshot_id": "20260820T094818Z-61f8537c2130",
+  "limitations": [
+    "歷史快照是官方彙總資料，不是逐球、逐打席或完整追蹤資料。",
+    "排名穩定性受球員出賽量、名單變動與官方頁面更新節奏影響。",
+    "敏感度分析是描述性壓力測試，不能取代球探、教練或醫療判斷。"
+  ],
+  "player_types": {
+    "打者": {
+      "history_rows": 1680,
+      "latest_drift_rows": 6,
+      "player_count": 168,
+      "stability": {
+        "obp": {
+          "comparison_count": 9,
+          "latest_spearman_rank_correlation": 1.0,
+          "latest_top_k_overlap": 1.0
+        },
+        "ops": {
+          "comparison_count": 9,
+          "latest_spearman_rank_correlation": 1.0,
+          "latest_top_k_overlap": 1.0
+        },
+        "player_value_score": {
+          "comparison_count": 9,
+          "latest_spearman_rank_correlation": 1.0,
+          "latest_top_k_overlap": 1.0
+        },
+        "slg": {
+          "comparison_count": 9,
+          "latest_spearman_rank_correlation": 1.0,
+          "latest_top_k_overlap": 1.0
+        }
+      }
+    },
+    "投手": {
+      "history_rows": 1523,
+      "latest_drift_rows": 5,
+      "player_count": 156,
+      "stability": {
+        "era": {
+          "comparison_count": 9,
+          "latest_spearman_rank_correlation": 1.0,
+          "latest_top_k_overlap": 1.0
+        },
+        "k_bb_ratio": {
+          "comparison_count": 9,
+          "latest_spearman_rank_correlation": 1.0,
+          "latest_top_k_overlap": 1.0
+        },
+        "player_value_score": {
+          "comparison_count": 9,
+          "latest_spearman_rank_correlation": 1.0,
+          "latest_top_k_overlap": 1.0
+        },
+        "whip": {
+          "comparison_count": 9,
+          "latest_spearman_rank_correlation": 1.0,
+          "latest_top_k_overlap": 1.0
+        }
+      }
+    }
+  },
+  "schema_version": "1.0",
+  "snapshot_count": 10
+}
