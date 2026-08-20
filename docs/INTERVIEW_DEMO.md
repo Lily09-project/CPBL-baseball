@@ -4,7 +4,7 @@
 
 ### 1. Establish trust
 
-開啟「資料訊號總覽」，先指出來源網域、最後驗證時間、品質狀態、資料新鮮度與限制。重點是：產品先讓使用者知道資料是否可回答問題，再展示排名。
+開啟「資料訊號總覽」，先指出來源網域、最後驗證時間、品質狀態、發布健康、資料新鮮度與限制。重點是：產品先讓使用者知道資料是否可回答問題，再展示排名。
 
 ### 2. Show the analytical workflow
 
@@ -36,6 +36,7 @@
 - `python -m pytest -q` 是否通過？
 - `python -m src.release_gate` 是否通過？
 - `reports/metrics/data_quality_report.json` 是否為 `mode=api` 且品質通過？
+- `reports/metrics/release_health.json` 是否通過 schema、列數驟降與血緣檢查？
 - `reports/metrics/analysis_validation.json` 是否有 schema、限制與解讀說明？
 - 是否能從 `player_id`、`snapshot_id` 與 `report_id` 回溯一次分析？
 - `.github/workflows/data-refresh.yml` 是否只對 `data/processed` 與 `reports/metrics` 開 PR？

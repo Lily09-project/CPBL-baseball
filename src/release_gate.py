@@ -9,6 +9,11 @@ from typing import Any
 import pandas as pd
 
 from src.data_quality import REQUIRED_FILES, UNIQUE_ID_FILES
+from src.release_health import (
+    RELEASE_HEALTH_REPORT_PATH,
+    RELEASE_HEALTH_SCHEMA_VERSION,
+    build_release_health_report,
+)
 from src.utils import project_path
 
 
@@ -100,6 +105,46 @@ def run_release_gate(root: Path | None = None) -> dict[str, Any]:
             failures.append("品質報告內嵌的分析驗證版本與 JSON 報告不一致")
         if embedded.get("snapshot_count") != analysis.get("snapshot_count"):
             failures.append("品質報告內嵌的快照數與分析驗證報告不一致")
+
+    health_path = project_root / RELEASE_HEALTH_REPORT_PATH
+    if not health_path.exists():
+        failures.append(f"缺少發布健康報告：{RELEASE_HEALTH_REPORT_PATH}")
+        health: dict[str, Any] = {}
+    else:
+        try:
+            health = _read_json(health_path)
+        except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+            failures.append(f"發布健康報告無法讀取：{exc}")
+            health = {}
+
+    if health:
+        expected_health = build_release_health_report(quality)
+        if health.get("schema_version") != RELEASE_HEALTH_SCHEMA_VERSION:
+            failures.append("發布健康報告 schema_version 不相容")
+        if str(health.get("generated_at", "")) != generated_at:
+            failures.append("品質報告與發布健康報告的 generated_at 不一致")
+        snapshot_payload = quality.get("snapshot")
+        expected_snapshot_id = (
+            str(snapshot_payload.get("snapshot_id", ""))
+            if isinstance(snapshot_payload, dict)
+            else ""
+        )
+        if str(health.get("snapshot_id", "")) != expected_snapshot_id:
+            failures.append("品質報告與發布健康報告的 snapshot_id 不一致")
+        if health.get("status") != expected_health.get("status"):
+            failures.append("發布健康報告與品質報告重新計算結果不一致")
+        if expected_health.get("status") == "failed":
+            failures.extend(
+                "發布健康檢查失敗：" + str(check.get("summary", check.get("name", "unknown")))
+                for check in expected_health.get("checks", [])
+                if check.get("status") == "failed"
+            )
+        elif expected_health.get("status") == "warning":
+            warnings.extend(
+                "發布健康提醒：" + str(check.get("summary", check.get("name", "unknown")))
+                for check in expected_health.get("checks", [])
+                if check.get("status") == "warning"
+            )
 
     return {
         "status": "failed" if failures else "passed",

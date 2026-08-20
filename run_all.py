@@ -8,6 +8,7 @@ from src.data_quality import generate_data_quality_report, save_data_quality_rep
 from src.history import generate_history_outputs
 from src.movements import generate_player_movements
 from src.preprocess import preprocess
+from src.release_health import build_release_health_report, write_release_health_report
 from src.snapshots import create_processed_snapshot
 from src.source_contract import build_pipeline_source_reason
 from src.utils import project_path
@@ -66,7 +67,19 @@ def main() -> None:
     write_analysis_validation_report(analysis_validation, analysis_validation_path)
     outputs["analysis_validation"] = str(analysis_validation_path)
     report["analysis_validation"] = analysis_validation
+    release_health = build_release_health_report(report)
+    release_health_path = write_release_health_report(release_health)
+    outputs["release_health"] = str(release_health_path)
+    report["release_health"] = release_health
     save_data_quality_report(report)
+    if release_health["status"] == "failed":
+        failed_checks = [
+            str(check.get("summary", check.get("name", "unknown")))
+            for check in release_health.get("checks", [])
+            if check.get("status") == "failed"
+        ]
+        detail = "；".join(failed_checks) or "未提供詳細原因"
+        raise RuntimeError(f"資料發布健康檢查失敗：{detail}")
     print("processed files:")
     for name, path in outputs.items():
         print(f"- {name}: {path}")

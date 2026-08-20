@@ -78,13 +78,18 @@ def test_user_can_change_scouting_threshold_and_export_report() -> None:
 def test_reviewer_can_trace_public_artifacts_to_quality_and_analysis_reports() -> None:
     quality_path = ROOT / "reports/metrics/data_quality_report.json"
     analysis_path = ROOT / "reports/metrics/analysis_validation.json"
+    health_path = ROOT / "reports/metrics/release_health.json"
     quality = json.loads(quality_path.read_text(encoding="utf-8-sig"))
     analysis = json.loads(analysis_path.read_text(encoding="utf-8-sig"))
+    health = json.loads(health_path.read_text(encoding="utf-8-sig"))
 
     assert quality["mode"] == "api"
     assert quality["quality_status"] in {"pass", "warning"}
     assert quality["snapshot"]["snapshot_id"] == analysis["latest_snapshot_id"]
     assert quality["analysis_validation"]["schema_version"] == analysis["schema_version"]
+    assert health["status"] in {"passed", "warning"}
+    assert health["snapshot_id"] == quality["snapshot"]["snapshot_id"]
+    assert quality["release_health"]["status"] == health["status"]
     assert analysis["limitations"]
     assert analysis["interpretation"]
     for path in [ROOT / "docs/MODEL_CARD.md", ROOT / "docs/ARCHITECTURE.md", ROOT / "docs/INTERVIEW_DEMO.md"]:

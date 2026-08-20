@@ -45,6 +45,18 @@ def test_run_all_defaults_to_api(monkeypatch, capsys):
         lambda report, path: None,
         raising=False,
     )
+    monkeypatch.setattr(
+        run_all,
+        "build_release_health_report",
+        lambda report: {"status": "passed", "checks": []},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        run_all,
+        "write_release_health_report",
+        lambda report: "release_health.json",
+        raising=False,
+    )
 
     main()
 
@@ -107,6 +119,18 @@ def test_run_all_attaches_snapshot_only_after_quality_passes(monkeypatch):
         lambda report, path: None,
         raising=False,
     )
+    monkeypatch.setattr(
+        run_all,
+        "build_release_health_report",
+        lambda report: {"status": "passed", "checks": []},
+        raising=False,
+    )
+    monkeypatch.setattr(
+        run_all,
+        "write_release_health_report",
+        lambda report: "release_health.json",
+        raising=False,
+    )
 
     monkeypatch.setattr(
         run_all,
@@ -139,3 +163,4 @@ def test_run_all_attaches_snapshot_only_after_quality_passes(monkeypatch):
     assert calls["report"]["movement"]["current_snapshot_id"] == "snapshot-1"
     assert calls["report"]["history"]["snapshot_count"] == 2
     assert calls["report"]["history"]["player_history_rows"] == 636
+    assert calls["report"]["release_health"]["status"] == "passed"

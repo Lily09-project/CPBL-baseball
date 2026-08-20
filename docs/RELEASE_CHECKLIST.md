@@ -16,6 +16,7 @@ run_project.bat --check
 - 依賴安裝與 `pip check`。
 - CPBL 官方資料 `--mode api` 刷新。
 - 資料品質報告與已驗證快照。
+- Release Health 報告：schema 漂移、列數驟降、基準版本與分析血緣。
 - `pytest` 完整測試套件。
 - `compileall` Python 編譯檢查。
 - `src.release_gate` 公開產物一致性檢查。
@@ -45,6 +46,8 @@ git diff --check
 
 - `reports/metrics/data_quality_report.json` 的 `mode` 為 `api`，`quality_status` 為 `pass` 或經人工確認的 `warning`。
 - `reports/metrics/analysis_validation.json` 的 `latest_snapshot_id` 與品質報告快照一致。
+- `reports/metrics/release_health.json` 的狀態不是 `failed`，且 `snapshot_id`、`generated_at` 與品質報告一致。
+- 列數下降達 10% 會產生警示，達 25% 會阻擋發布；需在 PR 中確認是真實資料變化還是來源／分頁異常。
 - `player_id` 在公開資料表中保持字串且唯一。
 - README 的驗證數字與報告、測試結果一致。
 - `requirements.lock` 可在乾淨 Python 3.12 環境安裝並通過 `pip check`。
@@ -67,6 +70,7 @@ git diff --check
 
 - 官方來源不是 API mode、品質閘門失敗或資料量異常。
 - 測試、compile、Smoke、release gate、Bandit 或 pip-audit 失敗。
+- Release Health 偵測到 schema 漂移、列數驟降或跨報告血緣不一致。
 - 無法說明新增、移除、變更的資料列。
 - README、Model Card、報告與實際程式公式不一致。
 - 需要使用 secret 才能在本機啟動或驗證。
