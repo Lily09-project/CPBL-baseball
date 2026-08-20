@@ -1,7 +1,7 @@
 {
   "mode": "api",
   "fallback_reason": "api mode: 使用 CPBL 官方公開頁面與表單分頁擷取",
-  "generated_at": "2026-08-20T22:57:29+08:00",
+  "generated_at": "2026-08-20T23:22:59+08:00",
   "files": {
     "teams.csv": {
       "row_count": 6,
@@ -223,7 +223,7 @@
   },
   "analysis_validation": {
     "schema_version": "1.0",
-    "generated_at": "2026-08-20T22:57:29+08:00",
+    "generated_at": "2026-08-20T23:22:59+08:00",
     "snapshot_count": 11,
     "history_rows": 3526,
     "latest_snapshot_id": "20260820T145729Z-02041d39eeea",
@@ -296,7 +296,7 @@
   },
   "release_health": {
     "schema_version": "1.0",
-    "generated_at": "2026-08-20T22:57:29+08:00",
+    "generated_at": "2026-08-20T23:22:59+08:00",
     "status": "passed",
     "snapshot_id": "20260820T145729Z-02041d39eeea",
     "thresholds": {

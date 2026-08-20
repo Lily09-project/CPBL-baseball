@@ -9,6 +9,10 @@ from typing import Any
 import pandas as pd
 
 from src.data_quality import REQUIRED_FILES, UNIQUE_ID_FILES
+from src.public_release_manifest import (
+    PUBLIC_RELEASE_MANIFEST_PATH,
+    verify_public_release_manifest,
+)
 from src.release_health import (
     RELEASE_HEALTH_REPORT_PATH,
     RELEASE_HEALTH_SCHEMA_VERSION,
@@ -146,12 +150,37 @@ def run_release_gate(root: Path | None = None) -> dict[str, Any]:
                 if check.get("status") == "warning"
             )
 
+    public_manifest_path = project_root / PUBLIC_RELEASE_MANIFEST_PATH
+    if not public_manifest_path.exists():
+        failures.append(f"缺少公開發布 Manifest：{PUBLIC_RELEASE_MANIFEST_PATH.as_posix()}")
+        public_manifest: dict[str, Any] = {}
+    else:
+        try:
+            public_manifest = _read_json(public_manifest_path)
+            verify_public_release_manifest(public_manifest, project_root)
+        except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+            failures.append(f"公開發布 Manifest 驗證失敗：{exc}")
+            public_manifest = {}
+
+    if public_manifest:
+        if str(public_manifest.get("generated_at", "")) != generated_at:
+            failures.append("品質報告與公開發布 Manifest 的 generated_at 不一致")
+        snapshot_payload = quality.get("snapshot")
+        expected_snapshot_id = (
+            str(snapshot_payload.get("snapshot_id", ""))
+            if isinstance(snapshot_payload, dict)
+            else ""
+        )
+        if str(public_manifest.get("snapshot_id", "")) != expected_snapshot_id:
+            failures.append("品質報告與公開發布 Manifest 的 snapshot_id 不一致")
+
     return {
         "status": "failed" if failures else "passed",
         "failures": failures,
         "warnings": warnings,
         "quality_report": str(QUALITY_REPORT_PATH),
         "analysis_report": str(ANALYSIS_REPORT_PATH),
+        "public_release_manifest": PUBLIC_RELEASE_MANIFEST_PATH.as_posix(),
     }
 
 

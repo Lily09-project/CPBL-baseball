@@ -24,6 +24,8 @@
 run_project.bat --runtime-check
 python run_all.py --mode api
 python -m pytest -q
+python -m src.release_gate
+python -m src.verify_public_release reports/metrics/public_release_manifest.json
 run_project.bat --check
 ```
 
@@ -32,6 +34,7 @@ run_project.bat --check
 - `data/processed/*.csv`
 - `reports/metrics/data_quality_report.json`
 - `reports/metrics/release_health.json`
+- `reports/metrics/public_release_manifest.json`
 - `data/processed/player_movements.csv`
 
 不要發布 `data/raw/`、`data/snapshots/`、`.env`、`.streamlit/secrets.toml`、`.venv/` 或本機執行日誌。
@@ -44,7 +47,8 @@ run_project.bat --check
 2. 執行資料品質閘門與球員變化資料檢查。
 3. 執行 Release Health，檢查 schema 漂移、列數驟降與跨報告血緣。
 4. 執行完整 pytest 測試。
-5. 輸出品質狀態、發布健康、球員數與變化資料筆數。
+5. 以獨立 CLI 驗證公開發布 Manifest 的 allowlist、release_id、逐檔 SHA-256 與 CSV 結構。
+6. 輸出品質狀態、發布健康、release_id、球員數與變化資料筆數。
 
 此工作流程不會自行提交或推送資料。正式發布前仍要人工檢查品質報告與變更內容。
 
@@ -55,3 +59,4 @@ run_project.bat --check
 - 側欄可搜尋完整球員總表並開啟球員頁。
 - 球員網址包含 `page=球員個人頁` 與 `player=<CPBL player_id>`，重新整理後仍顯示同一球員。
 - 頁面顯示資料來源、更新時間、新鮮度、分析限制與「非 CPBL 官方服務」聲明。
+- `python -m src.verify_public_release reports/metrics/public_release_manifest.json` 輸出 `valid: true`，且 snapshot_id 與品質報告一致。

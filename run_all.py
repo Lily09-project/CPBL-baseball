@@ -8,6 +8,7 @@ from src.data_quality import generate_data_quality_report, save_data_quality_rep
 from src.history import generate_history_outputs
 from src.movements import generate_player_movements
 from src.preprocess import preprocess
+from src.public_release_manifest import build_public_release_manifest, write_public_release_manifest
 from src.release_health import build_release_health_report, write_release_health_report
 from src.snapshots import create_processed_snapshot
 from src.source_contract import build_pipeline_source_reason
@@ -80,6 +81,13 @@ def main() -> None:
         ]
         detail = "；".join(failed_checks) or "未提供詳細原因"
         raise RuntimeError(f"資料發布健康檢查失敗：{detail}")
+    public_release = build_public_release_manifest(
+        project_path(),
+        generated_at=str(report.get("generated_at", "")),
+        snapshot_id=str(report.get("snapshot", {}).get("snapshot_id", "")),
+    )
+    public_release_path = write_public_release_manifest(public_release)
+    outputs["public_release_manifest"] = str(public_release_path)
     print("processed files:")
     for name, path in outputs.items():
         print(f"- {name}: {path}")

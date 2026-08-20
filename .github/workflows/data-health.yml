@@ -40,13 +40,18 @@ jobs:
       - name: Run release health gate
         run: python -m src.release_gate
 
+      - name: Verify public release manifest
+        run: python -m src.verify_public_release reports/metrics/public_release_manifest.json
+
       - name: Summarize verified outputs
         run: >-
           python -c "import json; import pandas as pd; from pathlib import Path;
           report=json.loads(Path('reports/metrics/data_quality_report.json').read_text(encoding='utf-8-sig'));
           health=json.loads(Path('reports/metrics/release_health.json').read_text(encoding='utf-8-sig'));
+          release=json.loads(Path('reports/metrics/public_release_manifest.json').read_text(encoding='utf-8-sig'));
           movements=pd.read_csv('data/processed/player_movements.csv');
           print('quality_status=' + str(report['quality_status']));
           print('release_health=' + str(health['status']));
+          print('release_id=' + str(release['release_id']));
           print('players=' + str(report['available_player_count']));
           print('movement_rows=' + str(len(movements)))"

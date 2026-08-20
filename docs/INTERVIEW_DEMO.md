@@ -31,13 +31,18 @@
 
 最後明確說明：這是資料與分析假設的壓力測試，不是把結果包裝成預測模型。
 
+### 5. Prove the GitHub bundle
+
+執行 `python -m src.verify_public_release reports/metrics/public_release_manifest.json`。說明球探報告 Manifest 用 `report_id` 驗證單一分析交付；公開發布 Manifest 則用 `release_id` 綁定 GitHub 上 11 個公開 CSV／JSON 的 SHA-256、大小、列數與欄位，任一檔案被修改都會讓 CI 與 release gate 失敗。
+
 ## Reviewer Checklist
 
 - `python -m pytest -q` 是否通過？
 - `python -m src.release_gate` 是否通過？
+- `python -m src.verify_public_release reports/metrics/public_release_manifest.json` 是否輸出 `valid: true`？
 - `reports/metrics/data_quality_report.json` 是否為 `mode=api` 且品質通過？
 - `reports/metrics/release_health.json` 是否通過 schema、列數驟降與血緣檢查？
 - `reports/metrics/analysis_validation.json` 是否有 schema、限制與解讀說明？
-- 是否能從 `player_id`、`snapshot_id` 與 `report_id` 回溯一次分析？
+- 是否能從 `player_id`、`snapshot_id`、`report_id` 與 `release_id` 回溯一次分析及其公開資料包？
 - `.github/workflows/data-refresh.yml` 是否只對 `data/processed` 與 `reports/metrics` 開 PR？
 - 是否沒有追蹤 `.env`、`.streamlit/secrets.toml`、原始 HTML、本機路徑或虛擬環境？
