@@ -19,6 +19,7 @@
 4. **分析結果可解釋**：資格門檻、聯盟母體百分位、固定評估分數、強項／風險訊號與 LOG5 限制都直接呈現在產品介面。
 5. **產品流程是真實可操作**：完整球員搜尋、深連結、篩選、比較、版本切換、空資料狀態、CSV 下載、響應式版面與可及性細節都有測試。
 6. **分析交付可以被獨立驗證**：球探報告會輸出含方法版本的 Manifest，使用者不需要相信畫面當下的結果，可以在本機重新計算 `report_id` 檢查檔案是否被修改。
+7. **整組公開資料可以驗證**：每次發布都建立公開發布 Manifest，以 `release_id` 綁定 11 個 CSV／JSON 產物的 SHA-256、大小、CSV 列數與欄位；任一檔案被替換都會讓 release gate 失敗。
 
 這是一個可重跑的資料產品，而不是依賴 Sample Data、Mock Data 或一次性手動整理的展示頁。
 
@@ -28,21 +29,22 @@
 
 ## 最新驗證摘要
 
-以下數字來自本次以 CPBL 官方資料執行 run_project.bat --check 後的本地驗證。資料檔案更新時，README 的數字應與 reports/metrics/data_quality_report.json、reports/metrics/release_health.json 一起重新檢查。
+以下數字來自本次以 CPBL 官方資料執行 run_project.bat --check 後的本地驗證。資料檔案更新時，README 的數字應與 reports/metrics/data_quality_report.json、reports/metrics/release_health.json、reports/metrics/public_release_manifest.json 一起重新檢查。
 
 | 項目 | 最新結果 |
 | --- | --- |
 | 資料來源 | CPBL 官方公開頁面擷取；mode=api 為相容的流程參數 |
-| 最後驗證時間 | 2026-08-20 22:57（Asia/Taipei） |
+| 最後驗證時間 | 2026-08-20 23:22（Asia/Taipei） |
 | 品質狀態 | pass |
 | 發布健康 | pass；schema、列數驟降與血緣檢查通過 |
+| 公開發布 Manifest | `rel-00fdf3a7edc5c76244f240bd`；11 個公開產物驗證通過 |
 | 官方現役名單 | 459 人 |
 | 打者／投手成績聯集 | 461 位球員 |
 | 已驗證資料快照 | 11 份 |
 | 最新資料快照 | `20260820T145729Z-02041d39eeea` |
 | 球員版本變化紀錄 | 2,106 筆 |
 | 分析驗證摘要 | schema 1.0；歷史列 3,526；最新快照與資料品質報告一致 |
-| 完整測試 | 166 passed |
+| 完整測試 | 183 passed |
 | Smoke test | passed |
 
 ## 實際使用畫面
@@ -207,7 +209,7 @@ python -m src.verify_report_manifest .\cpbl_scouting_report_hitter_<snapshot>.ma
 
 資料流程只接受 cpbl.com.tw 官方來源。來源無法連線、解析失敗、分頁不完整或資料品質檢查失敗時，流程會停止，不會用展示資料掩蓋錯誤。
 
-reports/metrics/data_quality_report.json 會記錄抓取模式、驗證時間、資料列數、涵蓋球隊／球員數、欄位檢查、重複 ID、數值範圍、快照與衍生資料結果。reports/metrics/release_health.json 會另外檢查相鄰快照的 schema 漂移、資料列數驟降與快照／歷史／分析報告血緣；警示需要人工確認，失敗會阻止 release gate 通過。
+reports/metrics/data_quality_report.json 會記錄抓取模式、驗證時間、資料列數、涵蓋球隊／球員數、欄位檢查、重複 ID、數值範圍、快照與衍生資料結果。reports/metrics/release_health.json 會另外檢查相鄰快照的 schema 漂移、資料列數驟降與快照／歷史／分析報告血緣；警示需要人工確認，失敗會阻止 release gate 通過。最後由 reports/metrics/public_release_manifest.json 綁定 11 個公開產物的 SHA-256 與結構摘要，讓 GitHub 上的整組資料能被獨立驗證。
 
 ## 系統架構
 
@@ -243,6 +245,11 @@ src/release_health.py        schema 漂移、列數驟降、血緣與發布摘�
         |
         +--> reports/metrics/release_health.json
         |
+        +--> src/public_release_manifest.py
+        |        公開產物 allowlist、SHA-256、列數、欄位與 release_id
+        |
+        +--> reports/metrics/public_release_manifest.json
+        |
         app.py + src/theme.py + src/app_helpers.py
         |
         v
@@ -259,6 +266,8 @@ Streamlit 互動分析介面
 | src/preprocess.py | 原始回應轉換為穩定的處理後 CSV |
 | src/data_quality.py | 資料品質報告與失敗閘門 |
 | src/release_health.py | 相鄰快照異常預警、血緣一致性與發布健康摘要 |
+| src/public_release_manifest.py | 公開發布 allowlist、檔案指紋、CSV 結構與 canonical release_id |
+| src/verify_public_release.py | 不依賴前端的公開 bundle 完整性驗證 CLI |
 | src/snapshots.py | 已驗證資料快照、manifest、內容指紋與版本 diff |
 | src/movements.py | 相鄰快照的球員指標變化 |
 | src/history.py | 版本趨勢與時間旅行用衍生資料
@@ -292,7 +301,8 @@ Streamlit 互動分析介面
 9. 產生 reports/metrics/analysis_validation.json，摘要歷史穩定性、分布變化與分析限制。
 10. 由 src/release_health.py 檢查 schema 漂移、相鄰版本列數驟降、基準版本與分析血緣，寫入 reports/metrics/release_health.json。
 11. 寫入 reports/metrics/data_quality_report.json，供前端與 CI 使用。
-12. 由 src/release_gate.py 檢查官方 API 模式、處理後資料、品質報告、發布健康與分析驗證輸出一致。
+12. 建立 reports/metrics/public_release_manifest.json，為明確 allowlist 中的 11 個公開 CSV／JSON 計算 SHA-256、大小、CSV 列數與有序欄位，再以 canonical JSON 產生 release_id。
+13. 由 src/release_gate.py 檢查官方 API 模式、處理後資料、品質報告、發布健康、分析驗證與公開發布 Manifest 一致。
 
 ### 主要公開資料表
 
@@ -308,6 +318,7 @@ Streamlit 互動分析介面
 | player_metric_history.csv | 球員跨版本指標走勢 |
 | analysis_validation.json | 描述性穩定性、分布變化與敏感度摘要 |
 | release_health.json | 發布前的 schema、列數與血緣異常檢查摘要 |
+| public_release_manifest.json | 11 個公開資料／品質產物的 SHA-256、大小、CSV 結構與 release_id |
 
 player_id 全程保留為字串，避免前導零在讀取、篩選、排序與版本比較時遺失。若球員同時出現在打者與投手成績表，統一摘要會使用打席 PA 與投球局數 × 4.25 的估算面對打者數比較主要工作量，避免野手短暫登板被誤標為投手；原始打者與投手輸出仍分開保留。
 
@@ -356,6 +367,7 @@ LOG5 只用來展示打者 OBP、投手估算被上壘率與聯盟平均之間�
 - 數值欄位是否能轉換，且落在合理範圍。
 - 打者、投手、球隊與現役名單的資料涵蓋是否符合預期。
 - 處理後資料是否能建立快照、manifest 與歷史衍生表。
+- 公開發布 Manifest 是否只包含 allowlist、與品質報告指向相同快照，且每個檔案的 SHA-256、大小與 CSV 結構均一致。
 
 每份已驗證快照包含：
 
@@ -436,8 +448,9 @@ run_project.bat --check
 - Streamlit 頁面、搜尋、篩選、選擇器、CSV 下載與頁面間路由。
 - run_project.bat 啟動流程、文件契約與安全規則。
 - 球探報告 Manifest 的 schema、canonical ID、UTF-8 round-trip、舊版相容性與竄改失敗路徑。
+- 公開發布 Manifest 的 allowlist、路徑穿越防護、canonical release_id、逐檔 SHA-256 與 CSV 結構驗證。
 
-### 報告完整性驗證
+### 獨立完整性驗證
 
 這個驗證器刻意放在 Streamlit 之外，因為稽核者不應依賴同一個 UI 來驗證 UI 產出的檔案。驗證流程只讀取指定的 UTF-8 JSON，不會修改檔案，也不會連線外部服務：
 
@@ -447,6 +460,16 @@ python -m src.verify_report_manifest .\path\to\report.manifest.json
 ~~~
 
 輸出為成功摘要時，代表 `report_id` 與 Manifest 的 schema、資料血緣、分析條件、方法內容及球員清單一致；若任一欄位被竄改，CLI 會輸出錯誤並回傳退出碼 `1`。這是完整性驗證，不是資料來源重新抓取，也不能證明官方網站在當時沒有更改歷史資料。
+
+公開儲存庫中的整組處理後資料與品質報告可用另一個獨立 CLI 驗證：
+
+~~~powershell
+python -m src.verify_public_release reports/metrics/public_release_manifest.json
+~~~
+
+成功輸出會包含 `valid: true`、`release_id`、`snapshot_id` 與產物數。驗證器只接受固定的公開 allowlist，拒絕絕對路徑、`..`、重複或額外項目；任一已列入檔案的內容、大小、列數或欄位被修改都會以退出碼 `1` 失敗。
+
+這是可重算的完整性校驗，不是持有私鑰的數位簽章：它能發現 Manifest 與公開產物不一致，但不能單獨證明發布者身分。Git commit／Pull Request 審查與受保護分支仍是發布信任鏈的一部分。
 
 ### 瀏覽器驗收重點
 
@@ -473,7 +496,7 @@ Streamlit Community Cloud 基本設定：
 
 ### GitHub Actions
 
-.github/workflows/data-health.yml 每日以唯讀權限重新執行 CPBL 官方資料流程與測試，也可以手動觸發。它會檢查來源格式、資料品質與應用程式回歸，但不會自動提交或推送資料。
+.github/workflows/data-health.yml 每日以唯讀權限重新執行 CPBL 官方資料流程、測試、release gate 與公開發布 Manifest 驗證，也可以手動觸發。它會檢查來源格式、資料品質與應用程式回歸，但不會自動提交或推送資料。
 
 .github/workflows/data-refresh.yml 以鎖定依賴執行官方資料刷新、測試與 release gate；只有 data/processed/ 與 reports/metrics/ 的驗證後差異會被提交到自動分支並開 Pull Request，不能直接推送 main。
 
@@ -490,6 +513,7 @@ Streamlit Community Cloud 基本設定：
 - reports/metrics/data_quality_report.json。
 - reports/metrics/analysis_validation.json。
 - reports/metrics/release_health.json。
+- reports/metrics/public_release_manifest.json；只記錄公開 allowlist 的相對路徑、SHA-256、大小與 CSV 結構，不含本機路徑或秘密。
 - README.md、SECURITY.md、docs/、PR template 與 GitHub Actions workflow。
 - 不含秘密的設定檔，例如 config.yaml 與 .streamlit/config.toml。
 

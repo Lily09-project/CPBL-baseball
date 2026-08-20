@@ -46,6 +46,12 @@ src/data_quality.py
                        +--> reports/metrics/release_health.json
                        |
                        v
+             src/public_release_manifest.py
+               allowlist + SHA-256 + CSV shape + release_id
+                       |
+                       +--> reports/metrics/public_release_manifest.json
+                       |
+                       v
                  app.py / Streamlit
 ```
 
@@ -59,6 +65,7 @@ src/data_quality.py
 | Snapshot/history | lineage, hashes, version comparisons | source retrieval |
 | Analysis validation | descriptive stability, drift, sensitivity | future prediction |
 | Release health | source regression, schema drift, row-count and lineage checks | changing business metrics |
+| Public release manifest | exact public inventory, content hashes and CSV shape | raw snapshots or secret material |
 | Scouting | qualification, weights, evidence signals | HTTP requests |
 | App | navigation, filters, display, downloads | hidden data mutation |
 | Release gate | artifact consistency before release | deployment |
@@ -71,17 +78,18 @@ src/data_quality.py
 4. Historical inputs contain duplicate IDs or invalid timestamps: analysis validation raises a clear error.
 5. Release health detects schema drift, a large row-count drop or mismatched artifact lineage: the pipeline records the reason and stops before release.
 6. Release artifacts are inconsistent: `src.release_gate` returns non-zero and CI blocks the change.
+7. A public artifact is missing, added outside the allowlist or has a different hash/shape: the independent Manifest verifier returns non-zero and publication is blocked.
 
 ## Public Repository Boundary
 
-Tracked outputs are limited to source code, tests, documentation, sanitized processed data and public metric summaries. Raw HTML, personal paths, local virtual environments, secrets, temporary files and generated caches are excluded by `.gitignore` and workflow checks.
+Tracked outputs are limited to source code, tests, documentation, sanitized processed data and public metric summaries. `public_release_manifest.json` records only relative allowlisted paths, SHA-256, byte size and CSV shape. Raw HTML, snapshots, personal paths, local virtual environments, secrets, temporary files and generated caches are excluded by `.gitignore` and workflow checks.
 
 ## Operational Workflows
 
 - `security.yml`: secret history scan, dependency audit, Bandit and tests.
-- `data-health.yml`: scheduled official API verification with read-only repository permission.
-- `data-refresh.yml`: scheduled official API refresh, quality gate and reviewable PR for data outputs only.
-- `release-quality.yml`: locked environment, `pip check`, compile, tests and release artifact gate.
+- `data-health.yml`: scheduled official API verification, release Manifest verification and read-only repository permission.
+- `data-refresh.yml`: scheduled official API refresh, quality gate, Manifest verification and reviewable PR for data outputs only.
+- `release-quality.yml`: locked environment, `pip check`, compile, tests, release artifact gate and independent Manifest verifier.
 
 `src/release_health.py` intentionally separates base data quality from release regression checks. A real roster change may produce a warning, while a likely pagination failure or schema drift blocks publication.
 
@@ -91,3 +99,5 @@ Tracked outputs are limited to source code, tests, documentation, sanitized proc
 - **String player IDs** throughout the pipeline because CPBL IDs may contain leading zeroes.
 - **Adjacent snapshot comparisons** because they match the operational question: what changed since the last verified refresh?
 - **Description over prediction** because the current source is an official public aggregate, not a labeled future-outcome dataset.
+- **Exact public allowlist** because a release verifier must reject silent additions as well as missing or modified artifacts.
+- **No circular hashes** because the public Manifest is generated after quality reports and is not embedded back into a hashed report.

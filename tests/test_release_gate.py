@@ -4,6 +4,7 @@ from pathlib import Path
 import pandas as pd
 
 from src.release_health import build_release_health_report
+from src.public_release_manifest import build_public_release_manifest, write_public_release_manifest
 from src.release_gate import run_release_gate
 
 
@@ -44,6 +45,15 @@ def _write_release_fixture(root: Path, *, quality_time: str, analysis_time: str)
     }
     for name in REQUIRED_PROCESSED_FILES:
         frames[name].to_csv(processed / name, index=False)
+    pd.DataFrame(
+        [{"player_id": "0001", "player_name": "測試球員", "change_status": "changed"}]
+    ).to_csv(processed / "player_movements.csv", index=False)
+    pd.DataFrame(
+        [{"snapshot_id": "snapshot-2", "captured_at": quality_time, "season": 2026}]
+    ).to_csv(processed / "snapshot_history.csv", index=False)
+    pd.DataFrame(
+        [{"snapshot_id": "snapshot-2", "player_id": "0001", "player_name": "測試球員"}]
+    ).to_csv(processed / "player_metric_history.csv", index=False)
 
     quality = {
         "mode": "api",
@@ -74,6 +84,12 @@ def _write_release_fixture(root: Path, *, quality_time: str, analysis_time: str)
     }
     (metrics / "analysis_validation.json").write_text(json.dumps(analysis), encoding="utf-8")
     (metrics / "release_health.json").write_text(json.dumps(health), encoding="utf-8")
+    manifest = build_public_release_manifest(
+        root,
+        generated_at=quality_time,
+        snapshot_id="snapshot-2",
+    )
+    write_public_release_manifest(manifest, metrics / "public_release_manifest.json")
 
 
 def test_release_gate_accepts_aligned_report_timestamps(tmp_path: Path) -> None:
@@ -97,3 +113,26 @@ def test_release_gate_rejects_stale_analysis_report(tmp_path: Path) -> None:
 
     assert result["status"] == "failed"
     assert "品質報告與分析驗證報告的 generated_at 不一致" in result["failures"]
+
+
+def test_release_gate_rejects_missing_public_release_manifest(tmp_path: Path) -> None:
+    generated_at = "2026-08-20T17:58:03+08:00"
+    _write_release_fixture(tmp_path, quality_time=generated_at, analysis_time=generated_at)
+    (tmp_path / "reports" / "metrics" / "public_release_manifest.json").unlink()
+
+    result = run_release_gate(tmp_path)
+
+    assert result["status"] == "failed"
+    assert "缺少公開發布 Manifest：reports/metrics/public_release_manifest.json" in result["failures"]
+
+
+def test_release_gate_rejects_tampered_public_artifact(tmp_path: Path) -> None:
+    generated_at = "2026-08-20T17:58:03+08:00"
+    _write_release_fixture(tmp_path, quality_time=generated_at, analysis_time=generated_at)
+    roster_path = tmp_path / "data" / "processed" / "roster.csv"
+    roster_path.write_text(roster_path.read_text(encoding="utf-8") + "2026,9999,竄改,測試隊\n", encoding="utf-8")
+
+    result = run_release_gate(tmp_path)
+
+    assert result["status"] == "failed"
+    assert any("公開發布 Manifest 驗證失敗" in failure for failure in result["failures"])

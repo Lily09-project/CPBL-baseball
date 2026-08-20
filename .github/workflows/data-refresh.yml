@@ -44,6 +44,7 @@ jobs:
           python -m compileall -q app.py src run_all.py
           python -m pytest -q
           python -m src.release_gate
+          python -m src.verify_public_release reports/metrics/public_release_manifest.json
 
       - name: Open pull request for verified outputs
         shell: bash
@@ -68,4 +69,4 @@ jobs:
             --base main \
             --head "$branch" \
             --title "chore(data): refresh verified CPBL data" \
-            --body "Automated refresh from CPBL official public pages.\n\n- API mode only\n- Data quality report passed before snapshot creation\n- Release gate and test suite passed\n- Review the generated snapshot, movement, history, and analysis validation outputs before merging."
+            --body "Automated refresh from CPBL official public pages.\n\n- API mode only\n- Data quality report passed before snapshot creation\n- Release gate, public release Manifest, and test suite passed\n- Review the generated snapshot, movement, history, analysis validation, and release integrity outputs before merging."

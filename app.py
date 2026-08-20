@@ -23,6 +23,10 @@ from src.freshness import data_freshness
 from src.analysis_validation import DRIFT_METRICS, STABILITY_METRICS, priority_sensitivity, rank_stability, summarize_data_drift
 from src.history import compare_metric_versions, later_snapshot_ids
 from src.log5_matchup import calculate_log5_probability, summarize_matchup_probability
+from src.public_release_manifest import (
+    PUBLIC_RELEASE_MANIFEST_PATH,
+    verify_public_release_manifest_file,
+)
 from src.rankings import get_bottom_players, get_team_rankings, get_top_players
 from src.scouting import (
     DEFAULT_QUALIFICATION,
@@ -45,6 +49,7 @@ from src.scouting_report import (
 )
 from src.similarity import find_similar_players
 from src.theme import STREAMLIT_CSS, STREAMLIT_LAYOUT_CSS
+from src.utils import project_path
 
 
 APP_TITLE = "CPBL 中職資料分析平台"
@@ -247,6 +252,29 @@ st.markdown(
     '<a class="skip-link" href="#cpbl-main">跳至主要內容</a><div id="cpbl-main" tabindex="-1"></div>',
     unsafe_allow_html=True,
 )
+
+
+@st.cache_data(show_spinner=False)
+def load_public_release_verification(
+    _manifest_version: tuple[int | None, int | None],
+) -> dict[str, object]:
+    path = project_path(str(PUBLIC_RELEASE_MANIFEST_PATH))
+    try:
+        return verify_public_release_manifest_file(path)
+    except (OSError, TypeError, UnicodeError, ValueError) as exc:
+        return {"valid": False, "error": str(exc)}
+
+
+def public_release_manifest_version() -> tuple[int | None, int | None]:
+    path = project_path(str(PUBLIC_RELEASE_MANIFEST_PATH))
+    try:
+        stat = path.stat()
+    except OSError:
+        return (None, None)
+    return (stat.st_mtime_ns, stat.st_size)
+
+
+PUBLIC_RELEASE_VERIFICATION = load_public_release_verification(public_release_manifest_version())
 
 
 @st.cache_data(show_spinner=False)
@@ -776,6 +804,15 @@ def render_data_trust_surface(
         for check in release_health.get("checks", []):
             if isinstance(check, dict) and check.get("status") in {"warning", "failed"}:
                 health_issues.append(str(check.get("summary", check.get("name", "未知檢查"))))
+    expected_snapshot_id = str(snapshot.get("snapshot_id", "")) if isinstance(snapshot, dict) else ""
+    release_is_valid = (
+        PUBLIC_RELEASE_VERIFICATION.get("valid") is True
+        and str(PUBLIC_RELEASE_VERIFICATION.get("snapshot_id", "")) == expected_snapshot_id
+    )
+    if release_is_valid:
+        details.append(f"發布 ID：{PUBLIC_RELEASE_VERIFICATION.get('release_id', '')}")
+    else:
+        details.append("發布 ID：未驗證")
     if player_type is not None and threshold is not None and population_count is not None:
         details.append(f"符合門檻母體：{population_count} 人（{qualification_label(player_type)} ≥ {threshold:g}）")
     trust_items = "".join(f"<span class='trust-item'>{escape(item)}</span>" for item in details)
@@ -790,6 +827,8 @@ def render_data_trust_surface(
             st.error("發布健康檢查失敗：" + message)
         else:
             st.warning("發布健康提醒：" + message)
+    if not release_is_valid:
+        st.warning("公開發布 Manifest 無法驗證或與目前資料快照不一致，請先重新執行 run_project.bat --check。")
     st.caption("LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。")
 
 

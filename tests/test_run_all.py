@@ -8,6 +8,7 @@ from run_all import main
 
 def test_run_all_defaults_to_api(monkeypatch, capsys):
     calls = {}
+    events = []
 
     def fake_preprocess(mode):
         calls["mode"] = mode
@@ -18,7 +19,12 @@ def test_run_all_defaults_to_api(monkeypatch, capsys):
     monkeypatch.setattr(
         run_all,
         "generate_data_quality_report",
-        lambda mode, fallback_reason: {"quality_status": "pass", "mode": mode, "fallback_reason": fallback_reason},
+        lambda mode, fallback_reason: {
+            "quality_status": "pass",
+            "mode": mode,
+            "fallback_reason": fallback_reason,
+            "generated_at": "2026-08-20T17:58:03+08:00",
+        },
     )
     monkeypatch.setattr(
         run_all,
@@ -38,7 +44,7 @@ def test_run_all_defaults_to_api(monkeypatch, capsys):
         lambda snapshot_root, processed_dir: {"snapshot_count": 1, "player_history_rows": 2},
         raising=False,
     )
-    monkeypatch.setattr(run_all, "save_data_quality_report", lambda report: None, raising=False)
+    monkeypatch.setattr(run_all, "save_data_quality_report", lambda report: events.append("quality"), raising=False)
     monkeypatch.setattr(
         run_all,
         "write_analysis_validation_report",
@@ -57,11 +63,30 @@ def test_run_all_defaults_to_api(monkeypatch, capsys):
         lambda report: "release_health.json",
         raising=False,
     )
+    monkeypatch.setattr(
+        run_all,
+        "build_public_release_manifest",
+        lambda root, *, generated_at, snapshot_id: (
+            events.append("manifest"),
+            calls.update(manifest_generated_at=generated_at, manifest_snapshot_id=snapshot_id),
+            {"release_id": "rel-test"},
+        )[-1],
+        raising=False,
+    )
+    monkeypatch.setattr(
+        run_all,
+        "write_public_release_manifest",
+        lambda manifest: "public_release_manifest.json",
+        raising=False,
+    )
 
     main()
 
     out = capsys.readouterr().out
     assert calls["mode"] == "api"
+    assert calls["manifest_generated_at"] == "2026-08-20T17:58:03+08:00"
+    assert calls["manifest_snapshot_id"] == "test-snapshot"
+    assert events == ["quality", "manifest"]
     assert "done" in out
 
 
@@ -131,6 +156,21 @@ def test_run_all_attaches_snapshot_only_after_quality_passes(monkeypatch):
         lambda report: "release_health.json",
         raising=False,
     )
+    monkeypatch.setattr(
+        run_all,
+        "build_public_release_manifest",
+        lambda root, *, generated_at, snapshot_id: calls.setdefault(
+            "public_release",
+            {"release_id": "rel-test", "generated_at": generated_at, "snapshot_id": snapshot_id},
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        run_all,
+        "write_public_release_manifest",
+        lambda manifest: "public_release_manifest.json",
+        raising=False,
+    )
 
     monkeypatch.setattr(
         run_all,
@@ -164,3 +204,4 @@ def test_run_all_attaches_snapshot_only_after_quality_passes(monkeypatch):
     assert calls["report"]["history"]["snapshot_count"] == 2
     assert calls["report"]["history"]["player_history_rows"] == 636
     assert calls["report"]["release_health"]["status"] == "passed"
+    assert calls["public_release"]["snapshot_id"] == "snapshot-1"

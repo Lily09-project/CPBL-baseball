@@ -5,6 +5,8 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
+from src.public_release_manifest import verify_public_release_manifest_file
+
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_PATH = ROOT / "app.py"
@@ -79,9 +81,12 @@ def test_reviewer_can_trace_public_artifacts_to_quality_and_analysis_reports() -
     quality_path = ROOT / "reports/metrics/data_quality_report.json"
     analysis_path = ROOT / "reports/metrics/analysis_validation.json"
     health_path = ROOT / "reports/metrics/release_health.json"
+    public_manifest_path = ROOT / "reports/metrics/public_release_manifest.json"
     quality = json.loads(quality_path.read_text(encoding="utf-8-sig"))
     analysis = json.loads(analysis_path.read_text(encoding="utf-8-sig"))
     health = json.loads(health_path.read_text(encoding="utf-8-sig"))
+    public_manifest = json.loads(public_manifest_path.read_text(encoding="utf-8-sig"))
+    verification = verify_public_release_manifest_file(public_manifest_path, root=ROOT)
 
     assert quality["mode"] == "api"
     assert quality["quality_status"] in {"pass", "warning"}
@@ -90,6 +95,11 @@ def test_reviewer_can_trace_public_artifacts_to_quality_and_analysis_reports() -
     assert health["status"] in {"passed", "warning"}
     assert health["snapshot_id"] == quality["snapshot"]["snapshot_id"]
     assert quality["release_health"]["status"] == health["status"]
+    assert verification["valid"] is True
+    assert verification["release_id"] == public_manifest["release_id"]
+    assert public_manifest["snapshot_id"] == quality["snapshot"]["snapshot_id"]
+    assert public_manifest["generated_at"] == quality["generated_at"]
+    assert public_manifest["artifact_count"] == 11
     assert analysis["limitations"]
     assert analysis["interpretation"]
     for path in [ROOT / "docs/MODEL_CARD.md", ROOT / "docs/ARCHITECTURE.md", ROOT / "docs/INTERVIEW_DEMO.md"]:
