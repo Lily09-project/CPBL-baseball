@@ -20,6 +20,7 @@ from src.data_quality import load_data_quality_report
 from src.fetch_cpbl_data import absolute_url
 from src.source_contract import SOURCE_DISPLAY_NAME, build_source_note
 from src.freshness import data_freshness
+from src.analysis_validation import DRIFT_METRICS, STABILITY_METRICS, priority_sensitivity, rank_stability, summarize_data_drift
 from src.history import compare_metric_versions, later_snapshot_ids
 from src.log5_matchup import calculate_log5_probability, summarize_matchup_probability
 from src.rankings import get_bottom_players, get_team_rankings, get_top_players
@@ -76,6 +77,7 @@ PAGES = [
     "資料訊號總覽",
     "聯盟總覽",
     "版本趨勢",
+    "分析驗證",
     "球探工作台",
     "球探報告",
     "球員排行榜",
@@ -995,7 +997,7 @@ def render_movement_focus() -> None:
         }
     )
     show_table(st, display)
-
+    render_version_trend_cta()
 
 def render_player_movements(row: pd.Series, player_type: str) -> None:
     st.header("前次快照變化")
@@ -1304,6 +1306,259 @@ def page_snapshot_trends() -> None:
         }
     )
     show_table(st, comparison_table)
+def _format_validation_ratio(value: object) -> str:
+    if value is None or pd.isna(value):
+        return "N/A"
+    return f"{as_number(value):.0%}"
+
+
+def _format_validation_correlation(value: object) -> str:
+    if value is None or pd.isna(value):
+        return "N/A"
+    return f"{as_number(value):.2f}"
+
+
+def stability_validation_chart(frame: pd.DataFrame, metric: str) -> go.Figure:
+    chart = go.Figure()
+    x = frame["current_captured_at"].map(format_snapshot_time)
+    chart.add_trace(
+        go.Scatter(
+            x=x,
+            y=frame["top_k_overlap"],
+            mode="lines+markers",
+            name="Top-K 重疊率",
+            line=dict(color=CHART_ACCENT, width=3),
+        )
+    )
+    chart.add_trace(
+        go.Scatter(
+            x=x,
+            y=frame["spearman_rank_correlation"],
+            mode="lines+markers",
+            name="Spearman ρ",
+            yaxis="y2",
+            line=dict(color=CHART_SECONDARY, width=3),
+        )
+    )
+    chart.update_layout(
+        title=f"{metric_name(metric)} · 相鄰版本排名一致性",
+        height=390,
+        yaxis=dict(title="Top-K 重疊率", range=[0, 1], tickformat=".0%"),
+        yaxis2=dict(title="Spearman ρ", overlaying="y", side="right", range=[-1, 1]),
+        legend=dict(orientation="h", y=1.12),
+    )
+    return apply_chart_theme(chart)
+
+
+def drift_validation_chart(frame: pd.DataFrame, metric: str) -> go.Figure:
+    chart = go.Figure()
+    x = frame["current_captured_at"].map(format_snapshot_time)
+    chart.add_trace(
+        go.Scatter(
+            x=x,
+            y=frame["baseline_median"],
+            mode="lines+markers",
+            name="基準版本中位數",
+            line=dict(color=CHART_MUTED, width=2, dash="dot"),
+        )
+    )
+    chart.add_trace(
+        go.Scatter(
+            x=x,
+            y=frame["current_median"],
+            mode="lines+markers",
+            name="比較版本中位數",
+            line=dict(color=CHART_HIGHLIGHT, width=3),
+        )
+    )
+    chart.update_layout(
+        title=f"{metric_name(metric)} · 相鄰版本中位數變化",
+        height=370,
+        xaxis_title="比較版本時間",
+        yaxis_title=metric_name(metric),
+    )
+    return apply_chart_theme(chart)
+
+
+def page_analysis_validation() -> None:
+    page_intro(
+        "分析驗證",
+        "分析驗證",
+        "以跨快照穩定性、資料分布變化與權重敏感度，檢查分析結果的可解釋範圍；這些是描述性驗證，不是未來表現預測。",
+    )
+    if SNAPSHOT_HISTORY.empty or PLAYER_METRIC_HISTORY.empty:
+        st.info("目前尚未建立足夠的公開歷史資料。請先執行 python run_all.py --mode api。")
+        return
+
+    history = PLAYER_METRIC_HISTORY.sort_values("captured_at", kind="stable").reset_index(drop=True)
+    player_type = st.radio(
+        "球員類型",
+        ["打者", "投手"],
+        horizontal=True,
+        key="validation_player_type",
+    )
+    available_history = history.loc[history["player_type"] == player_type]
+    available_metrics = [
+        metric
+        for metric in STABILITY_METRICS[player_type]
+        if metric in available_history.columns and available_history[metric].notna().any()
+    ]
+    if not available_metrics:
+        st.info(f"目前沒有足夠的{player_type}歷史指標可驗證。")
+        return
+
+    metric_cards(
+        [
+            ("資料版本", history["snapshot_id"].nunique(), "官方快照數"),
+            ("分析球員", available_history["player_id"].nunique(), f"{player_type}歷史球員"),
+            ("可比較版本", max(0, history["snapshot_id"].nunique() - 1), "相鄰版本組合"),
+            ("驗證定位", "描述性", "不代表預測準確率"),
+        ]
+    )
+
+    stability_tab, drift_tab, sensitivity_tab = st.tabs(
+        ["排名穩定性", "資料分布變化", "權重敏感度"]
+    )
+    with stability_tab:
+        st.subheader("排名穩定性")
+        control_metric, control_top_k = st.columns(2, gap="medium")
+        metric = control_metric.selectbox(
+            "穩定性指標",
+            available_metrics,
+            format_func=metric_name,
+            key="validation_stability_metric",
+        )
+        top_k = control_top_k.selectbox(
+            "Top-K",
+            [5, 10, 20],
+            index=1,
+            key="validation_stability_top_k",
+        )
+        stability = rank_stability(history, player_type, metric, top_k=top_k)
+        st.caption("Top-K 重疊率越高，代表相鄰版本的前段名單越一致；Spearman ρ 越接近 1，代表整體排名順序越穩定。")
+        if stability.empty:
+            st.info("目前只有一個可用版本，尚無法計算相鄰版本排名穩定性。")
+        else:
+            latest = stability.iloc[-1]
+            metric_cards(
+                [
+                    ("最新 Top-K 重疊", _format_validation_ratio(latest["top_k_overlap"]), "相鄰兩版"),
+                    ("最新 Spearman ρ", _format_validation_correlation(latest["spearman_rank_correlation"]), "共同球員排名"),
+                    ("共同球員", int(latest["common_population"]), "可比較母體"),
+                ]
+            )
+            show_chart(st, stability_validation_chart(stability, metric))
+            stability_table = pd.DataFrame(
+                {
+                    "比較版本": stability["current_captured_at"].map(format_snapshot_time),
+                    "基準版本": stability["baseline_snapshot_id"],
+                    "比較版本 ID": stability["current_snapshot_id"],
+                    "基準母體": stability["baseline_population"],
+                    "比較母體": stability["current_population"],
+                    "Top-K 重疊率": stability["top_k_overlap"].map(_format_validation_ratio),
+                    "Spearman ρ": stability["spearman_rank_correlation"].map(_format_validation_correlation),
+                    "平均排名變化": stability["mean_abs_rank_delta"].map(lambda value: "N/A" if pd.isna(value) else f"{as_number(value):.1f}"),
+                }
+            )
+            show_table(st, stability_table)
+
+    with drift_tab:
+        st.subheader("資料分布變化")
+        drift_options = [
+            metric
+            for metric in DRIFT_METRICS[player_type]
+            if metric in available_history.columns and available_history[metric].notna().any()
+        ]
+        drift_metric = st.selectbox(
+            "分布指標",
+            drift_options,
+            format_func=metric_name,
+            key="validation_drift_metric",
+        )
+        drift = summarize_data_drift(history, player_type, [drift_metric])
+        st.caption("中位數、平均數與涵蓋人數呈現官方彙總資料的版本差異；分布變化本身不等於資料品質錯誤。")
+        if drift.empty:
+            st.info("目前沒有可比較的分布資料。")
+        else:
+            latest = drift.iloc[-1]
+            metric_cards(
+                [
+                    ("本版涵蓋", int(latest["current_count"]), f"{metric_name(drift_metric)} 有效值"),
+                    ("涵蓋變化", _format_validation_ratio(as_number(latest["coverage_change_pct"]) / 100 if not pd.isna(latest["coverage_change_pct"]) else None), "相對前版"),
+                    ("中位數差", format_movement_delta(drift_metric, latest["median_delta"]), "描述性變化"),
+                ]
+            )
+            recent_drift = drift.tail(8).reset_index(drop=True)
+            show_chart(st, drift_validation_chart(recent_drift, drift_metric))
+            drift_table = pd.DataFrame(
+                {
+                    "比較版本": recent_drift["current_captured_at"].map(format_snapshot_time),
+                    "基準版本": recent_drift["baseline_snapshot_id"],
+                    "前版涵蓋": recent_drift["baseline_count"],
+                    "本版涵蓋": recent_drift["current_count"],
+                    "涵蓋變化": recent_drift["coverage_change_pct"].map(lambda value: "N/A" if pd.isna(value) else f"{as_number(value):+.1f}%"),
+                    "前版中位數": recent_drift["baseline_median"].map(lambda value: format_metric_value(drift_metric, value)),
+                    "本版中位數": recent_drift["current_median"].map(lambda value: format_metric_value(drift_metric, value)),
+                    "中位數變化": recent_drift["median_delta"].map(lambda value: format_movement_delta(drift_metric, value)),
+                }
+            )
+            show_table(st, drift_table)
+
+    with sensitivity_tab:
+        st.subheader("權重敏感度")
+        source = BATTERS if player_type == "打者" else PITCHERS
+        default_threshold = float(DEFAULT_QUALIFICATION[player_type])
+        threshold_max = qualification_upper_bound(source, player_type)
+        threshold = st.number_input(
+            f"最低{qualification_label(player_type)}",
+            min_value=0.0,
+            max_value=max(default_threshold, threshold_max),
+            value=min(default_threshold, max(default_threshold, threshold_max)),
+            step=1.0,
+            key="validation_sensitivity_threshold",
+        )
+        focus = st.selectbox(
+            "評估重點",
+            priority_options(player_type),
+            format_func=lambda value: value,
+            key="validation_sensitivity_focus",
+        )
+        teams = ["全部"] + sorted(str(team) for team in source["team"].dropna().unique())
+        team = st.selectbox("球隊篩選", teams, key="validation_sensitivity_team")
+        perturbation = st.selectbox(
+            "權重擾動幅度",
+            [0.05, 0.10, 0.15],
+            index=1,
+            format_func=lambda value: f"±{value:.0%}",
+            key="validation_sensitivity_perturbation",
+        )
+        sensitivity = priority_sensitivity(
+            source,
+            player_type,
+            threshold,
+            focus,
+            team=team,
+            perturbation=perturbation,
+            top_k=10,
+        )
+        st.caption("每個情境把一項權重上下調整指定幅度，並按比例重分配其他權重；結果用來檢查排序是否過度依賴單一假設。")
+        if sensitivity.empty:
+            st.info("目前沒有符合條件的候選球員。")
+        else:
+            sensitivity_table = pd.DataFrame(
+                {
+                    "情境": sensitivity["scenario"].map({"baseline": "基準", "increase": "提高指標權重", "decrease": "降低指標權重"}),
+                    "變動指標": sensitivity["changed_metric"],
+                    "權重變化": sensitivity["weight_delta"].map(lambda value: f"{as_number(value):+.0%}"),
+                    "候選人數": sensitivity["candidate_count"],
+                    "Top-K 重疊率": sensitivity["top_k_overlap"].map(_format_validation_ratio),
+                    "排名相關": sensitivity["rank_correlation"].map(_format_validation_correlation),
+                    "基準領先者": sensitivity["baseline_leader"],
+                    "情境領先者": sensitivity["scenario_leader"],
+                }
+            )
+            show_table(st, sensitivity_table)
+
 def page_league() -> None:
     page_intro("聯盟總覽", "聯盟總覽", "以球隊戰績、得失分與主客場差異，建立本季聯盟的可比較基準。")
     if TEAMS.empty:
@@ -1967,6 +2222,7 @@ PAGE_HANDLERS = {
     "資料訊號總覽": page_home,
     "聯盟總覽": page_league,
     "版本趨勢": page_snapshot_trends,
+    "分析驗證": page_analysis_validation,
     "球探工作台": page_scouting_workbench,
     "球探報告": page_scouting_report,
     "球員排行榜": page_rankings,

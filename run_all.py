@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 
+import pandas as pd
+from src.analysis_validation import build_analysis_validation_report, write_analysis_validation_report
 from src.data_quality import generate_data_quality_report, save_data_quality_report
 from src.history import generate_history_outputs
 from src.movements import generate_player_movements
@@ -52,6 +54,18 @@ def main() -> None:
     outputs["snapshot_history"] = str(project_path("data/processed/snapshot_history.csv"))
     outputs["player_metric_history"] = str(project_path("data/processed/player_metric_history.csv"))
     report["history"] = history
+    history_frame = pd.read_csv(
+        project_path("data/processed/player_metric_history.csv"),
+        dtype={"player_id": "string"},
+    )
+    analysis_validation = build_analysis_validation_report(
+        history_frame,
+        generated_at=str(report.get("generated_at", "")) or None,
+    )
+    analysis_validation_path = project_path("reports/metrics/analysis_validation.json")
+    write_analysis_validation_report(analysis_validation, analysis_validation_path)
+    outputs["analysis_validation"] = str(analysis_validation_path)
+    report["analysis_validation"] = analysis_validation
     save_data_quality_report(report)
     print("processed files:")
     for name, path in outputs.items():

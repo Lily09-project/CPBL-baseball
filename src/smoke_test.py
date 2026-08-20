@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.data_quality import REQUIRED_FILES, load_data_quality_report
+from src.release_gate import ANALYSIS_REPORT_PATH
 from src.log5_matchup import calculate_log5_probability
 from src.preprocess import preprocess
 from src.utils import project_path
@@ -15,10 +17,15 @@ def main() -> None:
     if any(not project_path("data/processed", name).exists() for name in REQUIRED_FILES):
         preprocess(mode="api")
     report = load_data_quality_report()
+    analysis_path = project_path(ANALYSIS_REPORT_PATH.parent, ANALYSIS_REPORT_PATH.name)
+    if not analysis_path.exists():
+        raise RuntimeError("分析驗證報告不存在，請先執行 python run_all.py --mode api。")
+    analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
     checks = {
         "data source mode is api": report["mode"] == "api",
         "data quality passed": report["quality_status"] in {"pass", "warning"},
         "player coverage is complete": report["available_player_count"] >= 200,
+        "analysis validation report is ready": analysis.get("schema_version") == "1.0",
         "LOG5 calculation returns a result": (
             calculate_log5_probability(0.36, 0.32, 0.33) is not None
         ),

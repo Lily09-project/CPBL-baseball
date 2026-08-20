@@ -173,7 +173,7 @@ def test_streamlit_defaults_to_loopback_and_ci_runs_tests():
         '"detect-secrets==1.5.0"',
         "git ls-files -z",
         "snapshot_id|previous_snapshot_id|relative_path",
-        "python -m pip_audit -r requirements.txt",
+        "python -m pip_audit -r requirements.lock",
         "python -m bandit -r app.py src run_all.py -ll",
         "python -m pytest -q",
     ]:

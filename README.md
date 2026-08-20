@@ -24,6 +24,8 @@
 
 審查者可直接依照 [Review Guide](docs/REVIEW_GUIDE.md) 重現資料流程、品質閘門與發布驗收。
 
+深入文件： [Model Card](docs/MODEL_CARD.md) · [Architecture](docs/ARCHITECTURE.md) · [Interview Demo](docs/INTERVIEW_DEMO.md) · [Release Checklist](docs/RELEASE_CHECKLIST.md)。
+
 ## 最新驗證摘要
 
 以下數字來自本次以 CPBL 官方資料執行 run_project.bat --check 後的本地驗證。資料檔案更新時，README 的數字應與 reports/metrics/data_quality_report.json 一起重新檢查。
@@ -31,14 +33,15 @@
 | 項目 | 最新結果 |
 | --- | --- |
 | 資料來源 | CPBL 官方公開頁面擷取；mode=api 為相容的流程參數 |
-| 最後驗證時間 | 2026-08-19 19:25（Asia/Taipei） |
+| 最後驗證時間 | 2026-08-20 17:48（Asia/Taipei） |
 | 品質狀態 | pass |
-| 官方現役名單 | 457 人 |
-| 打者／投手成績聯集 | 458 位球員 |
-| 已驗證資料快照 | 8 份 |
-| 最新資料快照 | `20260819T084104Z-e3f9f1e437fa` |
+| 官方現役名單 | 459 人 |
+| 打者／投手成績聯集 | 461 位球員 |
+| 已驗證資料快照 | 10 份 |
+| 最新資料快照 | `20260820T094818Z-61f8537c2130` |
 | 球員版本變化紀錄 | 2,106 筆 |
-| 完整測試 | 147 passed |
+| 分析驗證摘要 | schema 1.0；歷史列 3,203；最新快照與資料品質報告一致 |
+| 完整測試 | 159 passed |
 | Smoke test | passed |
 
 ## 實際使用畫面
@@ -70,6 +73,7 @@
 3. 先看「資料訊號總覽」的品質狀態、資料日期與限制，再進入「球探工作台」建立候選範圍。
 4. 點開「球員個人頁」查看事實資料與評估依據；如果資料沒有達到 PA／IP 門檻，頁面會標示樣本不足，而不是產生看似精準的排名。
 5. 使用「版本趨勢」比較兩個時間順序有效的官方快照，閱讀新增、移除、變更與未變更球員。
+6. 使用「分析驗證」檢查排名穩定性、資料分布變化與權重敏感度，理解結果對資料版本與分析假設的依賴。
 6. 使用頁面上的「下載 CSV」保存目前畫面展示的欄位；下載內容使用繁體中文欄名與 UTF-8 BOM，方便在 Excel 開啟。
 
 球員頁也支援深連結：
@@ -150,6 +154,16 @@ python -m src.verify_report_manifest .\cpbl_scouting_report_hitter_<snapshot>.ma
 ~~~
 
 這個流程適合在面試展示「從資料品質、分析規則到可交付分析成果」的完整鏈路；它仍然不是逐場對戰資料，也不是未來表現預測。
+### 分析驗證
+
+「分析驗證」把資料產品的可信度檢查做成可操作頁面，而不是只把最新排名放在畫面上：
+
+- 排名穩定性：用相鄰官方快照計算 Top-K 重疊率、共同球員數、Spearman ρ 與平均排名變化。
+- 資料分布變化：比較各版本的有效涵蓋量、中位數、平均數與四分位數，將資料變化與資料錯誤分開。
+- 權重敏感度：對球探評估重點的單一權重做 ±5%、±10% 或 ±15% 擾動，按比例重分配其他權重，再觀察候選排序是否改變。
+
+這些結果是描述性驗證，不代表預測準確率；完整摘要會寫入 reports/metrics/analysis_validation.json。計算模組位於 src/analysis_validation.py，不連外、不修改原始資料，並由單元測試固定邊界條件。
+
 ### 球員排行榜
 
 依打者／投手與指標切換排行榜，支援官方累積統計與進階指標閱讀。球員選項以「姓名、球隊、守位、CPBL ID」呈現，避免同名球員或不同資料表紀錄被誤選。
@@ -241,7 +255,9 @@ Streamlit 互動分析介面
 | src/data_quality.py | 資料品質報告與失敗閘門 |
 | src/snapshots.py | 已驗證資料快照、manifest、內容指紋與版本 diff |
 | src/movements.py | 相鄰快照的球員指標變化 |
-| src/history.py | 版本趨勢與時間旅行用衍生資料 |
+| src/history.py | 版本趨勢與時間旅行用衍生資料
+| src/analysis_validation.py | 排名穩定性、資料漂移與權重敏感度
+| src/release_gate.py | 發布前資料與公開產物一致性檢查 |
 | src/features.py | 打者／投手進階指標與可解釋特徵 |
 | src/scouting.py | 資格門檻、百分位、評估分數與說明訊號 |
 | src/scouting_report.py | 球探報告、Manifest 產生、canonical report_id 與分析交付格式 |
@@ -267,7 +283,9 @@ Streamlit 互動分析介面
 6. 建立處理後資料快照與 manifest，記錄列數、欄位、主鍵、捕捉時間與 SHA-256。
 7. 產生 player_movements.csv，比較相鄰已驗證快照的球員指標。
 8. 產生版本趨勢所需的 snapshot_history.csv 與 player_metric_history.csv。
-9. 寫入 reports/metrics/data_quality_report.json，供前端與 CI 使用。
+9. 產生 reports/metrics/analysis_validation.json，摘要歷史穩定性、分布變化與分析限制。
+10. 寫入 reports/metrics/data_quality_report.json，供前端與 CI 使用。
+11. 由 src/release_gate.py 檢查官方 API 模式、處理後資料、品質報告與分析驗證輸出一致。
 
 ### 主要公開資料表
 
@@ -281,6 +299,7 @@ Streamlit 互動分析介面
 | player_movements.csv | 相鄰快照的指標變化 |
 | snapshot_history.csv | 資料版本血緣與版本級異動 |
 | player_metric_history.csv | 球員跨版本指標走勢 |
+| analysis_validation.json | 描述性穩定性、分布變化與敏感度摘要 |
 
 player_id 全程保留為字串，避免前導零在讀取、篩選、排序與版本比較時遺失。若球員同時出現在打者與投手成績表，統一摘要會使用打席 PA 與投球局數 × 4.25 的估算面對打者數比較主要工作量，避免野手短暫登板被誤標為投手；原始打者與投手輸出仍分開保留。
 
@@ -346,7 +365,7 @@ LOG5 只用來展示打者 OBP、投手估算被上壘率與聯盟平均之間�
 專案提供 run_project.bat，會自動：
 
 1. 偵測或建立 .venv。
-2. 安裝 requirements.txt。
+2. 安裝 requirements.lock 的鎖定依賴。
 3. 執行官方資料流程與品質檢查。
 4. 執行完整 pytest。
 5. 啟動本機 Streamlit 服務。
@@ -369,7 +388,7 @@ run_project.bat
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m pip install -r requirements.lock
 python run_all.py --mode api
 python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501
 ~~~
@@ -404,6 +423,7 @@ run_project.bat --check
 - 前處理、欄位型別、球員主鍵與資料品質報告。
 - 快照建立、SHA-256 manifest、版本差異與資料新鮮度。
 - 球員變化、版本趨勢與跨版本指標方向。
+- 排名穩定性、資料分布變化、權重敏感度與公開分析摘要。
 - 評估分數、百分位、排行榜、相似球員與 LOG5。
 - Streamlit 頁面、搜尋、篩選、選擇器、CSV 下載與頁面間路由。
 - run_project.bat 啟動流程、文件契約與安全規則。
@@ -447,7 +467,11 @@ Streamlit Community Cloud 基本設定：
 
 .github/workflows/data-health.yml 每日以唯讀權限重新執行 CPBL 官方資料流程與測試，也可以手動觸發。它會檢查來源格式、資料品質與應用程式回歸，但不會自動提交或推送資料。
 
-.github/workflows/security.yml 會執行相依套件漏洞掃描、Bandit 靜態安全掃描、敏感資訊檢查與完整測試。正式發布前仍應人工檢查品質報告與 git diff，再決定是否更新公開處理後資料。
+.github/workflows/data-refresh.yml 以鎖定依賴執行官方資料刷新、測試與 release gate；只有 data/processed/ 與 reports/metrics/ 的驗證後差異會被提交到自動分支並開 Pull Request，不能直接推送 main。
+
+.github/workflows/security.yml 會執行相依套件漏洞掃描、Bandit 靜態安全掃描、敏感資訊檢查與完整測試。
+
+.github/workflows/release-quality.yml 會使用 requirements.lock、pip check、compile、pytest 與 python -m src.release_gate，作為合併前的發布品質門檻。正式發布前仍應人工檢查品質報告與 git diff，再決定是否更新公開處理後資料。
 
 ## 公開儲存庫政策
 
@@ -456,7 +480,8 @@ Streamlit Community Cloud 基本設定：
 - 原始碼、測試與 app.py。
 - data/processed/ 下可由官方公開資料重建的 CSV。
 - reports/metrics/data_quality_report.json。
-- README.md、SECURITY.md、docs/ 與 GitHub Actions workflow。
+- reports/metrics/analysis_validation.json。
+- README.md、SECURITY.md、docs/、PR template 與 GitHub Actions workflow。
 - 不含秘密的設定檔，例如 config.yaml 與 .streamlit/config.toml。
 
 ### 永不追蹤

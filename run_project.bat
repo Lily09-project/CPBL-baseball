@@ -9,7 +9,7 @@ set "BUNDLED_PY=%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\depend
 if exist "%VENV_PY%" (
     "%VENV_PY%" -c "from importlib.metadata import version; [version(name) for name in ('lxml', 'numpy', 'pandas', 'plotly', 'pytest', 'requests', 'streamlit')]" >nul 2>nul
     if not errorlevel 1 (
-        "%VENV_PY%" -c "from importlib.metadata import version; from pathlib import Path; from packaging.requirements import Requirement; reqs=[Requirement(line) for line in Path('requirements.txt').read_text(encoding='utf-8').splitlines() if line.strip() and not line.lstrip().startswith('#')]; raise SystemExit(0 if all(req.specifier.contains(version(req.name), prereleases=True) for req in reqs) else 1)" >nul 2>nul
+        "%VENV_PY%" -c "from importlib.metadata import version; from pathlib import Path; from packaging.requirements import Requirement; reqs=[Requirement(line) for line in Path('requirements.lock').read_text(encoding='utf-8').splitlines() if line.strip() and not line.lstrip().startswith('#')]; raise SystemExit(0 if all(req.specifier.contains(version(req.name), prereleases=True) for req in reqs) else 1)" >nul 2>nul
         if not errorlevel 1 (
             set "PYTHON_CMD="%VENV_PY%""
             goto runtime_ready
@@ -47,8 +47,8 @@ echo Updating secure packaging tools...
 "%VENV_PY%" -m pip install --disable-pip-version-check --upgrade "pip>=26.1.2"
 if errorlevel 1 goto dependency_fail
 
-echo Installing project requirements...
-"%VENV_PY%" -m pip install --disable-pip-version-check --upgrade -r requirements.txt
+echo Installing locked project requirements...
+"%VENV_PY%" -m pip install --disable-pip-version-check --upgrade -r requirements.lock
 if errorlevel 1 goto dependency_fail
 
 "%VENV_PY%" -c "import lxml, numpy, pandas, plotly, pytest, requests, streamlit" >nul 2>nul
@@ -63,6 +63,9 @@ if /I "%~1"=="--runtime-check" (
     exit /b 0
 )
 
+%PYTHON_CMD% -m pip check
+if errorlevel 1 goto fail
+
 %PYTHON_CMD% run_all.py --mode api
 if errorlevel 1 goto fail
 
@@ -72,6 +75,11 @@ set "PYTEST_TMP=%PYTEST_PARENT%\run_%RANDOM%_%RANDOM%"
 %PYTHON_CMD% -m pytest -p no:cacheprovider --basetemp "%PYTEST_TMP%"
 if errorlevel 1 goto fail
 if exist "%PYTEST_TMP%" rmdir /s /q "%PYTEST_TMP%" >nul 2>nul
+
+%PYTHON_CMD% -m compileall -q app.py src run_all.py tests
+if errorlevel 1 goto fail
+%PYTHON_CMD% -m src.release_gate
+if errorlevel 1 goto fail
 
 if /I "%~1"=="--check" (
     %PYTHON_CMD% -B src\smoke_test.py
