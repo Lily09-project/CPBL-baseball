@@ -226,22 +226,22 @@
     },
     {
       "path": "reports/metrics/data_quality_report.json",
-      "sha256": "dffede4779162555b8eff61871ff4139a26185b7fdf3efad29e792b24107c35e",
+      "sha256": "cdf4be7728bc466015e6102f656a674fee9cfd6206cf2f3f2b8aa8d5cd72e866",
       "size_bytes": 10943
     },
     {
       "path": "reports/metrics/analysis_validation.json",
-      "sha256": "d36641c6838d3b79f091b8ed72946ded7d9ec9a38053ca3a297b334d7005a466",
+      "sha256": "2dfdf035a4372a0cf9eca8ccf881eaf105c6949999297225f314a25d58ba5224",
       "size_bytes": 2508
     },
     {
       "path": "reports/metrics/release_health.json",
-      "sha256": "0f62ca0979d508d185b8ac37f80d7f536b0f4b623b62b9520517e25fd21d09d3",
+      "sha256": "89582471976afea94ec4252fff619b34e96ad13b39d92e8dd719bd40190802b8",
       "size_bytes": 1613
     }
   ],
-  "generated_at": "2026-08-20T23:22:59+08:00",
-  "release_id": "rel-00fdf3a7edc5c76244f240bd",
+  "generated_at": "2026-08-20T23:47:26+08:00",
+  "release_id": "rel-536611e4b9a04f4173023471",
   "schema_version": "1.0",
   "snapshot_id": "20260820T145729Z-02041d39eeea"
 }
