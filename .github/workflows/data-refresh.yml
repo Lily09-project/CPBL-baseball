@@ -1,0 +1,71 @@
+name: Verified CPBL data refresh
+
+on:
+  schedule:
+    - cron: "15 16 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: cpbl-data-refresh
+  cancel-in-progress: true
+
+jobs:
+  refresh-and-open-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: Install locked environment
+        run: |
+          python -m pip install --upgrade "pip>=26.1.2"
+          python -m pip install -r requirements.lock
+          python -m pip check
+
+      - name: Refresh and validate official CPBL data
+        run: python run_all.py --mode api
+
+      - name: Run release checks
+        run: |
+          python -m compileall -q app.py src run_all.py
+          python -m pytest -q
+          python -m src.release_gate
+
+      - name: Open pull request for verified outputs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/processed reports/metrics; then
+            echo "No verified data changes; no pull request required."
+            exit 0
+          fi
+
+          branch="automation/data-refresh-${GITHUB_RUN_ID}"
+          git switch -c "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/processed reports/metrics
+          git commit -m "chore(data): refresh verified CPBL data"
+          git push --set-upstream origin "$branch"
+
+          gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "chore(data): refresh verified CPBL data" \
+            --body "Automated refresh from CPBL official public pages.\n\n- API mode only\n- Data quality report passed before snapshot creation\n- Release gate and test suite passed\n- Review the generated snapshot, movement, history, and analysis validation outputs before merging."
