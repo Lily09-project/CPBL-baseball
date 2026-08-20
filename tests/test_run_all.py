@@ -39,6 +39,12 @@ def test_run_all_defaults_to_api(monkeypatch, capsys):
         raising=False,
     )
     monkeypatch.setattr(run_all, "save_data_quality_report", lambda report: None, raising=False)
+    monkeypatch.setattr(
+        run_all,
+        "write_analysis_validation_report",
+        lambda report, path: None,
+        raising=False,
+    )
 
     main()
 
@@ -93,6 +99,12 @@ def test_run_all_attaches_snapshot_only_after_quality_passes(monkeypatch):
         run_all,
         "save_data_quality_report",
         lambda report: calls.setdefault("report", report),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        run_all,
+        "write_analysis_validation_report",
+        lambda report, path: None,
         raising=False,
     )
 

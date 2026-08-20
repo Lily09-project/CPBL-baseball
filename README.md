@@ -24,7 +24,7 @@
 
 審查者可直接依照 [Review Guide](docs/REVIEW_GUIDE.md) 重現資料流程、品質閘門與發布驗收。
 
-深入文件： [Model Card](docs/MODEL_CARD.md) · [Architecture](docs/ARCHITECTURE.md) · [Interview Demo](docs/INTERVIEW_DEMO.md) · [Release Checklist](docs/RELEASE_CHECKLIST.md)。
+深入文件： [Model Card](docs/MODEL_CARD.md) · [Architecture](docs/ARCHITECTURE.md) · [Interview Demo](docs/INTERVIEW_DEMO.md) · [中文簡報講稿](docs/CPBL_資料分析平台_中文講稿.md) · [Release Checklist](docs/RELEASE_CHECKLIST.md)。
 
 ## 最新驗證摘要
 
@@ -33,7 +33,7 @@
 | 項目 | 最新結果 |
 | --- | --- |
 | 資料來源 | CPBL 官方公開頁面擷取；mode=api 為相容的流程參數 |
-| 最後驗證時間 | 2026-08-20 17:48（Asia/Taipei） |
+| 最後驗證時間 | 2026-08-20 18:08（Asia/Taipei） |
 | 品質狀態 | pass |
 | 官方現役名單 | 459 人 |
 | 打者／投手成績聯集 | 461 位球員 |
@@ -41,7 +41,7 @@
 | 最新資料快照 | `20260820T094818Z-61f8537c2130` |
 | 球員版本變化紀錄 | 2,106 筆 |
 | 分析驗證摘要 | schema 1.0；歷史列 3,203；最新快照與資料品質報告一致 |
-| 完整測試 | 159 passed |
+| 完整測試 | 161 passed |
 | Smoke test | passed |
 
 ## 實際使用畫面
