@@ -437,6 +437,24 @@ def test_scouting_report_deep_link_restores_watchlist_conditions() -> None:
     assert app.query_params["page"] == ["球探報告"]
     assert app.query_params["watchlist"] == [",".join(selected_ids)]
 
+
+def test_external_page_query_change_updates_navigation_after_session_started() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+
+    league_page = "\u806f\u76df\u7e3d\u89bd"
+    rankings_page = "\u7403\u54e1\u6392\u884c\u699c"
+
+    app.sidebar.radio[0].set_value(league_page)
+    app.run(timeout=20)
+    assert app.query_params["page"] == [league_page]
+
+    app.query_params["page"] = rankings_page
+    app.run(timeout=20)
+
+    assert len(app.exception) == 0
+    assert app.sidebar.radio[0].value == rankings_page
+
 def test_metric_ranking_team_view_renders_balanced_top_and_bottom_sections():
     app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
@@ -698,3 +716,25 @@ def test_matchup_uses_unique_player_ids_and_recalculates() -> None:
     assert len(app.exception) == 0
     assert "LOG5 上壘機率" in visible_text(app)
     assert len(app.get("plotly_chart")) == 2
+
+def test_freshness_display_explains_noncurrent_snapshot_age() -> None:
+    from datetime import datetime, timedelta, timezone
+
+    import app as dashboard
+
+    generated_at = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+    label = dashboard.freshness_display_label({"generated_at": generated_at})
+
+    assert "資料近期更新" in label
+    assert "天前" in label
+
+
+def test_analysis_entry_cards_use_real_streamlit_actions() -> None:
+    source = APP_PATH.read_text(encoding="utf-8-sig")
+    css = Path("src/theme.py").read_text(encoding="utf-8-sig")
+
+    assert "route_columns = st.columns(3, gap=\"medium\")" in source
+    assert "f\"開啟 {target}\"" in source
+    assert "key=f\"route_card_{target}\"" in source
+    assert "on_click=switch_page" in source
+    assert "a:focus-visible" in css
