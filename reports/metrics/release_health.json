@@ -16,7 +16,7 @@
       "details": [],
       "name": "snapshot_lineage",
       "status": "passed",
-      "summary": "已建立可追溯資料快照 20260820T145729Z-02041d39eeea。"
+      "summary": "已建立可追溯資料快照 20260822T102901Z-fe8988a5a21d。"
     },
     {
       "details": [],
@@ -34,7 +34,7 @@
       "details": [],
       "name": "baseline_lineage",
       "status": "passed",
-      "summary": "已與前一版本 20260820T094818Z-61f8537c2130 建立差異比較。"
+      "summary": "已與前一版本 20260820T145729Z-02041d39eeea 建立差異比較。"
     },
     {
       "details": [],
@@ -43,9 +43,9 @@
       "summary": "快照、歷史與分析驗證報告指向同一最新版本。"
     }
   ],
-  "generated_at": "2026-08-20T23:47:26+08:00",
+  "generated_at": "2026-08-22T18:29:01+08:00",
   "schema_version": "1.0",
-  "snapshot_id": "20260820T145729Z-02041d39eeea",
+  "snapshot_id": "20260822T102901Z-fe8988a5a21d",
   "status": "passed",
   "summary": {
     "failed": 0,
