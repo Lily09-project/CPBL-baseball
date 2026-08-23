@@ -108,6 +108,21 @@ def test_build_and_verify_public_release_manifest(tmp_path: Path) -> None:
     assert csv_artifact["columns"] == ["season", "player_id", "player_name", "team"]
 
 
+def test_manifest_verification_is_independent_of_text_line_endings(tmp_path: Path) -> None:
+    write_public_release_fixture(tmp_path)
+    roster_path = tmp_path / "data" / "processed" / "roster.csv"
+    roster_path.write_bytes(roster_path.read_bytes().replace(b"\r\n", b"\n"))
+    manifest = build_public_release_manifest(
+        tmp_path,
+        generated_at=GENERATED_AT,
+        snapshot_id=SNAPSHOT_ID,
+    )
+
+    roster_path.write_bytes(roster_path.read_bytes().replace(b"\n", b"\r\n"))
+
+    assert verify_public_release_manifest(manifest, tmp_path)["valid"] is True
+
+
 def test_verifier_rejects_tampered_csv(tmp_path: Path) -> None:
     manifest = _manifest(tmp_path)
     roster_path = tmp_path / "data" / "processed" / "roster.csv"
