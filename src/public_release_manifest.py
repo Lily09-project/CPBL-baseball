@@ -13,7 +13,7 @@ import pandas as pd
 from src.utils import project_path
 
 
-PUBLIC_RELEASE_SCHEMA_VERSION = "1.0"
+PUBLIC_RELEASE_SCHEMA_VERSION = "1.1"
 PUBLIC_RELEASE_MANIFEST_PATH = Path("reports/metrics/public_release_manifest.json")
 PUBLIC_RELEASE_ARTIFACTS = (
     "data/processed/teams.csv",
@@ -34,12 +34,14 @@ _REQUIRED_FIELDS = frozenset(
 )
 
 
-def _sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for chunk in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+def _canonical_text_bytes(path: Path) -> bytes:
+    """Return UTF-8 bytes with stable line endings across Git checkouts."""
+    text = path.read_bytes().decode("utf-8-sig")
+    return text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")
+
+
+def _sha256(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
 
 
 def _artifact_metadata(root: Path, relative_path: str) -> dict[str, Any]:
@@ -52,10 +54,14 @@ def _artifact_metadata(root: Path, relative_path: str) -> dict[str, Any]:
         raise ValueError(f"公開發布檔案不可離開專案根目錄：{relative_path}") from exc
     if not path.is_file():
         raise ValueError(f"缺少公開發布檔案：{relative_path}")
+    try:
+        canonical_content = _canonical_text_bytes(path)
+    except (OSError, UnicodeError) as exc:
+        raise ValueError(f"公開發布檔案必須是 UTF-8 文字：{relative_path}") from exc
     metadata: dict[str, Any] = {
         "path": relative_path,
-        "size_bytes": path.stat().st_size,
-        "sha256": _sha256(path),
+        "size_bytes": len(canonical_content),
+        "sha256": _sha256(canonical_content),
     }
     if path.suffix.lower() == ".csv":
         try:

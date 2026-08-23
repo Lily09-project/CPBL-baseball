@@ -8,7 +8,7 @@
 - **展示對象**：資料分析、資料工程、Analytics Engineering、全端產品工程職缺的面試官。
 - **展示主軸**：資料來源可信度 → 品質閘門 → 可追溯快照 → 可解釋分析 → 可交付報告 → 測試與安全。
 - **語氣**：用第一人稱說明設計決策，不把專案包裝成預測模型，也不誇大資料能力。
-- **最新驗證基準**：2026-08-22 18:29（Asia/Taipei）本機 `run_project.bat --check` 的結果：官方現役名單 460 人、打者／投手成績聯集 462 位球員、已驗證快照 12 份、品質狀態 `pass`、Release Health 7/7 通過、公開發布 `release_id` 為 `rel-74d0ed026e604b7b1c8889cb`、完整測試 186 passed。
+- **最新驗證基準**：2026-08-22 18:29（Asia/Taipei）本機 `run_project.bat --check` 的結果：官方現役名單 460 人、打者／投手成績聯集 462 位球員、已驗證快照 12 份、品質狀態 `pass`、Release Health 7/7 通過、公開發布 `release_id` 為 `rel-14d9cc107f3ac3b463e553b3`、完整測試 187 passed。
 
 ## 開場前準備
 
@@ -101,7 +101,7 @@ CPBL 公開資料分散、格式可能變動、同一球員可能出現在多張
 
 每次通過驗證的處理後資料都會留下快照，包含時間、來源、前一版本與 SHA-256 內容指紋。現在已累積 12 份已驗證快照，最新快照 ID 是 `20260822T102901Z-fe8988a5a21d`。所以我可以回答『這個結果是哪一版資料算的』，也可以回答『相鄰版本到底改了什麼』。」
 
-「快照解決本機資料血緣，公開發布 Manifest 則解決 GitHub 交付完整性。它只接受固定的 11 個公開 CSV／JSON，記錄每個檔案的 SHA-256、大小、CSV 列數與欄位，再以 canonical JSON 產生 `release_id`。目前 `release_id` 是 `rel-74d0ed026e604b7b1c8889cb`。審查者可執行 `python -m src.verify_public_release reports/metrics/public_release_manifest.json`；只要其中一個檔案被替換、漏掉或混入非 allowlist 路徑，驗證與 release gate 都會失敗。這是完整性校驗而不是數位簽章，發布者身分仍由 Git 與 Pull Request 審查鏈確認。」
+「快照解決本機資料血緣，公開發布 Manifest 則解決 GitHub 交付完整性。它只接受固定的 11 個公開 CSV／JSON，將 UTF-8 文字標準化為 LF 後記錄 SHA-256、大小、CSV 列數與欄位，再以 canonical JSON 產生 `release_id`。目前 `release_id` 是 `rel-14d9cc107f3ac3b463e553b3`。審查者可執行 `python -m src.verify_public_release reports/metrics/public_release_manifest.json`；只要其中一個檔案被替換、漏掉或混入非 allowlist 路徑，驗證與 release gate 都會失敗。這是完整性校驗而不是數位簽章，發布者身分仍由 Git 與 Pull Request 審查鏈確認。」
 
 ### 面試官可能追問
 
@@ -215,7 +215,7 @@ CPBL 公開資料分散、格式可能變動、同一球員可能出現在多張
 
 ### 講稿
 
-「在測試上，我把資料層、分析層、報告完整性、前端主要流程與 release contract 分開驗證。現在又加入 Release Health 與公開發布 Manifest 的異常情境測試，確認列數驟降、schema 漂移、血緣不一致、路徑穿越、symlink、額外檔案與雜湊竄改都會被阻擋。最新本機檢查共有 186 個測試通過，`run_project.bat --check` 也通過 release gate、公開發布驗證、smoke test、依賴檢查與編譯檢查。
+「在測試上，我把資料層、分析層、報告完整性、前端主要流程與 release contract 分開驗證。現在又加入 Release Health 與公開發布 Manifest 的異常情境測試，確認列數驟降、schema 漂移、血緣不一致、路徑穿越、symlink、額外檔案、雜湊竄改與跨平台換行差異都會被正確處理。最新本機檢查共有 187 個測試通過，`run_project.bat --check` 也通過 release gate、公開發布驗證、smoke test、依賴檢查與編譯檢查。
 
 CI 分成幾個責任：安全工作流會執行 secrets、依賴與 Bandit 等掃描；品質工作流會用鎖定依賴跑測試、`pip check`、編譯、release gate 與公開發布 Manifest 驗證；資料刷新工作流只把處理後資料與報告產生 reviewable PR，不直接推送 `main`。
 
@@ -258,7 +258,7 @@ CI 分成幾個責任：安全工作流會執行 secrets、依賴與 Bandit 等�
 3. **品質與血緣**：schema、主鍵、數值、分頁與涵蓋量通過才建立快照；目前有 12 份快照與 SHA-256 指紋。
 4. **使用流程**：使用者可切換打者／投手、調整 PA／IP、篩選、比較並進入完整球員個人頁；樣本不足會明確提示。
 5. **交付**：球探報告提供 Markdown、CSV 與 Manifest，`report_id` 驗證單份分析；公開發布 Manifest 以 `release_id` 驗證 11 個 GitHub 資料產物。
-6. **品質與安全**：186 個測試通過，CI 包含 release gate、Release Health、公開發布 Manifest、依賴、Bandit 與 secrets 檢查；資料刷新透過 PR，不直接改 `main`。
+6. **品質與安全**：187 個測試通過，CI 包含 release gate、Release Health、公開發布 Manifest、依賴、Bandit 與 secrets 檢查；資料刷新透過 PR，不直接改 `main`。
 7. **價值與限制**：能追蹤資料與分析變化，但不宣稱預測或投注能力；下一步是加入更多可驗證的時間序列或逐場資料。
 
 ## 建議現場 Demo 順序
@@ -313,7 +313,7 @@ CI 分成幾個責任：安全工作流會執行 secrets、依賴與 Bandit 等�
 - [ ] 能說明品質失敗時，為什麼不建立快照與排名。
 - [ ] 能展示至少一個真實互動：門檻、篩選、比較或深連結。
 - [ ] 能說明 `snapshot_id`、`report_id`、`release_id` 與兩種 Manifest 的關係。
-- [ ] 能說出 186 passed、12 份快照與最新資料涵蓋量，但不把數字講成永久保證。
+- [ ] 能說出 187 passed、12 份快照與最新資料涵蓋量，但不把數字講成永久保證。
 - [ ] 能清楚說出目前限制：非逐場資料、非預測、非因果推論。
 - [ ] 能說明安全掃描、依賴鎖定與資料刷新 PR 的理由。
 - [ ] 能在面試官追問時回到「來源、品質、血緣、方法、限制」五個關鍵字。
