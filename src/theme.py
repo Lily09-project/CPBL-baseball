@@ -299,6 +299,7 @@ div {
 
 .data-status-line {
   display: inline-flex;
+  max-width: 100%;
   align-items: center;
   gap: .45rem;
   align-self: start;
@@ -309,7 +310,7 @@ div {
   color: var(--mint);
   font-size: .86rem;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .data-status-line::before {
@@ -861,6 +862,7 @@ a:hover {
 }
 
 button:focus-visible,
+a:focus-visible,
 [role="button"]:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
@@ -1165,7 +1167,7 @@ STREAMLIT_LAYOUT_CSS = """
   background: rgba(101, 185, 149, .07);
   color: var(--mint);
   font-size: .86rem;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 [data-testid="stMarkdownContainer"] .data-status-line::before {

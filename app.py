@@ -23,6 +23,7 @@ from src.freshness import data_freshness
 from src.analysis_validation import DRIFT_METRICS, STABILITY_METRICS, priority_sensitivity, rank_stability, summarize_data_drift
 from src.history import compare_metric_versions, later_snapshot_ids
 from src.log5_matchup import calculate_log5_probability, summarize_matchup_probability
+from src.navigation_state import resolve_navigation_page
 from src.public_release_manifest import (
     PUBLIC_RELEASE_MANIFEST_PATH,
     verify_public_release_manifest_file,
@@ -94,6 +95,19 @@ def release_health_label(value: object) -> str:
     if status == "failed":
         return "失敗"
     return "未知"
+
+
+def freshness_display_label(report: dict | None = None) -> str:
+    """Return a compact freshness label that includes age when it matters."""
+    freshness = data_freshness((report or QUALITY_REPORT).get("generated_at", ""))
+    label = str(freshness.get("label", "更新時間未知"))
+    age_hours = freshness.get("age_hours")
+    if age_hours is None or freshness.get("status") in {"current", "unknown"}:
+        return label
+    age = float(age_hours)
+    if age < 24:
+        return f"{label} · 約 {age:g} 小時前"
+    return f"{label} · 約 {age / 24:.1f} 天前"
 
 
 DATA_VERIFIED_DATE = data_verified_date()
@@ -581,7 +595,7 @@ def page_intro(section: str, title: str, description: str) -> None:
         "<div class='mobile-product-brand'>CPBL / SCOUTING DESK</div><section class='page-masthead' aria-label='頁面資料狀態'><div>"
         + page_kicker(section)
         + f"</div><div class='data-status-line status-{escape(str(freshness['status']))}'>"
-        + f"官方資料已核對 · {escape(str(freshness['label']))}</div></section>",
+        + f"官方資料已核對 · {escape(freshness_display_label())}</div></section>",
         unsafe_allow_html=True,
     )
     st.title(title)
@@ -671,15 +685,23 @@ def render_analysis_routes() -> None:
         ("球員排行榜", "依單一指標快速縮小本季候選範圍。"),
         ("投打對決", "用明確限制的 LOG5 情境理解投打差異。"),
     ]
-    route_cards = "".join(
-        "<section class='route-card'><div class='route-eyebrow'>分析入口</div>"
-        f"<div class='route-label'>{escape(target)}</div>"
-        f"<div class='route-description'>{escape(description)}</div></section>"
-        for target, description in routes
-    )
-    st.markdown(f"<div class='route-grid' aria-label='主要分析入口'>{route_cards}</div>", unsafe_allow_html=True)
-    target = st.selectbox("開啟分析頁", [route[0] for route in routes], key="analysis_route_target")
-    st.button("前往分析頁", key="analysis_route_go", on_click=switch_page, args=(target,), width="content")
+    route_columns = st.columns(3, gap="medium")
+    for column, (target, description) in zip(route_columns, routes):
+        with column:
+            st.markdown(
+                "<section class='route-card route-card-content'><div class='route-eyebrow'>分析入口</div>"
+                f"<div class='route-label'>{escape(target)}</div>"
+                f"<div class='route-description'>{escape(description)}</div></section>",
+                unsafe_allow_html=True,
+            )
+            st.button(
+                f"開啟 {target}",
+                key=f"route_card_{target}",
+                icon=":material/arrow_forward:",
+                on_click=switch_page,
+                args=(target,),
+                width="stretch",
+            )
 
 
 def radar_chart(labels: list[str], values: list[float], title: str = "能力雷達圖") -> go.Figure:
@@ -786,7 +808,7 @@ def render_data_trust_surface(
         "來源網域：cpbl.com.tw",
         f"最後驗證：{data_generated_time(report)}",
         f"資料品質：{quality_label}",
-        f"資料新鮮度：{data_freshness(report.get('generated_at', ''))['label']}",
+        f"資料新鮮度：{freshness_display_label(report)}",
     ]
     snapshot = report.get("snapshot", {})
     if isinstance(snapshot, dict) and snapshot.get("snapshot_id"):
@@ -2314,12 +2336,20 @@ st.sidebar.markdown(
     unsafe_allow_html=True,
 )
 requested_page = query_param_value("page")
-if "main_navigation" not in st.session_state and requested_page in PAGE_HANDLERS:
-    st.session_state["main_navigation"] = requested_page
+resolved_page = resolve_navigation_page(
+    requested_page,
+    st.session_state.get("main_navigation"),
+    st.session_state.get("_last_synced_page"),
+    PAGES,
+    PAGES[0],
+)
+if st.session_state.get("main_navigation") != resolved_page:
+    st.session_state["main_navigation"] = resolved_page
 
 st.sidebar.markdown("<div class='sidebar-nav-label'>頁面導覽</div>", unsafe_allow_html=True)
 selected = st.sidebar.radio("頁面導覽", PAGES, label_visibility="collapsed", key="main_navigation")
 sync_page_query(selected)
+st.session_state["_last_synced_page"] = selected
 
 search_map = player_search_options(PLAYERS if not PLAYERS.empty else ROSTER)
 search_labels = ["選擇球員", *search_map]
@@ -2336,7 +2366,7 @@ st.sidebar.button(
 
 freshness = data_freshness(QUALITY_REPORT.get("generated_at", ""))
 st.sidebar.markdown(
-    f"<div class='sidebar-status status-{escape(str(freshness['status']))}'><strong>官方資料已核對 · {escape(str(freshness['label']))}</strong><br>"
+    f"<div class='sidebar-status status-{escape(str(freshness['status']))}'><strong>官方資料已核對 · {escape(freshness_display_label())}</strong><br>"
     f"更新日期：{escape(data_verified_date())}<br>術語：OPS · ISO · AVG · OBP · SLG · ERA · WHIP · K/BB · LOG5</div>",
     unsafe_allow_html=True,
 )
