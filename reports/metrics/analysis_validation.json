@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-08-20T23:47:26+08:00",
-  "history_rows": 3526,
+  "generated_at": "2026-08-22T18:29:01+08:00",
+  "history_rows": 3849,
   "interpretation": {
     "distribution_drift": "中位數、平均數與涵蓋量描述資料分布變化，不會單獨判定資料錯誤。",
     "priority_sensitivity": "權重敏感度只評估排序對小幅權重調整的反應，不代表未來表現。",
     "rank_stability": "Spearman ρ 與 Top-K 重疊率描述相鄰資料快照的一致程度，不是準確率。"
   },
-  "latest_snapshot_id": "20260820T145729Z-02041d39eeea",
+  "latest_snapshot_id": "20260822T102901Z-fe8988a5a21d",
   "limitations": [
     "歷史快照是官方彙總資料，不是逐球、逐打席或完整追蹤資料。",
     "排名穩定性受球員出賽量、名單變動與官方頁面更新節奏影響。",
@@ -14,54 +14,54 @@
   ],
   "player_types": {
     "打者": {
-      "history_rows": 1848,
+      "history_rows": 2016,
       "latest_drift_rows": 6,
       "player_count": 168,
       "stability": {
         "obp": {
-          "comparison_count": 10,
-          "latest_spearman_rank_correlation": 0.9995,
-          "latest_top_k_overlap": 1.0
+          "comparison_count": 11,
+          "latest_spearman_rank_correlation": 0.9982,
+          "latest_top_k_overlap": 0.9
         },
         "ops": {
-          "comparison_count": 10,
-          "latest_spearman_rank_correlation": 0.9995,
-          "latest_top_k_overlap": 1.0
+          "comparison_count": 11,
+          "latest_spearman_rank_correlation": 0.999,
+          "latest_top_k_overlap": 0.9
         },
         "player_value_score": {
-          "comparison_count": 10,
-          "latest_spearman_rank_correlation": 0.9998,
+          "comparison_count": 11,
+          "latest_spearman_rank_correlation": 0.999,
           "latest_top_k_overlap": 1.0
         },
         "slg": {
-          "comparison_count": 10,
-          "latest_spearman_rank_correlation": 0.9998,
+          "comparison_count": 11,
+          "latest_spearman_rank_correlation": 0.9991,
           "latest_top_k_overlap": 1.0
         }
       }
     },
     "投手": {
-      "history_rows": 1678,
+      "history_rows": 1833,
       "latest_drift_rows": 5,
       "player_count": 156,
       "stability": {
         "era": {
-          "comparison_count": 10,
-          "latest_spearman_rank_correlation": 0.9996,
+          "comparison_count": 11,
+          "latest_spearman_rank_correlation": 0.9997,
           "latest_top_k_overlap": 1.0
         },
         "k_bb_ratio": {
-          "comparison_count": 10,
-          "latest_spearman_rank_correlation": 0.9994,
+          "comparison_count": 11,
+          "latest_spearman_rank_correlation": 0.999,
           "latest_top_k_overlap": 1.0
         },
         "player_value_score": {
-          "comparison_count": 10,
-          "latest_spearman_rank_correlation": 0.9996,
-          "latest_top_k_overlap": 1.0
+          "comparison_count": 11,
+          "latest_spearman_rank_correlation": 0.9994,
+          "latest_top_k_overlap": 0.9
         },
         "whip": {
-          "comparison_count": 10,
+          "comparison_count": 11,
           "latest_spearman_rank_correlation": 0.9993,
           "latest_top_k_overlap": 1.0
         }
@@ -69,5 +69,5 @@
     }
   },
   "schema_version": "1.0",
-  "snapshot_count": 11
+  "snapshot_count": 12
 }
