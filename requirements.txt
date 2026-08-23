@@ -4,6 +4,6 @@ numpy>=2.5.1
 plotly>=6.9.0
 requests>=2.34.2
 pytest>=9.1.1
-lxml>=6.1.1
+lxml>=6.1.2
 gitpython>=3.1.58
 pillow>=12.3.0
