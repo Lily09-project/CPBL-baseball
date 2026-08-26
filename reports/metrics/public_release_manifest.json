@@ -26,8 +26,8 @@
       ],
       "path": "data/processed/teams.csv",
       "row_count": 6,
-      "sha256": "5c434cb1704bd30f58201b3310d7015872567ed6e6a27946136bb7416277d5d3",
-      "size_bytes": 790
+      "sha256": "3f5d86e9f1b4b264ae6c89de691af83675123e88e5ddb32f7aa078938ee9e372",
+      "size_bytes": 793
     },
     {
       "columns": [
@@ -41,8 +41,8 @@
       ],
       "path": "data/processed/roster.csv",
       "row_count": 460,
-      "sha256": "6c464b31c73ed617ee7652075b6c31135656bec3446156eec0c130213bc99af6",
-      "size_bytes": 58720
+      "sha256": "1dfb6db9fff4c782a5dd95bdf2c358f752f126322e5e2cbedbfb88346a60d28b",
+      "size_bytes": 58714
     },
     {
       "columns": [
@@ -79,8 +79,8 @@
       ],
       "path": "data/processed/batters_scored.csv",
       "row_count": 168,
-      "sha256": "23fa08c62264e5fc5da9b0ed362584d3a52bab3c42d32a13c98d6e1ea3b251b7",
-      "size_bytes": 30705
+      "sha256": "3272d7791275acc6bc047a43689b929986bbe6c5cc99f301b4db4f55c9be0ede",
+      "size_bytes": 30650
     },
     {
       "columns": [
@@ -110,9 +110,9 @@
         "player_type"
       ],
       "path": "data/processed/pitchers_scored.csv",
-      "row_count": 155,
-      "sha256": "beb599d07a329ab1da39d6aa92805ac79447f632fc82085ff5dd1205e2f0c7b0",
-      "size_bytes": 24470
+      "row_count": 157,
+      "sha256": "742104f998d168a07344a4dc4521f5344d9ce0256a720102445d83d330de39a6",
+      "size_bytes": 24789
     },
     {
       "columns": [
@@ -129,8 +129,8 @@
       ],
       "path": "data/processed/players_scored.csv",
       "row_count": 462,
-      "sha256": "7b0914060766029eecc9a0d5875ad64bd155590d146be0307b9bc7fd97f2c1e9",
-      "size_bytes": 69278
+      "sha256": "5ffe41a7a873cdc3f8571fbbc289a073df7d7a06fe849be444dfee9e821f0b71",
+      "size_bytes": 69261
     },
     {
       "columns": [
@@ -150,9 +150,9 @@
         "current_captured_at"
       ],
       "path": "data/processed/player_movements.csv",
-      "row_count": 2106,
-      "sha256": "dc452d58b1a1dc378378b07eabc61019c9b5f68954e86f2fc7b49382c1cf043e",
-      "size_bytes": 403191
+      "row_count": 2118,
+      "sha256": "cdaed350a95da10e45895eb235a6a823f90abad64da10f602b53a4a6b48d2613",
+      "size_bytes": 405319
     },
     {
       "columns": [
@@ -172,9 +172,9 @@
         "schema_changed_files"
       ],
       "path": "data/processed/snapshot_history.csv",
-      "row_count": 12,
-      "sha256": "22eec81c917891ed4d8ce6473ed7ed321eda8dee1cbb7a728889383aa3417644",
-      "size_bytes": 1634
+      "row_count": 13,
+      "sha256": "cca93d358f5bb29cf5a4c9d813c7937a761db97933de10324e4da6c5c9a0247f",
+      "size_bytes": 1758
     },
     {
       "columns": [
@@ -220,28 +220,28 @@
         "player_value_score"
       ],
       "path": "data/processed/player_metric_history.csv",
-      "row_count": 3849,
-      "sha256": "8e324f3cfeef9aaaeda17b3ecd72e2e46afe0b826eaa0da2206f1a9f0f3a2ad0",
-      "size_bytes": 824010
+      "row_count": 4174,
+      "sha256": "7a388056d195996e582b3860fe9ee1f5fd42db17b2a8c452de3097b8c3366e31",
+      "size_bytes": 893602
     },
     {
       "path": "reports/metrics/data_quality_report.json",
-      "sha256": "e564e98a297a102f5501bb1cf8b81120b5e440539118eba6271bdada166fa5c6",
-      "size_bytes": 10584
+      "sha256": "90daea989f1071c20da27261f245943bbdf363f16fa8393028fcd55908ddc157",
+      "size_bytes": 10592
     },
     {
       "path": "reports/metrics/analysis_validation.json",
-      "sha256": "a6f633510e97d002da0e492b21fec343373a05aa282688d1b0216616646a1cb6",
-      "size_bytes": 2432
+      "sha256": "83e6a3c2991f936a372969dc806d8b70a0de212f92db1e472966b63e17be33cb",
+      "size_bytes": 2435
     },
     {
       "path": "reports/metrics/release_health.json",
-      "sha256": "58e820f6db28c2cb42c0c7376cabd71d5037c91999479a7bc1dea8c18bc1291c",
+      "sha256": "1601eb77f4b73d41554814bb76e950282a6430370e6c9c4e24b35d30534f1255",
       "size_bytes": 1553
     }
   ],
-  "generated_at": "2026-08-22T18:29:01+08:00",
-  "release_id": "rel-14d9cc107f3ac3b463e553b3",
+  "generated_at": "2026-08-26T10:22:25+08:00",
+  "release_id": "rel-6913b177716c5c227df5d95a",
   "schema_version": "1.1",
-  "snapshot_id": "20260822T102901Z-fe8988a5a21d"
+  "snapshot_id": "20260826T022226Z-0fd951653c01"
 }

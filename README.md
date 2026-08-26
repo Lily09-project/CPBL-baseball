@@ -29,21 +29,21 @@
 
 ## 最新驗證摘要
 
-以下數字來自本次以 CPBL 官方資料執行 run_project.bat --check 後的本地驗證。資料檔案更新時，README 的數字應與 reports/metrics/data_quality_report.json、reports/metrics/release_health.json、reports/metrics/public_release_manifest.json 一起重新檢查。
+以下數字來自本次執行 `python run_all.py --mode api`，並通過完整測試與發布檢查後的本地驗證。資料檔案更新時，README 的數字應與 reports/metrics/data_quality_report.json、reports/metrics/release_health.json、reports/metrics/public_release_manifest.json 一起重新檢查。
 
 | 項目 | 最新結果 |
 | --- | --- |
 | 資料來源 | CPBL 官方公開頁面擷取；mode=api 為相容的流程參數 |
-| 最後驗證時間 | 2026-08-22 18:29（Asia/Taipei） |
+| 最後驗證時間 | 2026-08-26 10:22（Asia/Taipei） |
 | 品質狀態 | pass |
 | 發布健康 | pass；schema、列數驟降與血緣檢查通過 |
-| 公開發布 Manifest | `rel-14d9cc107f3ac3b463e553b3`；11 個公開產物驗證通過 |
+| 公開發布 Manifest | `rel-6913b177716c5c227df5d95a`；11 個公開產物驗證通過 |
 | 官方現役名單 | 460 人 |
 | 打者／投手成績聯集 | 462 位球員 |
-| 已驗證資料快照 | 12 份 |
-| 最新資料快照 | `20260822T102901Z-fe8988a5a21d` |
-| 球員版本變化紀錄 | 2,106 筆 |
-| 分析驗證摘要 | schema 1.0；歷史列 3,849；最新快照與資料品質報告一致 |
+| 已驗證資料快照 | 13 份 |
+| 最新資料快照 | `20260826T022226Z-0fd951653c01` |
+| 球員版本變化紀錄 | 2,118 筆 |
+| 分析驗證摘要 | schema 1.0；歷史列 4,174；最新快照與資料品質報告一致 |
 | 完整測試 | 187 passed |
 | Smoke test | passed |
 
