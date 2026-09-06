@@ -5,5 +5,5 @@ plotly>=6.9.0
 requests>=2.34.2
 pytest>=9.1.1
 lxml>=6.1.1
-gitpython>=3.1.58
+gitpython>=3.1.61
 pillow>=12.3.0
