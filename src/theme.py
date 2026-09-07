@@ -758,7 +758,7 @@ div {
   min-height: 48px;
   border-radius: var(--radius);
   font-size: .98rem !important;
-  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
   touch-action: manipulation;
   cursor: pointer;
 }
@@ -773,12 +773,12 @@ div {
 .stDownloadButton button:hover {
   border-color: var(--accent-soft);
   background: rgba(216, 90, 82, .22);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px rgba(240, 138, 120, .18);
 }
 
 .stButton button:active,
 .stDownloadButton button:active {
-  transform: translateY(0);
+  box-shadow: inset 0 0 0 2px rgba(240, 138, 120, .28);
 }
 
 .stDownloadButton {
@@ -867,8 +867,46 @@ a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--focus) !important;
-  outline-offset: 2px !important;
+  outline: 3px solid var(--focus) !important;
+  outline-offset: 3px !important;
+}
+
+/* UI Pro Max: data-dense layouts must reflow without clipping or hidden focus. */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 1rem;
+}
+
+[data-testid="stDataFrame"],
+[data-testid="stPlotlyChart"] {
+  max-width: 100%;
+  min-width: 0;
+}
+
+[data-testid="stDataFrame"] {
+  scrollbar-color: var(--line-strong) var(--surface-soft);
+}
+
+[data-testid="stMarkdownContainer"] h1,
+[data-testid="stMarkdownContainer"] h2,
+[data-testid="stMarkdownContainer"] h3,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li {
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+@media (max-width: 720px) {
+  html { scroll-padding-top: 4.5rem; }
+
+  [data-testid="stPlotlyChart"] {
+    padding: 0;
+  }
+
+  .table-toolbar {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
 }
 
 select,
