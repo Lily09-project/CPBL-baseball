@@ -41,7 +41,8 @@ jobs:
       - name: Scan tracked files for secrets
         shell: bash
         run: |
-          git ls-files -z | xargs -0 detect-secrets scan --all-files --no-verify --exclude-lines '"(snapshot_id|previous_snapshot_id|relative_path|sha256|release_id)"\s*:' > /tmp/secret-scan.json
+          # These content-derived identifiers are public audit metadata, not credentials.
+          git ls-files -z | xargs -0 detect-secrets scan --all-files --no-verify --exclude-lines '"(snapshot_id|previous_snapshot_id|relative_path|sha256|release_id|fingerprint)"\s*:' > /tmp/secret-scan.json
           python - <<'PY'
           import json
           import sys
