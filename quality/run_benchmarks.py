@@ -24,6 +24,9 @@ MANIFEST_PATH = ROOT / "quality" / "performance-manifest.json"
 BASELINE_PATH = ROOT / "quality" / "performance-baseline.json"
 REPORT_PATH = ROOT / "reports" / "metrics" / "performance_latest.json"
 LOG_ROOT = ROOT / "reports" / "performance"
+# The checkout directory can differ from the product/repository logical ID
+# (for example, GitHub Actions checks out this repository as ``CPBL-baseball``).
+PROJECT_ID = "cpbl-analytics-dashboard"
 
 
 def utc_now() -> str:
@@ -47,8 +50,8 @@ def environment() -> dict[str, Any]:
 def validate_manifest(value: dict[str, Any]) -> None:
     if value.get("schema_version") != "1.0":
         raise ValueError("schema_version must be 1.0")
-    if value.get("project") != ROOT.name:
-        raise ValueError(f"project must be {ROOT.name}")
+    if value.get("project") != PROJECT_ID:
+        raise ValueError(f"project must be {PROJECT_ID}")
     repetitions = value.get("repetitions")
     if not isinstance(repetitions, int) or repetitions < 3 or repetitions > 9:
         raise ValueError("repetitions must be between 3 and 9")
