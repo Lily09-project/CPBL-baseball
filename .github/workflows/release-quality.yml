@@ -38,7 +38,7 @@ jobs:
         run: python -m compileall -q app.py src run_all.py
 
       - name: Run tests
-        run: python -m pytest -q
+        run: python -m pytest -q --basetemp "${RUNNER_TEMP}/cpbl-release-pytest"
 
       - name: Verify generated public artifacts
         run: |

@@ -70,4 +70,4 @@ jobs:
         run: python -m bandit -r app.py src run_all.py -ll
 
       - name: Run test suite
-        run: python -m pytest -q
+        run: python -m pytest -q --basetemp "${RUNNER_TEMP}/cpbl-security-pytest"
