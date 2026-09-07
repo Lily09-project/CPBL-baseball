@@ -63,7 +63,7 @@ jobs:
           PY
 
       - name: Audit Python dependencies
-        run: python -m pip_audit -r requirements.lock
+        run: python -m pip_audit --local --strict
 
       - name: Run static security analysis
         run: python -m bandit -r app.py src run_all.py -ll

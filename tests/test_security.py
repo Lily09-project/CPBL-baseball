@@ -10,6 +10,9 @@ from app import dataframe_to_csv_bytes
 from src.fetch_cpbl_data import absolute_url
 
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
 def test_csv_export_neutralizes_spreadsheet_formulas():
     source = pd.DataFrame(
         {
@@ -63,7 +66,7 @@ def test_repository_ignores_common_secret_and_internal_artifacts():
         "*.p12",
         "*.pfx",
         "data/raw/",
-        "notes/source_prompt.txt",
+        "notes/",
     ]:
         assert entry in ignore_text
 
@@ -80,7 +83,7 @@ def test_launcher_enforces_secure_dependency_floors_and_loopback_binding():
         "requests>=2.34.2",
         "pytest>=9.1.1",
         "lxml>=6.1.1",
-        "gitpython>=3.1.58",
+        "gitpython>=3.1.59",
         "pillow>=12.3.0",
     ]:
         assert requirement in requirements
@@ -131,12 +134,23 @@ def test_secret_artifacts_are_effectively_ignored_by_git():
         "example.p12",
         "example.pfx",
         "data/raw/example.html",
-        "notes/source_prompt.txt",
+        "notes/private-review.md",
     ]
 
     for candidate in candidates:
         subprocess.run(
-            ["git", "check-ignore", "--no-index", "--quiet", "--", candidate],
+            [
+                "git",
+                "-c",
+                f"safe.directory={ROOT.as_posix()}",
+                "-C",
+                str(ROOT),
+                "check-ignore",
+                "--no-index",
+                "--quiet",
+                "--",
+                candidate,
+            ],
             check=True,
         )
 
@@ -173,7 +187,7 @@ def test_streamlit_defaults_to_loopback_and_ci_runs_tests():
         '"detect-secrets==1.5.0"',
         "git ls-files -z",
         "snapshot_id|previous_snapshot_id|relative_path",
-        "python -m pip_audit -r requirements.lock",
+        "python -m pip_audit --local --strict",
         "python -m bandit -r app.py src run_all.py -ll",
         "python -m pytest -q",
     ]:

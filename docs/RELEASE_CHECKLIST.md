@@ -8,7 +8,11 @@
 
 ```powershell
 run_project.bat --runtime-check
+run_project.bat --offline-check
 run_project.bat --check
+run_project.bat --validate
+.venv\Scripts\python.exe quality\run_acceptance.py release
+.venv\Scripts\python.exe quality\run_benchmarks.py
 ```
 
 `--check` 必須依序完成：
@@ -23,13 +27,27 @@ run_project.bat --check
 - `src.verify_public_release` 公開發布 allowlist、release_id、SHA-256 與 CSV 結構檢查。
 - Smoke test。
 
+`--offline-check` 不執行官方資料刷新，其餘驗收與 `--check` 相同；用於無網路審查或確認目前 checkout 的公開交付可以獨立重現。需要驗證資料新鮮度時仍必須執行 `--check`。
+
+`--validate` 不刷新官方資料，並在離線交付驗收上再加入零 warning pytest、Bandit 與 pip-audit。正式 release candidate 必須通過此模式。
+
+`quality\run_acceptance.py release` 是整合資料契約、200 項 pytest、10×3 browser QA、timeout、required gate 與失敗證據的機器可讀總判定。效能比較固定執行三次取中位數；不得以減少 route／viewport、忽略 console error 或未經審查覆寫 baseline 的方式消除警告。
+
 額外安全檢查：
 
 ```powershell
-python -m pip_audit -r requirements.lock
+python -m pip_audit --local --strict
 python -m bandit -r app.py src run_all.py -ll
 python -m src.verify_public_release reports/metrics/public_release_manifest.json
 git diff --check
+```
+
+瀏覽器驗收（先在 `127.0.0.1:8852` 啟動 Streamlit）：
+
+```powershell
+python -m pip install -r requirements-e2e.txt
+python -m playwright install chromium
+python tools\ui_qa.py --url http://127.0.0.1:8852
 ```
 
 ## User Acceptance

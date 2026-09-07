@@ -102,6 +102,6 @@ def test_reviewer_can_trace_public_artifacts_to_quality_and_analysis_reports() -
     assert public_manifest["artifact_count"] == 11
     assert analysis["limitations"]
     assert analysis["interpretation"]
-    for path in [ROOT / "docs/MODEL_CARD.md", ROOT / "docs/ARCHITECTURE.md", ROOT / "docs/INTERVIEW_DEMO.md"]:
+    for path in [ROOT / "docs/MODEL_CARD.md", ROOT / "docs/ARCHITECTURE.md", ROOT / "docs/REVIEW_GUIDE.md"]:
         assert path.exists()
         assert path.stat().st_size > 500

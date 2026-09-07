@@ -22,12 +22,17 @@
 
 ```powershell
 run_project.bat --runtime-check
+run_project.bat --offline-check
 python run_all.py --mode api
 python -m pytest -q
 python -m src.release_gate
 python -m src.verify_public_release reports/metrics/public_release_manifest.json
 run_project.bat --check
+.venv\Scripts\python.exe quality\run_acceptance.py release
+.venv\Scripts\python.exe quality\run_benchmarks.py
 ```
+
+發布判定以 acceptance `release` profile 的 JSON 報告為準；散列命令用於定位單一失敗。效能報告採相同環境三次中位數，涵蓋 release integrity、AppTest 與 10×3 browser QA，baseline 只能在確認覆蓋與錯誤閘門未被放寬後更新。
 
 確認以下公開產物已更新且沒有本機路徑或秘密資訊：
 

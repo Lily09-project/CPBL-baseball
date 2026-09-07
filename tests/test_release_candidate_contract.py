@@ -11,6 +11,7 @@ def test_windows_check_runs_the_full_release_gate() -> None:
         "%PYTHON_CMD% -m pip check",
         "%PYTHON_CMD% -m compileall -q app.py src run_all.py tests",
         "%PYTHON_CMD% -m src.release_gate",
+        "%PYTHON_CMD% -m src.verify_public_release reports\\metrics\\public_release_manifest.json",
         "%PYTHON_CMD% -B src\\smoke_test.py",
     ]:
         assert command in launcher

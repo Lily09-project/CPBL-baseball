@@ -44,3 +44,32 @@ jobs:
         run: |
           python -m src.release_gate
           python -m src.verify_public_release reports/metrics/public_release_manifest.json
+
+  browser-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install browser QA dependencies
+        run: |
+          python -m pip install -r requirements-e2e.txt
+          python -m playwright install --with-deps chromium
+      - name: Start Streamlit against verified artifacts
+        shell: bash
+        run: |
+          nohup python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8852 --server.headless true > streamlit-ui-qa.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:8852/_stcore/health | grep --quiet ok; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat streamlit-ui-qa.log
+          exit 1
+      - name: Run responsive browser QA
+        run: python tools/ui_qa.py --url http://127.0.0.1:8852

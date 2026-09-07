@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "project": "cpbl-analytics-dashboard",
+  "repetitions": 3,
+  "thresholds": {"warning_regression_percent": 20, "blocker_regression_percent": 50},
+  "benchmarks": [
+    {
+      "id": "release_integrity", "description": "Release health and public artifact integrity gate",
+      "timeout_seconds": 120, "command": ["{python}", "-m", "src.release_gate"]
+    },
+    {
+      "id": "app_test", "description": "Reviewer-first and acceptance workflow AppTests",
+      "timeout_seconds": 300, "command": ["{python}", "-W", "error", "-m", "pytest", "-q", "-p", "no:cacheprovider", "--basetemp", "{temp}/pytest", "tests/test_reviewer_first_flow.py", "tests/test_acceptance_workflows.py"]
+    },
+    {
+      "id": "browser_qa", "description": "Browser QA across ten routes and three viewports",
+      "timeout_seconds": 600, "command": ["{python}", "quality/run_acceptance.py", "ui"]
+    }
+  ]
+}
