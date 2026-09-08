@@ -6,6 +6,7 @@ import pytest
 from src.fetch_cpbl_data import (
     CPBL_BASE_URL,
     CURRENT_SEASON,
+    add_player_ids,
     build_cpbl_session,
     clean_player_name,
     fetch_recordall,
@@ -112,3 +113,24 @@ def test_normalize_batters_uses_fraction_fallback_when_percentage_columns_are_mi
 
     assert result["bb_rate"] == 0.10
     assert result["k_rate"] == 0.20
+
+
+def test_add_player_ids_uses_stable_ten_character_ids_for_stats_only_players():
+    stats = pd.DataFrame(
+        [
+            {"player_name": "新球員甲", "team": "測試隊"},
+            {"player_name": "新球員乙", "team": "測試隊"},
+        ]
+    )
+    roster = pd.DataFrame(columns=["player_id", "player_name", "team"])
+
+    forward = add_player_ids(stats, roster, "BAT")
+    reversed_rows = add_player_ids(stats.iloc[::-1], roster, "BAT")
+    forward_ids = dict(zip(forward["player_name"], forward["player_id"], strict=True))
+    reversed_ids = dict(
+        zip(reversed_rows["player_name"], reversed_rows["player_id"], strict=True)
+    )
+
+    assert forward_ids == reversed_ids
+    assert forward["player_id"].str.fullmatch(r"BAT[0-9A-F]{7}").all()
+    assert forward["player_id"].str.len().eq(10).all()

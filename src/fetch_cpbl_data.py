@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+import hashlib
 from html.parser import HTMLParser
 from io import StringIO
 import re
@@ -403,10 +404,25 @@ def parse_standing_team(value: Any) -> tuple[int, str]:
     return int(match.group(1)), match.group(2)
 
 
+def synthetic_player_id(prefix: str, player_name: object, team: object) -> str:
+    """Return a stable 10-character ID for a stats-only player."""
+    if not re.fullmatch(r"[A-Z]{3}", prefix):
+        raise ValueError("synthetic player ID prefix must contain three uppercase letters")
+    identity = "\x1f".join(
+        (prefix, normalize_space(team), normalize_space(player_name))
+    ).encode("utf-8")
+    digest = hashlib.sha256(identity).hexdigest()[:7].upper()
+    return f"{prefix}{digest}"
+
+
 def add_player_ids(stats: pd.DataFrame, roster: pd.DataFrame, prefix: str) -> pd.DataFrame:
     out = stats.merge(roster[["player_id", "player_name", "team"]], on=["player_name", "team"], how="left")
     missing = out["player_id"].isna()
-    out.loc[missing, "player_id"] = [f"{prefix}{idx + 1:04d}" for idx in range(int(missing.sum()))]
+    out.loc[missing, "player_id"] = [
+        synthetic_player_id(prefix, row.player_name, row.team)
+        for row in out.loc[missing, ["player_name", "team"]].itertuples(index=False)
+    ]
+    out["player_id"] = out["player_id"].astype("string")
     return out
 
 

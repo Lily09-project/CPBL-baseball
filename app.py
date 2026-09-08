@@ -590,6 +590,7 @@ def page_kicker(section: str) -> str:
 
 
 def page_intro(section: str, title: str, description: str) -> None:
+    del description
     freshness = data_freshness(QUALITY_REPORT.get("generated_at", ""))
     st.markdown(
         "<div class='mobile-product-brand'>CPBL / SCOUTING DESK</div><section class='page-masthead' aria-label='頁面資料狀態'><div>"
@@ -599,7 +600,6 @@ def page_intro(section: str, title: str, description: str) -> None:
         unsafe_allow_html=True,
     )
     st.title(title)
-    st.caption(description)
 
 
 def switch_page(page: str) -> None:
@@ -1132,6 +1132,12 @@ def render_player_movements(row: pd.Series, player_type: str) -> None:
 def page_home() -> None:
     page_intro("資料訊號總覽", "資料訊號總覽", "以 CPBL 官方資料建立本季觀察框架：先確認資料，再進入可重現的比較。")
     render_data_trust_surface(QUALITY_REPORT)
+    st.caption(
+        f"CPBL 官方公開頁面擷取 · /player · /standings/season · /stats/recordall · "
+        f"品質狀態：{quality_status_label(QUALITY_REPORT.get('quality_status'))} · "
+        f"更新：{data_generated_time()}"
+    )
+    st.caption("資料可回答：資格與評估分數；資料限制：不預測未來表現。")
     metric_cards(
         [
             ("球隊數", TEAMS["team"].nunique(), "官方戰績資料"),
@@ -1142,36 +1148,12 @@ def page_home() -> None:
     )
     render_movement_focus()
     st.header("分析入口")
-    st.caption("從一項清楚的工作開始，避免在沒有資格門檻與母體基準的情況下直接比較數字。")
     render_analysis_routes()
-
-    st.header("資料可回答")
-    st.markdown(
-        "- 球員是否達到打席或投球局數資格門檻。\n"
-        "- 評估分數由哪些官方成績訊號推動。\n"
-        "- 球員在符合門檻母體中的相對百分位。\n"
-        "- 官方資料目前可支撐與不可支撐的判讀範圍。"
-    )
-    st.header("資料限制")
-    st.markdown(
-        "- 目前使用本季官方彙總成績，不投射未來表現。\n"
-        "- LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。\n"
-        "- 未列入官方本季全記錄表的現役球員只呈現名單資訊，不計算百分位或評估訊號。"
-    )
-    workflows = [
-        ("球探工作台", "查看打席與投球局數資格門檻、以官方成績產生固定評估分數，並比較符合門檻母體百分位。"),
-        ("聯盟總覽", "戰績、勝差、近況、得失分差與主客場勝率。"),
-        ("球員排行榜", "以 OPS、ISO、ERA、WHIP、K/BB 等指標篩選投打表現。"),
-        ("球員個人頁", "查看本季成績、評估依據、聯盟比較、百分位與相似球員。"),
-        ("投打對決", "以官方成績與聯盟平均 OBP 計算 LOG5 情境結果。"),
-        ("分項排行", "比較打者、投手與球隊的 Top / Bottom 結果。"),
-    ]
-    workflow_html = "\n".join(
-        f"<div class='workflow-row' role='listitem'><span class='workflow-label'>{escape(title)}</span><span class='workflow-description'>{escape(body)}</span></div>"
-        for title, body in workflows
-    )
-    st.markdown(f"<div class='workflow-grid' role='list' aria-label='完整分析流程'>{workflow_html}</div>", unsafe_allow_html=True)
-    source_status_panel()
+    with st.expander("資料可回答 / 資料限制", expanded=False):
+        st.markdown(
+            "資格門檻、固定評估分數與符合門檻母體百分位皆來自本季官方彙總成績。\n\n"
+            "LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。"
+        )
 
 
 def snapshot_option_label(snapshot_id: str) -> str:
@@ -1272,8 +1254,7 @@ def page_snapshot_trends() -> None:
         ]
     )
 
-    st.header("資料版本血緣")
-    st.caption("每個版本由處理後資料的 SHA-256 指紋識別；內部原始 HTML 與本機路徑不會出現在公開輸出。")
+    st.header("資料版本血緣 · SHA-256")
     nodes = []
     for index, row in history.iterrows():
         current_class = " snapshot-node-current" if index == len(history) - 1 else ""
@@ -1339,7 +1320,6 @@ def page_snapshot_trends() -> None:
     )
     selected_history = type_history.loc[type_history["player_id"].astype(str) == str(player_id)].copy()
     player_name = str(selected_history.iloc[-1]["player_name"])
-    st.caption(f"{metric_name(metric)} 僅反映各次官方彙總資料快照，不代表單場或逐打席表現。")
     show_chart(st, player_history_chart(selected_history, metric, player_name))
     trend_table = pd.DataFrame(
         {
@@ -1374,7 +1354,6 @@ def page_snapshot_trends() -> None:
         key=f"history_current_version_{baseline_id}",
         help="只顯示晚於目前基準的資料版本。",
     )
-    st.caption("已限制為時間順序有效的版本組合，避免反向或同版本比較。")
     comparison = compare_metric_versions(players, baseline_id, current_id, player_type, metric)
     if comparison.empty:
         st.info("所選版本沒有可比較的球員指標。")
@@ -1486,6 +1465,7 @@ def page_analysis_validation() -> None:
         "分析驗證",
         "以跨快照穩定性、資料分布變化與權重敏感度，檢查分析結果的可解釋範圍；這些是描述性驗證，不是未來表現預測。",
     )
+    st.caption("描述性驗證 · 不代表預測準確率")
     if SNAPSHOT_HISTORY.empty or PLAYER_METRIC_HISTORY.empty:
         st.info("目前尚未建立足夠的公開歷史資料。請先執行 python run_all.py --mode api。")
         return
@@ -1535,7 +1515,6 @@ def page_analysis_validation() -> None:
             key="validation_stability_top_k",
         )
         stability = rank_stability(history, player_type, metric, top_k=top_k)
-        st.caption("Top-K 重疊率越高，代表相鄰版本的前段名單越一致；Spearman ρ 越接近 1，代表整體排名順序越穩定。")
         if stability.empty:
             st.info("目前只有一個可用版本，尚無法計算相鄰版本排名穩定性。")
         else:
@@ -1576,7 +1555,6 @@ def page_analysis_validation() -> None:
             key="validation_drift_metric",
         )
         drift = summarize_data_drift(history, player_type, [drift_metric])
-        st.caption("中位數、平均數與涵蓋人數呈現官方彙總資料的版本差異；分布變化本身不等於資料品質錯誤。")
         if drift.empty:
             st.info("目前沒有可比較的分布資料。")
         else:
@@ -1641,7 +1619,6 @@ def page_analysis_validation() -> None:
             perturbation=perturbation,
             top_k=10,
         )
-        st.caption("每個情境把一項權重上下調整指定幅度，並按比例重分配其他權重；結果用來檢查排序是否過度依賴單一假設。")
         if sensitivity.empty:
             st.info("目前沒有符合條件的候選球員。")
         else:
@@ -1665,7 +1642,6 @@ def page_league() -> None:
         st.info("目前沒有可顯示的官方球隊戰績，請重新執行官方資料刷新。")
         return
     source_status_panel(compact=True)
-    st.caption("戰績表包含勝差、近況、勝率、得失分差與資料來源欄位。")
     season = st.selectbox("選擇年度", sorted(TEAMS["season"].unique(), reverse=True), key="league_season")
     season_teams = sorted_standings(TEAMS[TEAMS["season"] == season].copy())
     team_options = ["全部"] + sorted(season_teams["team"].unique())
@@ -1682,6 +1658,7 @@ def page_league() -> None:
         ]
     )
     st.header("戰績表")
+    st.caption("勝差 · 近況 · 勝率 · 得失分差")
     show_table(
         st,
         teams,
@@ -1746,7 +1723,6 @@ def page_scouting_workbench() -> None:
     usage_label = qualification_label(player_type)
     default_threshold = DEFAULT_QUALIFICATION[player_type]
     maximum = qualification_upper_bound(source, player_type)
-    st.markdown("<span class='control-caption'>設定資料母體：球隊、資格門檻與評估重點會共同決定候選範圍。</span>", unsafe_allow_html=True)
     control_team, control_threshold, control_priority = st.columns(3, gap="medium")
     team = control_team.selectbox("球隊", ["全部", *sorted(source["team"].dropna().unique())], key=f"scouting_team_{player_type}")
     if player_type == "打者":
@@ -1763,7 +1739,6 @@ def page_scouting_workbench() -> None:
         return
 
     st.header("候選名單")
-    st.caption(f"評估重點：{priority}；排名依評估分數降冪，同分時依 CPBL 球員 ID 排序。")
     display_columns = (
         ["player_id", "player_name", "team", "pa", "priority_score", "qualified_percentile", "contact_score", "power_score", "discipline_score", "hitter_value_score", "evidence_strengths", "evidence_risks", "evidence_notes"]
         if player_type == "打者"
@@ -1782,7 +1757,7 @@ def page_scouting_workbench() -> None:
         help="最多選擇 4 位球員；比較表會保留此選擇順序。",
         key=f"scouting_compare_{player_type}",
     )
-    st.caption("最多選擇 4 位球員。")
+    st.caption("最多選擇 4 位球員")
     comparison = comparison_frame(candidates, [options[label] for label in selected_labels], player_type)
     st.header("並列比較")
     if comparison.empty:
@@ -1797,6 +1772,7 @@ def page_scouting_report() -> None:
         "球探報告",
         "把目前的球探候選人固定成一份具備資料版本、資格門檻與判讀依據的可下載觀察名單。",
     )
+    st.caption("資格門檻 · 評估重點")
     report_type_param = query_param_value("report_type")
     type_index = 1 if report_type_param == "投手" else 0
     player_type = st.radio("球員類型", ["打者", "投手"], index=type_index, horizontal=True, key="scouting_report_type")
@@ -1863,6 +1839,7 @@ def page_scouting_report() -> None:
         help="最多選擇 4 位球員；選取順序會保留在下載報告中。",
         key=f"report_watchlist_{player_type}",
     )
+    st.caption("最多選擇 4 位球員")
     selected_ids = [options[label] for label in selected_labels]
 
     action_share, action_clear = st.columns(2, gap="medium")
@@ -1875,10 +1852,6 @@ def page_scouting_report() -> None:
 
     report = build_watchlist_report(candidates, selected_ids, player_type)
     st.header("評估報告")
-    st.caption("資料版本與品質狀態會隨下載球探報告一併保留。")
-    st.caption("下載稽核 Manifest JSON 會保留報告條件與資料血緣。")
-    st.caption("建立可分享連結後，網址會保留目前的球員與評估條件。")
-    st.caption("選取球員後會顯示報告 ID，方便核對同一份分析成果。")
     if report.empty:
         st.info("選擇候選球員後，這裡會產生可下載的球探報告。")
         return
@@ -1897,7 +1870,8 @@ def page_scouting_report() -> None:
     }
     manifest = build_report_manifest(report, {**metadata, "team": team})
     report_id = str(manifest["report_id"])
-    st.caption(f"資料版本：{snapshot_id} · 產生時間：{metadata['generated_at']} · 品質狀態：{quality_status} · 報告 ID：{report_id}")
+    with st.expander("報告識別資訊", expanded=False):
+        st.caption(f"資料版本：{snapshot_id} · 產生時間：{metadata['generated_at']} · 品質狀態：{quality_status} · 報告 ID：{report_id}")
     chart = report.sort_values("priority_score", ascending=True)
     show_chart(
         st,
@@ -2016,7 +1990,7 @@ def page_rankings() -> None:
 def page_player() -> None:
     page_intro("球員個人頁", "球員個人頁", "從官方名單或本季成績選擇球員，依序檢視事實、相對位置與可解釋的評估訊號。")
     source_status_panel(compact=True)
-    st.caption("全體球員以 CPBL 官方現役名單與官方全記錄成績表的聯集為主；本季一軍成績表未列出的球員會顯示為「官方現役名單」。")
+    st.caption("資料範圍：官方現役名單與本季成績")
     player_type = st.radio("球員類型", ["全體球員", "打者", "投手"], horizontal=True, key="player_type")
     requested_player_id = str(
         st.session_state.pop("requested_player_id", "") or query_param_value("player")
@@ -2313,7 +2287,7 @@ def page_metric_rankings() -> None:
 def render_product_footer() -> None:
     st.markdown(
         "<footer class='product-footer'><strong>獨立資料分析作品 · 非 CPBL 官方服務</strong>"
-        "<span>資料取自 CPBL 官方公開頁面；分析結果不構成投注、比賽結果或球員決策建議。</span></footer>",
+        "<span>CPBL 官方公開資料 · 非投注或決策建議</span></footer>",
         unsafe_allow_html=True,
     )
 
