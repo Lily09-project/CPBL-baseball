@@ -31,7 +31,7 @@ run_project.bat --validate
 
 `--validate` 不刷新官方資料，並在離線交付驗收上再加入零 warning pytest、Bandit 與 pip-audit。正式 release candidate 必須通過此模式。
 
-`quality\run_acceptance.py release` 是整合資料契約、200 項 pytest、10×3 browser QA、timeout、required gate 與失敗證據的機器可讀總判定。效能比較固定執行三次取中位數；不得以減少 route／viewport、忽略 console error 或未經審查覆寫 baseline 的方式消除警告。
+`quality\run_acceptance.py release` 是整合資料契約、200 項 pytest、10×5 核心 browser QA、timeout、required gate 與失敗證據的機器可讀總判定。需要更窄手機、較大手機與 200% 字級重排時，另執行 `python tools\ui_qa.py --url http://127.0.0.1:8852 --extended --text-scale`（10×7）。效能比較固定執行三次取中位數；不得以減少 route／viewport、忽略 console error 或未經審查覆寫 baseline 的方式消除警告。
 
 額外安全檢查：
 

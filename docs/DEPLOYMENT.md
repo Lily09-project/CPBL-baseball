@@ -32,7 +32,7 @@ run_project.bat --check
 .venv\Scripts\python.exe quality\run_benchmarks.py
 ```
 
-發布判定以 acceptance `release` profile 的 JSON 報告為準；散列命令用於定位單一失敗。效能報告採相同環境三次中位數，涵蓋 release integrity、AppTest 與 10×3 browser QA，baseline 只能在確認覆蓋與錯誤閘門未被放寬後更新。
+發布判定以 acceptance `release` profile 的 JSON 報告為準；散列命令用於定位單一失敗。效能報告採相同環境三次中位數，涵蓋 release integrity、AppTest 與 10×5 核心 browser QA；完整 responsive 檢查則使用 10×7 `--extended` 矩陣與 `--text-scale` 200% 字級重排，baseline 只能在確認覆蓋與錯誤閘門未被放寬後更新。
 
 確認以下公開產物已更新且沒有本機路徑或秘密資訊：
 
@@ -60,7 +60,7 @@ run_project.bat --check
 ## 上線驗收
 
 - 桌機與 375px 行動版沒有頁面水平溢位。
-- 七個分析頁面均可開啟，沒有 Streamlit exception 或瀏覽器 console error。
+- 十個公開分析頁面均可開啟，沒有 Streamlit exception 或瀏覽器 console error。
 - 側欄可搜尋完整球員總表並開啟球員頁。
 - 球員網址包含 `page=球員個人頁` 與 `player=<CPBL player_id>`，重新整理後仍顯示同一球員。
 - 頁面顯示資料來源、更新時間、新鮮度、分析限制與「非 CPBL 官方服務」聲明。
