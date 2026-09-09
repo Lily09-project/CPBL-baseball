@@ -21,12 +21,118 @@ PAGE_CONTRACTS = (
     "投打對決",
     "分項排行",
 )
-VIEWPORTS = (
+CORE_VIEWPORTS = (
     ("desktop", 1440, 1000),
     ("small-mobile", 375, 812),
+    ("tablet", 768, 1024),
     ("landscape", 844, 390),
+    ("wide-tablet", 1024, 768),
 )
+EXTENDED_VIEWPORTS = (
+    ("tiny-mobile", 320, 568),
+    ("large-mobile", 414, 896),
+)
+VIEWPORTS = CORE_VIEWPORTS
 STREAMLIT_EXCEPTION_SELECTOR = '[data-testid="stException"]'
+TEXT_SCALE_CSS = ":root { font-size: 200% !important; }"
+
+
+def viewport_matrix(extended: bool = False) -> tuple[tuple[str, int, int], ...]:
+    return CORE_VIEWPORTS + EXTENDED_VIEWPORTS if extended else CORE_VIEWPORTS
+
+
+def layout_issues(page) -> list[str]:
+    """Return observable layout/accessibility defects from the rendered page."""
+    return page.evaluate(
+        """() => {
+            const issues = [];
+            const visible = (element) => {
+                const rect = element.getBoundingClientRect();
+                const style = getComputedStyle(element);
+                return rect.width > 0 && rect.height > 0 && style.display !== 'none'
+                    && style.visibility !== 'hidden';
+            };
+            const main = document.querySelector('#cpbl-main, main');
+            const heading = main?.querySelector('h1') || document.querySelector('h1');
+            if (!heading || !visible(heading)) {
+                issues.push('main heading is missing or hidden');
+            } else {
+                const rect = heading.getBoundingClientRect();
+                const inViewport = rect.bottom > 0 && rect.top < window.innerHeight;
+                if (inViewport) {
+                    const x = Math.min(window.innerWidth - 1, Math.max(1, rect.left + rect.width / 2));
+                    const y = Math.min(window.innerHeight - 1, Math.max(1, rect.top + rect.height / 2));
+                    const top = document.elementFromPoint(x, y);
+                    if (!top || (!heading.contains(top) && !top.contains(heading))) {
+                        issues.push('main heading is obscured');
+                    }
+                }
+            }
+            for (const control of document.querySelectorAll('button[data-testid^="stBaseButton"], [data-testid="stButton"] button, select, textarea')) {
+                if (!visible(control)) continue;
+                const rect = control.getBoundingClientRect();
+                const inViewport = rect.right > 0 && rect.left < window.innerWidth
+                    && rect.bottom > 0 && rect.top < window.innerHeight;
+                const testId = control.getAttribute('data-testid') || '';
+                if (!inViewport || testId === 'stBaseButton-elementToolbar'
+                    || testId.startsWith('stBaseButton-header')) continue;
+                if (rect.width < 24 || rect.height < 24) {
+                    issues.push(`small interactive target: ${control.tagName}`);
+                    break;
+                }
+            }
+            for (const element of document.querySelectorAll('button, [role="button"]')) {
+                if (!visible(element)) continue;
+                const style = getComputedStyle(element);
+                if ((style.overflow === 'hidden' || style.overflowX === 'hidden' || style.overflowY === 'hidden')
+                    && (element.scrollWidth > element.clientWidth + 3 || element.scrollHeight > element.clientHeight + 3)) {
+                    issues.push('interactive label is clipped');
+                    break;
+                }
+            }
+            return issues;
+        }"""
+    )
+
+
+def focus_issues(page) -> list[str]:
+    """Verify a keyboard-focus target remains visible and unobscured."""
+    return page.evaluate(
+        """() => {
+            const visible = (element) => {
+                const rect = element.getBoundingClientRect();
+                const style = getComputedStyle(element);
+                return rect.width > 0 && rect.height > 0 && style.display !== 'none'
+                    && style.visibility !== 'hidden';
+            };
+            const inViewportTarget = (element) => {
+                const rect = element.getBoundingClientRect();
+                return rect.right > 0 && rect.left < window.innerWidth
+                    && rect.bottom > 0 && rect.top < window.innerHeight;
+            };
+            const target = [...document.querySelectorAll('button, [role="button"], select, textarea')]
+                .find((element) => visible(element) && inViewportTarget(element));
+            if (!target) {
+                const skipLink = document.querySelector('a.skip-link');
+                if (!skipLink) return ['no keyboard-focus target'];
+                skipLink.focus({preventScroll: true});
+                return document.activeElement === skipLink ? [] : ['focus did not move to skip link'];
+            }
+            target.focus({preventScroll: true});
+            if (document.activeElement !== target) return ['focus did not move to target'];
+            const rect = target.getBoundingClientRect();
+            const inViewport = rect.right > 0 && rect.left < window.innerWidth
+                && rect.bottom > 0 && rect.top < window.innerHeight;
+            if (!inViewport) return ['focused target is outside viewport'];
+            const x = Math.min(window.innerWidth - 1, Math.max(1, rect.left + rect.width / 2));
+            const y = Math.min(window.innerHeight - 1, Math.max(1, rect.top + rect.height / 2));
+            const top = document.elementFromPoint(x, y);
+            if (!top || (!target.contains(top) && !top.contains(target))) {
+                return ['focused target is obscured'];
+            }
+            return [];
+        }"""
+    )
 
 
 def failure_screenshot_names(screenshot_dir: Path, error: str) -> list[str]:
@@ -70,7 +176,12 @@ def check_health(base_url: str) -> None:
         raise RuntimeError(f"Unexpected Streamlit health response: {body[:200]}")
 
 
-def run_browser_checks(base_url: str, screenshot_dir: Path) -> str:
+def run_browser_checks(
+    base_url: str,
+    screenshot_dir: Path,
+    extended: bool = False,
+    text_scale: bool = False,
+) -> str:
     try:
         from playwright.sync_api import Error as PlaywrightError
         from playwright.sync_api import sync_playwright
@@ -81,7 +192,7 @@ def run_browser_checks(base_url: str, screenshot_dir: Path) -> str:
     failures: list[str] = []
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
-        for viewport_name, width, height in VIEWPORTS:
+        for viewport_name, width, height in viewport_matrix(extended):
             context = browser.new_context(viewport={"width": width, "height": height})
             try:
                 for page_name in PAGE_CONTRACTS:
@@ -110,6 +221,9 @@ def run_browser_checks(base_url: str, screenshot_dir: Path) -> str:
                             failures.append(f"{viewport_name}/{page_name}: missing skip link")
                         if main_anchor.count() != 1:
                             failures.append(f"{viewport_name}/{page_name}: missing main-content anchor")
+                        if text_scale:
+                            page.add_style_tag(content=TEXT_SCALE_CSS)
+                            page.wait_for_timeout(250)
                         if page.locator(STREAMLIT_EXCEPTION_SELECTOR).count():
                             failures.append(f"{viewport_name}/{page_name}: Streamlit runtime exception")
                         overflow = page.evaluate(
@@ -119,12 +233,18 @@ def run_browser_checks(base_url: str, screenshot_dir: Path) -> str:
                             failures.append(
                                 f"{viewport_name}/{page_name}: horizontal overflow {overflow}px"
                             )
+                        for issue in layout_issues(page):
+                            failures.append(f"{viewport_name}/{page_name}: {issue}")
+                        for issue in focus_issues(page):
+                            failures.append(f"{viewport_name}/{page_name}: {issue}")
+                        page.evaluate("document.activeElement?.blur()")
                         if console_errors:
                             failures.append(
                                 f"{viewport_name}/{page_name}: console errors {console_errors[:3]}"
                             )
+                        suffix = "-text-200" if text_scale else ""
                         page.screenshot(
-                            path=str(screenshot_dir / f"{page_name}-{viewport_name}.png"),
+                            path=str(screenshot_dir / f"{page_name}-{viewport_name}{suffix}.png"),
                             full_page=True,
                         )
                     except PlaywrightError as exc:
@@ -147,13 +267,24 @@ def run_browser_checks(base_url: str, screenshot_dir: Path) -> str:
         browser.close()
     if failures:
         raise RuntimeError("; ".join(failures[:20]))
-    return "PASS: 10 routes × 3 viewports, accessibility, overflow, runtime, and console checks"
+    text_note = ", 200% text reflow" if text_scale else ""
+    return f"PASS: {len(PAGE_CONTRACTS)} routes × {len(viewport_matrix(extended))} viewports, accessibility, overflow, runtime, and console checks{text_note}"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run CPBL Streamlit browser QA.")
     parser.add_argument("--url", default="http://127.0.0.1:8852")
     parser.add_argument("--screenshots", default="docs/screenshots/ui-qa")
+    parser.add_argument(
+        "--extended",
+        action="store_true",
+        help="also run 320px and 414px mobile viewports",
+    )
+    parser.add_argument(
+        "--text-scale",
+        action="store_true",
+        help="apply 200% root text scaling and rerun reflow checks",
+    )
     args = parser.parse_args()
     screenshot_dir = Path(args.screenshots)
     (screenshot_dir / "failure-evidence.json").unlink(missing_ok=True)
@@ -161,7 +292,12 @@ def main() -> int:
         stale.unlink(missing_ok=True)
     try:
         check_health(args.url)
-        result = run_browser_checks(args.url, screenshot_dir)
+        result = run_browser_checks(
+            args.url,
+            screenshot_dir,
+            extended=args.extended,
+            text_scale=args.text_scale,
+        )
     except (OSError, urllib.error.URLError, RuntimeError, ValueError) as exc:
         evidence = write_failure_evidence(args.url, screenshot_dir, str(exc))
         print(f"FAIL: {exc}")
