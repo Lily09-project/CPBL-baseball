@@ -763,7 +763,9 @@ def source_status_panel(compact: bool = False) -> None:
     pitcher_count = report.get("available_pitcher_count", 0)
     quality_label = quality_status_label(report.get("quality_status"))
     if compact:
-        st.caption(f"{text} 產生時間：{generated_at}。")
+        st.caption(f"官方資料 · 更新 {generated_at}")
+        with st.expander("資料來源詳情", expanded=False):
+            st.caption(f"{text} 產生時間：{generated_at}。")
         return
     safe_text = escape(str(text))
     safe_verified_date = escape(str(verified_date))
@@ -837,8 +839,16 @@ def render_data_trust_surface(
         details.append("發布 ID：未驗證")
     if player_type is not None and threshold is not None and population_count is not None:
         details.append(f"符合門檻母體：{population_count} 人（{qualification_label(player_type)} ≥ {threshold:g}）")
-    trust_items = "".join(f"<span class='trust-item'>{escape(item)}</span>" for item in details)
+    visible_details = details[:4]
+    lineage_details = details[4:]
+    if player_type is not None and threshold is not None and population_count is not None and details:
+        visible_details.append(details[-1])
+        lineage_details = details[4:-1]
+    trust_items = "".join(f"<span class='trust-item'>{escape(item)}</span>" for item in visible_details)
     st.markdown(f"<div class='trust-strip' role='note'>{trust_items}</div>", unsafe_allow_html=True)
+    if lineage_details:
+        with st.expander("版本與發布資訊", expanded=False):
+            st.caption(" · ".join(lineage_details))
     warnings = [str(item) for item in report.get("warnings", []) if str(item)]
     if quality_status != "pass" and warnings:
         st.warning("資料品質警示：" + "；".join(warnings))
@@ -851,7 +861,7 @@ def render_data_trust_surface(
             st.warning("發布健康提醒：" + message)
     if not release_is_valid:
         st.warning("公開發布 Manifest 無法驗證或與目前資料快照不一致，請先重新執行 run_project.bat --check。")
-    st.caption("LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。")
+    st.caption("分析模型為情境計算，不代表未來表現。")
 
 
 def render_player_evidence(row: pd.Series, population: pd.DataFrame, player_type: str, threshold: float) -> None:
@@ -1132,12 +1142,13 @@ def render_player_movements(row: pd.Series, player_type: str) -> None:
 def page_home() -> None:
     page_intro("資料訊號總覽", "資料訊號總覽", "以 CPBL 官方資料建立本季觀察框架：先確認資料，再進入可重現的比較。")
     render_data_trust_surface(QUALITY_REPORT)
-    st.caption(
-        f"CPBL 官方公開頁面擷取 · /player · /standings/season · /stats/recordall · "
-        f"品質狀態：{quality_status_label(QUALITY_REPORT.get('quality_status'))} · "
-        f"更新：{data_generated_time()}"
-    )
-    st.caption("資料可回答：資格與評估分數；資料限制：不預測未來表現。")
+    with st.expander("資料與限制", expanded=False):
+        st.caption(
+            f"CPBL 官方公開頁面擷取 · /player · /standings/season · /stats/recordall · "
+            f"品質狀態：{quality_status_label(QUALITY_REPORT.get('quality_status'))} · "
+            f"更新：{data_generated_time()}"
+        )
+        st.caption("資料可回答：資格與評估分數；資料限制：不預測未來表現。")
     metric_cards(
         [
             ("球隊數", TEAMS["team"].nunique(), "官方戰績資料"),
