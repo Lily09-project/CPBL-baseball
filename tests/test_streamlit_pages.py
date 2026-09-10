@@ -499,6 +499,19 @@ def test_theme_enforces_equal_cards_spacing_touch_targets_and_mobile_layout():
     assert "transition: all" not in css
 
 
+def test_theme_stacks_masthead_when_sidebar_constrains_tablet_width():
+    css = Path("src/theme.py").read_text(encoding="utf-8-sig")
+    tablet_rules = css.split(
+        "@media (max-width: 1100px) and (min-width: 721px)", 1
+    )[1]
+
+    assert '.page-masthead,' in tablet_rules
+    assert '.player-identity {' in tablet_rules
+    assert 'grid-template-columns: 1fr !important;' in tablet_rules
+    assert '.data-status-line {' in tablet_rules
+    assert 'justify-self: start;' in tablet_rules
+
+
 def test_theme_uses_flat_editorial_data_tool_direction():
     css = Path("src/theme.py").read_text(encoding="utf-8-sig")
 

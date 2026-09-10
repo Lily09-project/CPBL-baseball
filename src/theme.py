@@ -1373,6 +1373,16 @@ STREAMLIT_LAYOUT_CSS = """
 }
 
 @media (max-width: 1100px) and (min-width: 721px) {
+  [data-testid="stMarkdownContainer"] .page-masthead,
+  [data-testid="stMarkdownContainer"] .player-identity {
+    grid-template-columns: 1fr !important;
+    gap: .8rem;
+  }
+
+  [data-testid="stMarkdownContainer"] .data-status-line {
+    justify-self: start;
+  }
+
   [data-testid="stMarkdownContainer"] .cpbl-card-grid,
   [data-testid="stMarkdownContainer"] .route-grid,
   [data-testid="stMarkdownContainer"] .evidence-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
