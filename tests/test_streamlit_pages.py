@@ -507,7 +507,11 @@ def test_theme_stacks_masthead_when_sidebar_constrains_tablet_width():
 
     assert '.page-masthead,' in tablet_rules
     assert '.player-identity {' in tablet_rules
-    assert 'grid-template-columns: 1fr !important;' in tablet_rules
+    assert 'display: flex !important;' in tablet_rules
+    assert 'flex-direction: column;' in tablet_rules
+    assert 'align-items: flex-start;' in tablet_rules
+    assert '.page-kicker {' in tablet_rules
+    assert 'flex-wrap: wrap;' in tablet_rules
     assert '.data-status-line {' in tablet_rules
     assert 'justify-self: start;' in tablet_rules
 

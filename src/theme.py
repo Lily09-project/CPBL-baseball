@@ -1375,8 +1375,14 @@ STREAMLIT_LAYOUT_CSS = """
 @media (max-width: 1100px) and (min-width: 721px) {
   [data-testid="stMarkdownContainer"] .page-masthead,
   [data-testid="stMarkdownContainer"] .player-identity {
-    grid-template-columns: 1fr !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-start;
     gap: .8rem;
+  }
+
+  [data-testid="stMarkdownContainer"] .page-kicker {
+    flex-wrap: wrap;
   }
 
   [data-testid="stMarkdownContainer"] .data-status-line {
