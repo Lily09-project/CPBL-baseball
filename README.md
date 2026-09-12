@@ -2,6 +2,7 @@
 
 [![Security checks](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/security.yml)
 [![CPBL data health](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/data-health.yml/badge.svg?branch=main)](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/data-health.yml)
+[![Release quality gate](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/release-quality.yml/badge.svg?branch=main)](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/release-quality.yml)
 
 以官方 CPBL 資料來源建立的可追溯資料產品，涵蓋資料管線、資料品質與可稽核性、球員評估、球探工作台、球探報告、版本差異與響應式 Streamlit UI。
 
