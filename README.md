@@ -80,6 +80,10 @@ data/raw/、data/processed/（若非發布所需的衍生資料）、notes/、.e
 
 公開資料需經過 data quality、release health 與 public release manifest 驗證；reports/metrics/data_quality_report.json、release_health.json、public_release_manifest.json 只保留可重現發布所需的摘要。
 
+## 授權與資料來源聲明
+
+本儲存庫目前未指定開源授權；除非另有書面同意，程式碼與文件不授予再發布或商業使用權。CPBL 名稱、球隊／球員識別資訊、統計資料與官方網站內容之權利歸屬原權利人；使用處理後資料時，請遵守來源網站的使用規範與適用條款。本專案僅作資料工程與分析展示，不代表 CPBL 官方服務或立場。
+
 ## 資料限制
 
 來源頁面格式可能變動，官方資料也可能有缺欄位、延遲與快照差異。分析不預測比賽或產生名單建議，不代表 CPBL 官方立場，也不能推論傷勢、戰術、未來表現或球員名單決策。
