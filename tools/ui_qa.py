@@ -110,8 +110,11 @@ def focus_issues(page) -> list[str]:
                 return rect.right > 0 && rect.left < window.innerWidth
                     && rect.bottom > 0 && rect.top < window.innerHeight;
             };
+            const focusable = (element) => !element.disabled
+                && element.getAttribute('aria-disabled') !== 'true'
+                && !element.closest('[inert]');
             const target = [...document.querySelectorAll('button, [role="button"], select, textarea')]
-                .find((element) => visible(element) && inViewportTarget(element));
+                .find((element) => focusable(element) && visible(element) && inViewportTarget(element));
             if (!target) {
                 const skipLink = document.querySelector('a.skip-link');
                 if (!skipLink) return ['no keyboard-focus target'];
