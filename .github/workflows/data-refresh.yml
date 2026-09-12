@@ -58,6 +58,18 @@ jobs:
           fi
 
           branch="automation/data-refresh-${GITHUB_RUN_ID}"
+
+          # Re-runs reuse the same run ID. Keep the job idempotent by reusing
+          # an existing PR, or removing an orphaned ref before recreating it.
+          if existing_pr="$(gh pr view "$branch" --repo "$GITHUB_REPOSITORY" --json url --jq '.url' 2>/dev/null)"; then
+            echo "Pull request already exists: $existing_pr"
+            exit 0
+          fi
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Removing stale remote refresh branch: $branch"
+            git push origin --delete "$branch"
+          fi
+
           git switch -c "$branch"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -65,8 +77,17 @@ jobs:
           git commit -m "chore(data): refresh verified CPBL data"
           git push --set-upstream origin "$branch"
 
-          gh pr create \
+          set +e
+          pr_output="$(gh pr create \
             --base main \
             --head "$branch" \
             --title "chore(data): refresh verified CPBL data" \
-            --body "Automated refresh from CPBL official public pages.\n\n- API mode only\n- Data quality report passed before snapshot creation\n- Release gate, public release Manifest, and test suite passed\n- Review the generated snapshot, movement, history, analysis validation, and release integrity outputs before merging."
+            --body "Automated refresh from CPBL official public pages.\n\n- API mode only\n- Data quality report passed before snapshot creation\n- Release gate, public release manifest, and test suite passed\n- Review the generated snapshot, movement, history, analysis validation, and release integrity outputs before merging." 2>&1)"
+          pr_status=$?
+          set -e
+          printf '%s\n' "$pr_output"
+          if [ "$pr_status" -ne 0 ]; then
+            echo "::error::Unable to create the verified-data pull request; removing the orphaned refresh branch."
+            git push origin --delete "$branch" || echo "::warning::Failed to remove refresh branch $branch"
+            exit "$pr_status"
+          fi
