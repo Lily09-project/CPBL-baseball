@@ -4,7 +4,7 @@
 [![CPBL data health](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/data-health.yml/badge.svg?branch=main)](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/data-health.yml)
 [![Release quality gate](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/release-quality.yml/badge.svg?branch=main)](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/release-quality.yml)
 
-以官方 CPBL 資料來源建立的可追溯資料產品，涵蓋資料管線、資料品質與可稽核性、球員評估、球探工作台、球探報告、版本差異與響應式 Streamlit UI。
+以官方 CPBL 資料來源建立的可追溯資料產品，涵蓋資料管線、資料品質與可稽核性、球員評估、球探工作台、球探報告與版本差異。Streamlit UI 支援桌面與行動裝置，並提供深色／淺色模式。
 
 這是獨立分析作品，為非 CPBL 官方服務。不預測比賽或產生名單建議，也不對傷勢、戰術、未來表現或球員名單決策作出結論。
 
@@ -36,7 +36,7 @@
 
 ## 評估公式
 
-打者與投手先套用資格門檻：打者 PA >= 30，投手 IP >= 10。評估只使用固定的描述性指標與聯盟母體百分位：
+打者與投手先套用資格門檻：打者 `PA >= 30`、投手 `IP >= 10`。球探報告的評估公式使用固定權重；完整欄位定義與來源見 [docs/MODEL_CARD.md](docs/MODEL_CARD.md)：
 
 ~~~text
 player_value_score = 0.70 * power_score + 0.30 * hitter_value_score
@@ -45,7 +45,7 @@ pitcher_value_score = 0.75 * run_prevention_score + 0.25 * pitcher_value_score
 command_score = 0.70 * command_score + 0.30 * strikeout_score
 ~~~
 
-實際頁面會同時顯示資料量、母體、強項、風險與限制，避免把 player_value_score 解讀成未來表現預測。LOG5 為情境計算，非校準預測模型。
+頁面會同時顯示資料量、母體、強項、風險與限制。`player_value_score` 是描述性排序工具；LOG5 為情境計算，非校準預測模型。
 
 ## 官方 CPBL 資料來源
 
@@ -83,11 +83,11 @@ data/raw/、data/processed/（若非發布所需的衍生資料）、notes/、.e
 
 ## 授權與資料來源聲明
 
-本儲存庫目前未指定開源授權；除非另有書面同意，程式碼與文件不授予再發布或商業使用權。CPBL 名稱、球隊／球員識別資訊、統計資料與官方網站內容之權利歸屬原權利人；使用處理後資料時，請遵守來源網站的使用規範與適用條款。本專案僅作資料工程與分析展示，不代表 CPBL 官方服務或立場。
+本儲存庫目前未指定開源授權；除非另有書面同意，程式碼與文件不授予再發布或商業使用權。CPBL 名稱、球隊／球員識別資訊、統計資料與官方網站內容之權利歸屬原權利人；使用處理後資料時請遵守來源網站規範。本專案僅作資料工程與分析展示，不代表 CPBL 官方服務或立場。
 
 ## 資料限制
 
-來源頁面格式可能變動，官方資料也可能有缺欄位、延遲與快照差異。分析不預測比賽或產生名單建議，不代表 CPBL 官方立場，也不能推論傷勢、戰術、未來表現或球員名單決策。
+來源頁面格式可能變動，官方資料也可能有缺欄位、延遲與快照差異。分析不預測比賽或產生名單建議，也不推論傷勢、戰術、未來表現或球員名單決策。
 
 ## 部署與營運
 

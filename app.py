@@ -49,7 +49,7 @@ from src.scouting_report import (
     report_markdown,
 )
 from src.similarity import find_similar_players
-from src.theme import STREAMLIT_CSS, STREAMLIT_LAYOUT_CSS
+from src.theme import STREAMLIT_CSS, STREAMLIT_LAYOUT_CSS, STREAMLIT_LIGHT_CSS
 from src.utils import project_path
 
 
@@ -260,8 +260,14 @@ METRIC_HELP = {
 
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
+UI_THEME_OPTIONS = {"dark": "深色", "light": "淺色"}
+UI_THEME = str(st.session_state.get("ui_theme", "dark"))
+if UI_THEME not in UI_THEME_OPTIONS:
+    UI_THEME = "dark"
 st.markdown(STREAMLIT_CSS, unsafe_allow_html=True)
 st.markdown(STREAMLIT_LAYOUT_CSS, unsafe_allow_html=True)
+if UI_THEME == "light":
+    st.markdown(STREAMLIT_LIGHT_CSS, unsafe_allow_html=True)
 st.markdown(
     '<a class="skip-link" href="#cpbl-main">跳至主要內容</a><div id="cpbl-main" tabindex="-1"></div>',
     unsafe_allow_html=True,
@@ -331,12 +337,43 @@ SNAPSHOT_HISTORY = DATA["snapshot_history"]
 PLAYER_METRIC_HISTORY = DATA["player_metric_history"]
 TABLE_DOWNLOAD_INDEX = 0
 
-CHART_TEXT = "#e7efed"
-CHART_MUTED = "#9db0b5"
-CHART_GRID = "rgba(157,176,181,.22)"
-CHART_ACCENT = "#d85a52"
-CHART_SECONDARY = "#79b6bc"
-CHART_HIGHLIGHT = "#d3a354"
+CHART_PALETTES = {
+    "dark": {
+        "text": "#e7efed",
+        "muted": "#9db0b5",
+        "grid": "rgba(157,176,181,.22)",
+        "zero": "rgba(157,176,181,.38)",
+        "accent": "#d85a52",
+        "accent_fill": "rgba(216,90,82,.22)",
+        "secondary": "#79b6bc",
+        "highlight": "#d3a354",
+        "mint": "#65b995",
+        "danger_soft": "#e87d72",
+    },
+    "light": {
+        "text": "#0f172a",
+        "muted": "#475569",
+        "grid": "rgba(71,85,105,.22)",
+        "zero": "rgba(71,85,105,.38)",
+        "accent": "#b42318",
+        "accent_fill": "rgba(180,35,24,.16)",
+        "secondary": "#0369a1",
+        "highlight": "#a16207",
+        "mint": "#047857",
+        "danger_soft": "#d92d20",
+    },
+}
+CHART_PALETTE = CHART_PALETTES.get(UI_THEME, CHART_PALETTES["dark"])
+CHART_TEXT = CHART_PALETTE["text"]
+CHART_MUTED = CHART_PALETTE["muted"]
+CHART_GRID = CHART_PALETTE["grid"]
+CHART_ZERO = CHART_PALETTE["zero"]
+CHART_ACCENT = CHART_PALETTE["accent"]
+CHART_ACCENT_FILL = CHART_PALETTE["accent_fill"]
+CHART_SECONDARY = CHART_PALETTE["secondary"]
+CHART_HIGHLIGHT = CHART_PALETTE["highlight"]
+CHART_MINT = CHART_PALETTE["mint"]
+CHART_DANGER_SOFT = CHART_PALETTE["danger_soft"]
 HISTORY_METRICS = {
     "打者": ["ops", "batting_average", "obp", "slg", "iso", "bb_rate", "k_rate", "player_value_score"],
     "投手": ["era", "whip", "k_bb_ratio", "k_rate", "bb_rate", "player_value_score"],
@@ -462,7 +499,29 @@ def show_table(container, df: pd.DataFrame, columns: list[str] | None = None) ->
     global TABLE_DOWNLOAD_INDEX
     TABLE_DOWNLOAD_INDEX += 1
     display = to_display_table(df, columns)
-    container.dataframe(display, width="stretch", hide_index=True)
+    if UI_THEME == "light":
+        # Streamlit's Glide canvas receives its palette from the server-level
+        # theme. Render an escaped HTML table in light mode so the visual
+        # theme switch is immediate and every cell follows the light palette.
+        html_table = display.to_html(
+            index=False,
+            escape=True,
+            classes="dashboard-table",
+            border=0,
+        )
+        container.markdown(
+            f'<div class="table-shell" role="region" aria-label="資料表" tabindex="0">{html_table}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        # Include the active UI theme in the widget key so Streamlit remounts
+        # the Glide canvas when users switch between dark and light modes.
+        container.dataframe(
+            display,
+            width="stretch",
+            hide_index=True,
+            key=f"cpbl_table_{UI_THEME}_{TABLE_DOWNLOAD_INDEX}",
+        )
     container.markdown(
         "<div class='table-toolbar'><span class='table-toolbar-label'>資料表</span><span class='table-toolbar-hint'>UTF-8 CSV</span></div>",
         unsafe_allow_html=True,
@@ -489,20 +548,20 @@ def apply_chart_theme(fig: go.Figure) -> go.Figure:
     )
     fig.update_xaxes(
         gridcolor=CHART_GRID,
-        zerolinecolor="rgba(157,176,181,.38)",
+        zerolinecolor=CHART_ZERO,
         title_font=dict(size=17),
         tickfont=dict(size=15, color=CHART_MUTED),
     )
     fig.update_yaxes(
         gridcolor=CHART_GRID,
-        zerolinecolor="rgba(157,176,181,.38)",
+        zerolinecolor=CHART_ZERO,
         title_font=dict(size=17),
         tickfont=dict(size=15, color=CHART_MUTED),
     )
     fig.update_polars(
         bgcolor="rgba(0,0,0,0)",
-        radialaxis=dict(gridcolor="rgba(157,176,181,.32)", tickfont=dict(size=14, color=CHART_MUTED)),
-        angularaxis=dict(gridcolor="rgba(157,176,181,.36)", tickfont=dict(size=16, color=CHART_TEXT)),
+        radialaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=14, color=CHART_MUTED)),
+        angularaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=16, color=CHART_TEXT)),
     )
     return fig
 
@@ -718,7 +777,7 @@ def radar_chart(labels: list[str], values: list[float], title: str = "能力雷�
             mode="lines+markers",
             line=dict(color=CHART_ACCENT, width=3),
             marker=dict(size=7, color=CHART_HIGHLIGHT),
-            fillcolor="rgba(216,90,82,.22)",
+            fillcolor=CHART_ACCENT_FILL,
             hovertemplate="%{theta}: %{r:.1f}<extra></extra>",
         )
     )
@@ -728,8 +787,8 @@ def radar_chart(labels: list[str], values: list[float], title: str = "能力雷�
         polar=dict(
             bgcolor="rgba(0,0,0,0)",
             domain=dict(x=[0.16, 0.84], y=[0.08, 0.92]),
-            radialaxis=dict(visible=True, range=[0, 100], gridcolor="rgba(157,176,181,.32)"),
-            angularaxis=dict(gridcolor="rgba(157,176,181,.36)"),
+            radialaxis=dict(visible=True, range=[0, 100], gridcolor=CHART_GRID),
+            angularaxis=dict(gridcolor=CHART_GRID),
         ),
         height=420,
     )
@@ -944,7 +1003,7 @@ def league_percentile_chart(row: pd.Series, df: pd.DataFrame, metrics: list[tupl
             x=values,
             y=labels,
             orientation="h",
-            marker_color=[CHART_ACCENT, CHART_HIGHLIGHT, CHART_SECONDARY, "#65b995", "#e87d72"][: len(values)],
+            marker_color=[CHART_ACCENT, CHART_HIGHLIGHT, CHART_SECONDARY, CHART_MINT, CHART_DANGER_SOFT][: len(values)],
             text=[f"{value:.0f}" for value in values],
             textposition="auto",
             hovertemplate="%{y}: 第 %{x:.1f} 百分位<extra></extra>",
@@ -1686,7 +1745,7 @@ def page_league() -> None:
             orientation="h",
             title="勝率排行",
             color="win_pct",
-            color_continuous_scale=["#65b995", CHART_HIGHLIGHT],
+            color_continuous_scale=[CHART_MINT, CHART_HIGHLIGHT],
             labels={"win_pct": "勝率", "team": "球隊"},
         ),
     )
@@ -1699,7 +1758,7 @@ def page_league() -> None:
             orientation="h",
             title="得失分差",
             color="run_diff",
-            color_continuous_scale=["#e87d72", CHART_HIGHLIGHT],
+            color_continuous_scale=[CHART_DANGER_SOFT, CHART_HIGHLIGHT],
             labels={"run_diff": "得失分差", "team": "球隊"},
         ),
     )
@@ -1894,7 +1953,7 @@ def page_scouting_report() -> None:
             title="觀察名單評估分數",
             labels={"priority_score": "評估分數", "player_name": "球員"},
             color="priority_score",
-            color_continuous_scale=["#79b6bc", CHART_HIGHLIGHT],
+            color_continuous_scale=[CHART_SECONDARY, CHART_HIGHLIGHT],
         ),
     )
     show_table(
@@ -2335,6 +2394,13 @@ st.sidebar.markdown("<div class='sidebar-nav-label'>頁面導覽</div>", unsafe_
 selected = st.sidebar.radio("頁面導覽", PAGES, label_visibility="collapsed", key="main_navigation")
 sync_page_query(selected)
 st.session_state["_last_synced_page"] = selected
+
+st.sidebar.selectbox(
+    "介面主題",
+    list(UI_THEME_OPTIONS),
+    format_func=lambda value: UI_THEME_OPTIONS[value],
+    key="ui_theme",
+)
 
 search_map = player_search_options(PLAYERS if not PLAYERS.empty else ROSTER)
 search_labels = ["選擇球員", *search_map]

@@ -1167,6 +1167,278 @@ button:disabled,
 </style>
 """
 
+STREAMLIT_LIGHT_CSS = """
+<style>
+:root {
+  --bg-deep: #f8fafc;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-raised: #f8fafc;
+  --surface-soft: #f1f5f9;
+  --ink: #0f172a;
+  --ink-soft: #334155;
+  --muted: #475569;
+  --muted-strong: #334155;
+  --accent: #b42318;
+  --accent-soft: #d92d20;
+  --mint: #047857;
+  --gold: #a16207;
+  --blue: #0369a1;
+  --line: rgba(15, 23, 42, .16);
+  --line-strong: rgba(161, 98, 7, .52);
+  --focus: #7c2d12;
+  color-scheme: light;
+}
+
+html,
+body,
+.stApp {
+  background: var(--bg-deep) !important;
+  color: var(--ink) !important;
+  color-scheme: light;
+}
+
+html body header[data-testid="stHeader"],
+html body header.stAppHeader[data-testid="stHeader"] {
+  background: var(--bg-deep) !important;
+  background-color: var(--bg-deep) !important;
+  color: var(--ink) !important;
+}
+
+html body [data-testid="stToolbar"],
+html body [data-testid="stDecoration"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--ink) !important;
+}
+
+html body header[data-testid="stHeader"] button,
+html body header[data-testid="stHeader"] svg {
+  color: var(--ink) !important;
+  fill: currentColor !important;
+}
+
+[data-testid="stExpandSidebarButton"],
+[data-testid="stExpandSidebarButton"] button,
+[data-testid="stSidebar"] [data-testid="stBaseButton-headerNoPadding"],
+[data-testid="stSidebarCollapsedControl"] button {
+  color: var(--ink) !important;
+  background: transparent !important;
+  border-color: var(--ink) !important;
+}
+
+[data-testid="stExpandSidebarButton"] svg,
+[data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"],
+[data-testid="stSidebar"] [data-testid="stBaseButton-headerNoPadding"] svg,
+[data-testid="stSidebar"] [data-testid="stBaseButton-headerNoPadding"] [data-testid="stIconMaterial"],
+[data-testid="stSidebarCollapsedControl"] svg,
+[data-testid="stSidebarCollapsedControl"] [data-testid="stIconMaterial"] {
+  color: var(--ink) !important;
+  fill: currentColor !important;
+}
+
+[data-testid="stSidebar"] {
+  background: #e2e8f0 !important;
+  border-right-color: var(--line) !important;
+}
+
+[data-testid="stSidebar"] * {
+  color: var(--ink) !important;
+}
+
+[data-testid="stSidebar"] .sidebar-brand-subtitle,
+[data-testid="stSidebar"] .sidebar-nav-label,
+[data-testid="stSidebar"] .sidebar-status {
+  color: var(--muted) !important;
+}
+
+[data-testid="stSidebar"] .sidebar-status strong,
+[data-testid="stSidebar"] .brand-mark {
+  color: var(--mint) !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
+  border-color: rgba(3, 105, 161, .36) !important;
+  background: rgba(3, 105, 161, .08) !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stRadio"] label:has(input:checked) {
+  border-color: rgba(180, 35, 24, .62) !important;
+  background: rgba(180, 35, 24, .10) !important;
+  color: var(--ink) !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="select"] > div,
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] textarea,
+[data-baseweb="select"] > div,
+[data-testid="stSelectbox"] [role="group"],
+[data-testid="stMultiSelect"] [role="group"],
+[data-testid="stNumberInput"] input,
+[data-testid="stTextInput"] input,
+textarea {
+  background: var(--surface) !important;
+  border-color: var(--line) !important;
+  color: var(--ink) !important;
+}
+
+[data-testid="stSidebar"] [data-baseweb="select"] > div:hover,
+[data-testid="stSelectbox"] [role="group"]:hover,
+[data-testid="stMultiSelect"] [role="group"]:hover,
+[data-testid="stNumberInput"] input:hover,
+[data-testid="stMultiSelect"] [data-baseweb="select"] > div:hover {
+  border-color: rgba(3, 105, 161, .7) !important;
+}
+
+[data-testid="stSelectbox"] [data-testid="stWidgetLabel"],
+[data-testid="stSelectbox"] label,
+[data-testid="stSelectbox"] label p,
+[data-testid="stMultiSelect"] [data-testid="stWidgetLabel"],
+[data-testid="stMultiSelect"] label,
+[data-testid="stMultiSelect"] label p {
+  color: var(--ink) !important;
+}
+
+[data-testid="stSelectbox"] input[role="combobox"],
+[data-testid="stMultiSelect"] input[role="combobox"] {
+  background: var(--surface) !important;
+  color: var(--ink) !important;
+  -webkit-text-fill-color: var(--ink) !important;
+}
+
+[data-testid="stSelectbox"] svg,
+[data-testid="stMultiSelect"] svg {
+  color: var(--ink-soft) !important;
+  fill: currentColor !important;
+}
+
+.stButton button,
+.stDownloadButton button {
+  border-color: rgba(180, 35, 24, .58) !important;
+  background: rgba(180, 35, 24, .08) !important;
+  color: var(--ink) !important;
+}
+
+.stButton button:hover,
+.stDownloadButton button:hover {
+  border-color: var(--accent) !important;
+  background: rgba(180, 35, 24, .15) !important;
+  box-shadow: 0 0 0 2px rgba(180, 35, 24, .12) !important;
+}
+
+.stButton button:active,
+.stDownloadButton button:active {
+  box-shadow: inset 0 0 0 2px rgba(180, 35, 24, .20) !important;
+}
+
+.data-status-line,
+.source-ribbon,
+.trust-strip {
+  border-color: rgba(4, 120, 87, .36) !important;
+  background: rgba(4, 120, 87, .07) !important;
+}
+
+.data-status-line,
+.data-status-line strong,
+.source-ribbon strong,
+.trust-strip strong {
+  color: var(--mint) !important;
+}
+
+.workflow-row:hover,
+.route-card:hover {
+  border-color: rgba(180, 35, 24, .6) !important;
+  background: var(--surface-raised) !important;
+}
+
+[data-testid="stDataFrame"] {
+  color: var(--ink) !important;
+}
+
+/* Streamlit's Glide grid reads these variables when it paints the canvas. */
+[data-testid="stDataFrame"] .stDataFrameGlideDataEditor,
+[data-testid="stDataFrame"] .dvn-underlay,
+[data-testid="stDataFrame"] [data-testid="data-grid-canvas"],
+[data-testid="stDataFrame"] [class*="gdg-"] {
+  --gdg-bg-cell: #ffffff !important;
+  --gdg-bg-header: #e2e8f0 !important;
+  --gdg-bg-header-has-focus: rgba(180, 35, 24, .12) !important;
+  --gdg-text-dark: #0f172a !important;
+  --gdg-text-medium: #334155 !important;
+  --gdg-border-color: rgba(15, 23, 42, .16) !important;
+  --gdg-header-font-style: 600 14px !important;
+  color-scheme: light;
+}
+
+[data-testid="stDataFrame"] [data-testid="stElementToolbarButtonContainer"] {
+  background: var(--surface-soft) !important;
+  color: var(--ink-soft) !important;
+}
+
+[data-testid="stDataFrame"] [data-testid="stElementToolbarButton"] button,
+[data-testid="stDataFrame"] [data-testid="stElementToolbarButton"] svg {
+  color: var(--ink-soft) !important;
+  fill: currentColor !important;
+}
+
+/* Light-mode fallback table: keep wide datasets scrollable without page overflow. */
+.table-shell {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  margin: 8px 0 18px;
+  scrollbar-color: var(--line) var(--surface-soft);
+}
+
+.table-shell:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.dashboard-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  color: var(--ink);
+  font-size: .875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-table th {
+  background: var(--surface-soft);
+  color: var(--ink);
+  text-align: left;
+  padding: .72rem .78rem;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.dashboard-table td {
+  background: var(--surface);
+  color: var(--ink);
+  padding: .68rem .78rem;
+  border-bottom: 1px solid var(--line);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.dashboard-table tr:last-child td { border-bottom: 0; }
+.dashboard-table tbody tr:hover td { background: var(--surface-raised); }
+
+[data-testid="stExpander"] {
+  border-color: var(--line) !important;
+  background: transparent !important;
+}
+
+[data-testid="stExpander"] summary {
+  color: var(--ink) !important;
+}
+</style>
+"""
+
 STREAMLIT_LAYOUT_CSS = """
 <style>
 .page-masthead {
