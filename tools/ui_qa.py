@@ -138,6 +138,51 @@ def focus_issues(page) -> list[str]:
     )
 
 
+def interaction_smoke(page, base_url: str) -> list[str]:
+    """Exercise the reviewer path: nav -> player profile -> return."""
+    from playwright.sync_api import Error as PlaywrightError
+
+    failures: list[str] = []
+    page.goto(f"{base_url.rstrip('/')}/?page=球探工作台", wait_until="domcontentloaded", timeout=60_000)
+    page.get_by_role("heading", name="球探工作台", exact=True).wait_for(timeout=60_000)
+    sidebar = page.locator('[data-testid="stSidebar"]')
+    labels = sidebar.locator('[data-testid="stRadio"] label')
+    try:
+        page.wait_for_function(
+            "expected => document.querySelectorAll('[data-testid=\\\"stSidebar\\\"] [data-testid=\\\"stRadio\\\"] label').length >= expected",
+            arg=len(PAGE_CONTRACTS),
+            timeout=60_000,
+        )
+    except PlaywrightError:
+        failures.append("sidebar navigation did not finish loading")
+    if labels.count() < len(PAGE_CONTRACTS):
+        failures.append("sidebar navigation did not expose every public page")
+    for label in labels.all():
+        if not label.inner_text().strip():
+            failures.append("sidebar navigation contains an unlabeled item")
+            break
+    player_option = labels.filter(has_text="球員個人頁").first
+    if not player_option.count():
+        failures.append("球員個人頁 navigation option missing")
+    else:
+        player_option.click()
+        try:
+            page.get_by_role("heading", name="球員個人頁", exact=True).wait_for(timeout=60_000)
+        except PlaywrightError:
+            failures.append("navigation did not reach 球員個人頁")
+    workbench_option = labels.filter(has_text="球探工作台").first
+    if workbench_option.count():
+        workbench_option.click()
+        try:
+            page.get_by_role("heading", name="球探工作台", exact=True).wait_for(timeout=60_000)
+        except PlaywrightError:
+            failures.append("navigation did not return to 球探工作台")
+    overflow = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
+    if overflow > 4:
+        failures.append(f"interaction flow introduced horizontal overflow: {overflow}px")
+    return failures
+
+
 def failure_screenshot_names(screenshot_dir: Path, error: str) -> list[str]:
     names = {path.name for path in screenshot_dir.glob("failure-*.png")}
     for failure in error.split("; "):
@@ -267,6 +312,14 @@ def run_browser_checks(
                         page.close()
             finally:
                 context.close()
+        interaction_page = browser.new_page(viewport={"width": 1440, "height": 1000})
+        try:
+            interaction_page.emulate_media(reduced_motion="reduce")
+            failures.extend(interaction_smoke(interaction_page, base_url))
+        except PlaywrightError as exc:
+            failures.append(f"interaction flow browser error: {exc}")
+        finally:
+            interaction_page.close()
         browser.close()
     if failures:
         raise RuntimeError("; ".join(failures[:20]))

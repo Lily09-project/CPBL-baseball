@@ -7,6 +7,7 @@ from tools.ui_qa import (
     focus_issues,
     CORE_VIEWPORTS,
     EXTENDED_VIEWPORTS,
+    interaction_smoke,
     PAGE_CONTRACTS,
     STREAMLIT_EXCEPTION_SELECTOR,
     TEXT_SCALE_CSS,
@@ -44,6 +45,7 @@ def test_ui_qa_covers_desktop_small_phone_and_landscape() -> None:
 def test_layout_issues_is_fail_closed_for_browser_contract() -> None:
     assert callable(layout_issues)
     assert callable(focus_issues)
+    assert callable(interaction_smoke)
 
 
 def test_browser_qa_is_wired_into_ci_and_kept_out_of_release_artifacts() -> None:

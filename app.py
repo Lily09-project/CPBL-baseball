@@ -2418,7 +2418,7 @@ st.sidebar.button(
 freshness = data_freshness(QUALITY_REPORT.get("generated_at", ""))
 st.sidebar.markdown(
     f"<div class='sidebar-status status-{escape(str(freshness['status']))}'><strong>官方資料已核對 · {escape(freshness_display_label())}</strong><br>"
-    f"更新日期：{escape(data_verified_date())}<br>術語：OPS · ISO · AVG · OBP · SLG · ERA · WHIP · K/BB · LOG5</div>",
+    f"更新日期：{escape(data_verified_date())}</div>",
     unsafe_allow_html=True,
 )
 PAGE_HANDLERS[selected]()
