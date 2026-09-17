@@ -6,6 +6,7 @@ import pytest
 from src.fetch_cpbl_data import (
     CPBL_BASE_URL,
     CURRENT_SEASON,
+    PIPELINE_FETCH_ATTEMPTS,
     add_player_ids,
     build_cpbl_session,
     clean_player_name,
@@ -46,6 +47,43 @@ def test_build_cpbl_session_configures_retry_for_official_reads():
     assert retry.total == 3
     assert retry.backoff_factor == 0.5
     assert {"GET", "POST"}.issubset(set(retry.allowed_methods))
+
+
+def test_official_pipeline_retries_an_incomplete_official_response(monkeypatch):
+    attempts = {"count": 0}
+
+    def fetch_once(timeout: int):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise RuntimeError("CPBL recordall 初始頁缺少 __RequestVerificationToken。")
+        return {"teams": pd.DataFrame()}
+
+    monkeypatch.setattr("src.fetch_cpbl_data._fetch_cpbl_official_data_once", fetch_once)
+    monkeypatch.setattr("src.fetch_cpbl_data.sleep", lambda _: None)
+
+    from src.fetch_cpbl_data import fetch_cpbl_official_data
+
+    result = fetch_cpbl_official_data()
+    assert list(result) == ["teams"]
+    assert isinstance(result["teams"], pd.DataFrame)
+    assert attempts["count"] == 2
+
+
+def test_official_pipeline_reports_the_last_failure_after_bounded_retries(monkeypatch):
+    attempts = {"count": 0}
+
+    def fetch_once(timeout: int):
+        attempts["count"] += 1
+        raise RuntimeError("CPBL 官方資料筆數異常")
+
+    monkeypatch.setattr("src.fetch_cpbl_data._fetch_cpbl_official_data_once", fetch_once)
+    monkeypatch.setattr("src.fetch_cpbl_data.sleep", lambda _: None)
+
+    from src.fetch_cpbl_data import fetch_cpbl_official_data
+
+    with pytest.raises(RuntimeError, match=f"{PIPELINE_FETCH_ATTEMPTS} 次嘗試後仍失敗"):
+        fetch_cpbl_official_data()
+    assert attempts["count"] == PIPELINE_FETCH_ATTEMPTS
 
 
 class _FakeResponse:

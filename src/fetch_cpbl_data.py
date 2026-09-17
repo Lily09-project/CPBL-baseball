@@ -5,6 +5,7 @@ import hashlib
 from html.parser import HTMLParser
 from io import StringIO
 import re
+from time import sleep
 from typing import Any
 from urllib.parse import parse_qs, urlencode, urljoin, urlparse
 
@@ -22,6 +23,7 @@ DEFAULT_HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; CPBL analytics dashbo
 PLAYER_MARKERS = {"*", "#", "＃", "◎", "✽", "▲"}
 MAX_PAGINATION_PAGES = 100
 MAX_OFFICIAL_RESPONSE_BYTES = 8 * 1024 * 1024
+PIPELINE_FETCH_ATTEMPTS = 3
 OFFICIAL_HOSTNAMES = frozenset({"cpbl.com.tw", "www.cpbl.com.tw"})
 PLAYER_STATUS_LABELS = {
     "*": "合約所屬球員（二軍）",
@@ -508,7 +510,7 @@ def normalize_pitchers(raw: pd.DataFrame, roster: pd.DataFrame) -> pd.DataFrame:
     return add_player_ids(pd.DataFrame(rows), roster, "PIT")
 
 
-def fetch_cpbl_official_data(timeout: int = 20) -> dict[str, pd.DataFrame]:
+def _fetch_cpbl_official_data_once(timeout: int) -> dict[str, pd.DataFrame]:
     ensure_dirs()
     session = build_cpbl_session()
     roster = fetch_roster(session, timeout=timeout)
@@ -533,3 +535,24 @@ def fetch_cpbl_official_data(timeout: int = 20) -> dict[str, pd.DataFrame]:
         "batters": batters,
         "pitchers": pitchers,
     }
+
+
+def fetch_cpbl_official_data(timeout: int = 20) -> dict[str, pd.DataFrame]:
+    """Fetch one internally consistent official-data snapshot.
+
+    Individual HTTP requests already retry transient transport/status failures.
+    This outer retry also covers temporary, successful-but-incomplete HTML
+    responses from the official site. It never accepts a partial result: the
+    last failure is still raised after the bounded retry budget is exhausted.
+    """
+    for attempt in range(1, PIPELINE_FETCH_ATTEMPTS + 1):
+        try:
+            return _fetch_cpbl_official_data_once(timeout)
+        except (requests.RequestException, RuntimeError) as exc:
+            if attempt == PIPELINE_FETCH_ATTEMPTS:
+                raise RuntimeError(
+                    "CPBL 官方資料擷取在 "
+                    f"{PIPELINE_FETCH_ATTEMPTS} 次嘗試後仍失敗：{exc}"
+                ) from exc
+            sleep(attempt)
+    raise AssertionError("unreachable")
