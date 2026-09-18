@@ -16,7 +16,7 @@
       "details": [],
       "name": "snapshot_lineage",
       "status": "passed",
-      "summary": "已建立可追溯資料快照 20260908T015251Z-8bc98aea67b6。"
+      "summary": "已建立可追溯資料快照 20260918T112310Z-8f8e01d8ec46。"
     },
     {
       "details": [],
@@ -27,14 +27,14 @@
     {
       "details": [],
       "name": "row_count_regression",
-      "status": "passed",
-      "summary": "所有可比較資料表均未達列數驟降門檻。"
+      "status": "warning",
+      "summary": "沒有可比較的前一版本列數，已略過驟降檢查。"
     },
     {
       "details": [],
       "name": "baseline_lineage",
       "status": "passed",
-      "summary": "已與前一版本 20260830T044000Z-f61c9de6b224 建立差異比較。"
+      "summary": "已與前一版本 None 建立差異比較。"
     },
     {
       "details": [],
@@ -43,15 +43,15 @@
       "summary": "快照、歷史與分析驗證報告指向同一最新版本。"
     }
   ],
-  "generated_at": "2026-09-08T09:52:51+08:00",
+  "generated_at": "2026-09-18T11:23:10+00:00",
   "schema_version": "1.0",
-  "snapshot_id": "20260908T015251Z-8bc98aea67b6",
-  "status": "passed",
+  "snapshot_id": "20260918T112310Z-8f8e01d8ec46",
+  "status": "warning",
   "summary": {
     "failed": 0,
-    "passed": 7,
+    "passed": 6,
     "total": 7,
-    "warnings": 0
+    "warnings": 1
   },
   "thresholds": {
     "row_count_drop_failure_ratio": 0.25,
