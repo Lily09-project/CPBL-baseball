@@ -1,7 +1,7 @@
 {
   "mode": "api",
   "fallback_reason": "api mode: 使用 CPBL 官方公開頁面與表單分頁擷取",
-  "generated_at": "2026-09-18T11:23:10+00:00",
+  "generated_at": "2026-09-18T19:02:43+00:00",
   "files": {
     "teams.csv": {
       "row_count": 6,
@@ -131,10 +131,10 @@
   "warnings": [],
   "snapshot": {
     "schema_version": "1.0",
-    "snapshot_id": "20260918T112310Z-8f8e01d8ec46",
-    "captured_at": "2026-09-18T11:23:10+00:00",
+    "snapshot_id": "20260918T190243Z-3584a30fce99",
+    "captured_at": "2026-09-18T19:02:43+00:00",
     "season": 2026,
-    "relative_path": "season=2026/snapshot_id=20260918T112310Z-8f8e01d8ec46",
+    "relative_path": "season=2026/snapshot_id=20260918T190243Z-3584a30fce99",
     "previous_snapshot_id": null,
     "diff": null
   },
@@ -150,72 +150,72 @@
     "output_file": "player_movements.csv"
   },
   "history": {
-    "snapshot_count": 16,
-    "player_history_rows": 5166,
+    "snapshot_count": 17,
+    "player_history_rows": 5504,
     "oldest_snapshot_id": "20260806T062528Z-205080b25390",
-    "latest_snapshot_id": "20260918T112310Z-8f8e01d8ec46",
+    "latest_snapshot_id": "20260918T190243Z-3584a30fce99",
     "oldest_captured_at": "2026-08-06T06:25:28+00:00",
-    "latest_captured_at": "2026-09-18T11:23:10+00:00",
+    "latest_captured_at": "2026-09-18T19:02:43+00:00",
     "snapshot_output_file": "snapshot_history.csv",
     "player_output_file": "player_metric_history.csv"
   },
   "analysis_validation": {
     "schema_version": "1.0",
-    "generated_at": "2026-09-18T11:23:10+00:00",
-    "snapshot_count": 16,
-    "history_rows": 5166,
-    "latest_snapshot_id": "20260918T112310Z-8f8e01d8ec46",
+    "generated_at": "2026-09-18T19:02:43+00:00",
+    "snapshot_count": 17,
+    "history_rows": 5504,
+    "latest_snapshot_id": "20260918T190243Z-3584a30fce99",
     "player_types": {
       "打者": {
-        "history_rows": 2694,
+        "history_rows": 2866,
         "player_count": 173,
         "stability": {
           "ops": {
-            "comparison_count": 15,
-            "latest_top_k_overlap": 0.8,
-            "latest_spearman_rank_correlation": 0.9725
+            "comparison_count": 16,
+            "latest_top_k_overlap": 1.0,
+            "latest_spearman_rank_correlation": 0.9993
           },
           "obp": {
-            "comparison_count": 15,
-            "latest_top_k_overlap": 0.8,
-            "latest_spearman_rank_correlation": 0.9732
+            "comparison_count": 16,
+            "latest_top_k_overlap": 1.0,
+            "latest_spearman_rank_correlation": 0.999
           },
           "slg": {
-            "comparison_count": 15,
-            "latest_top_k_overlap": 0.9,
-            "latest_spearman_rank_correlation": 0.9758
+            "comparison_count": 16,
+            "latest_top_k_overlap": 1.0,
+            "latest_spearman_rank_correlation": 0.9994
           },
           "player_value_score": {
-            "comparison_count": 15,
-            "latest_top_k_overlap": 0.9,
-            "latest_spearman_rank_correlation": 0.9818
+            "comparison_count": 16,
+            "latest_top_k_overlap": 1.0,
+            "latest_spearman_rank_correlation": 0.9991
           }
         },
         "latest_drift_rows": 6
       },
       "投手": {
-        "history_rows": 2472,
+        "history_rows": 2638,
         "player_count": 169,
         "stability": {
           "era": {
-            "comparison_count": 15,
-            "latest_top_k_overlap": 0.9,
-            "latest_spearman_rank_correlation": 0.943
+            "comparison_count": 16,
+            "latest_top_k_overlap": 1.0,
+            "latest_spearman_rank_correlation": 0.998
           },
           "whip": {
-            "comparison_count": 15,
-            "latest_top_k_overlap": 0.6,
-            "latest_spearman_rank_correlation": 0.9434
+            "comparison_count": 16,
+            "latest_top_k_overlap": 0.9,
+            "latest_spearman_rank_correlation": 0.9924
           },
           "k_bb_ratio": {
-            "comparison_count": 15,
+            "comparison_count": 16,
             "latest_top_k_overlap": 0.9,
-            "latest_spearman_rank_correlation": 0.9582
+            "latest_spearman_rank_correlation": 0.9991
           },
           "player_value_score": {
-            "comparison_count": 15,
-            "latest_top_k_overlap": 0.8,
-            "latest_spearman_rank_correlation": 0.9441
+            "comparison_count": 16,
+            "latest_top_k_overlap": 0.9,
+            "latest_spearman_rank_correlation": 0.9989
           }
         },
         "latest_drift_rows": 5
@@ -234,9 +234,9 @@
   },
   "release_health": {
     "schema_version": "1.0",
-    "generated_at": "2026-09-18T11:23:10+00:00",
+    "generated_at": "2026-09-18T19:02:43+00:00",
     "status": "warning",
-    "snapshot_id": "20260918T112310Z-8f8e01d8ec46",
+    "snapshot_id": "20260918T190243Z-3584a30fce99",
     "thresholds": {
       "row_count_drop_warning_ratio": 0.1,
       "row_count_drop_failure_ratio": 0.25
@@ -263,7 +263,7 @@
       {
         "name": "snapshot_lineage",
         "status": "passed",
-        "summary": "已建立可追溯資料快照 20260918T112310Z-8f8e01d8ec46。",
+        "summary": "已建立可追溯資料快照 20260918T190243Z-3584a30fce99。",
         "details": []
       },
       {
