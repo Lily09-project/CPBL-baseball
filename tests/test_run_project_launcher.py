@@ -29,6 +29,22 @@ def test_offline_check_skips_refresh_and_runs_existing_release_verification() ->
     assert 'if /I "%~1"=="--offline-check" goto smoke_check' in launcher
 
 
+def test_check_is_read_only_and_refresh_check_is_explicit() -> None:
+    launcher = (ROOT / "run_project.bat").read_text(encoding="utf-8")
+
+    check_branch = 'if /I "%~1"=="--check" goto verify_project'
+    refresh_branch = 'if /I "%~1"=="--refresh-check" goto refresh_project'
+    refresh_command = "%PYTHON_CMD% run_all.py --mode api"
+
+    assert check_branch in launcher
+    assert refresh_branch in launcher
+    assert launcher.index(check_branch) < launcher.index(refresh_command)
+    assert launcher.index(refresh_branch) < launcher.index(":refresh_project")
+    assert 'if /I "%~1"=="--refresh-check" goto smoke_check' in launcher
+    assert "--check           Verify checked-out artifacts without refreshing" in launcher
+    assert "--refresh-check   Refresh official data" in launcher
+
+
 def test_launcher_documents_options_and_rejects_unknown_arguments() -> None:
     launcher = (ROOT / "run_project.bat").read_text(encoding="utf-8")
 
@@ -53,6 +69,7 @@ def test_validate_mode_runs_zero_warning_release_smoke_and_security_gates() -> N
     ):
         assert token in launcher
     assert "Usage: run_project.bat" in launcher
+    assert "--refresh-check" in launcher
 
 
 @pytest.mark.integration

@@ -17,7 +17,7 @@ Run from the repository root with Python 3.12 and network access to the official
 ~~~powershell
 run_project.bat --runtime-check
 run_project.bat --offline-check
-python run_all.py --mode api
+run_project.bat --check
 python -m pytest -q
 python -m compileall -q app.py src tests
 python -m src.smoke_test
@@ -29,7 +29,7 @@ python -m src.smoke_test
 
 run_project.bat --offline-check is the network-free reviewer command. It leaves published data unchanged and verifies dependencies, the complete test suite, compilation, release gate, public release manifest, and smoke test against the checked-out artifacts.
 
-run_project.bat --check is the Windows release-style acceptance command. It first refreshes official data, then performs the same repository verification. Use it when freshness, rather than reproducibility of the checked-out release, is under review.
+run_project.bat --check is the Windows release-style acceptance command for the checked-out release and does not refresh or overwrite published artifacts. Use run_project.bat --refresh-check when freshness must be reviewed and a new official snapshot is intentionally generated.
 
 ## 3. Source and lineage contract
 
@@ -44,7 +44,7 @@ The project intentionally does not describe this as an official API integration.
 
 ### Frontend failure boundary
 
-The Streamlit frontend is intentionally offline and read-only. It only reads validated files under data/processed/ and the quality report. If a required CSV is missing or corrupt, or the quality report cannot be trusted, the app stops with an actionable message instead of fetching external data implicitly. Run run_project.bat --check to rebuild and validate the published artifacts.
+The Streamlit frontend is intentionally offline and read-only. It only reads validated files under data/processed/ and the quality report. If a required CSV is missing or corrupt, or the quality report cannot be trusted, the app stops with an actionable message instead of fetching external data implicitly. Run run_project.bat --check to validate the checked-out artifacts; use run_project.bat --refresh-check when an intentional refresh is required.
 
 After a successful refresh, the report and snapshot evidence includes:
 

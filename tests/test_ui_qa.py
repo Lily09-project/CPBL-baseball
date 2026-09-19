@@ -7,6 +7,7 @@ from tools.ui_qa import (
     focus_issues,
     CORE_VIEWPORTS,
     EXTENDED_VIEWPORTS,
+    MIN_INTERACTIVE_TARGET_PX,
     interaction_smoke,
     PAGE_CONTRACTS,
     STREAMLIT_EXCEPTION_SELECTOR,
@@ -46,6 +47,7 @@ def test_layout_issues_is_fail_closed_for_browser_contract() -> None:
     assert callable(layout_issues)
     assert callable(focus_issues)
     assert callable(interaction_smoke)
+    assert MIN_INTERACTIVE_TARGET_PX == 44
 
 
 def test_browser_qa_is_wired_into_ci_and_kept_out_of_release_artifacts() -> None:

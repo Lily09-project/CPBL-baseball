@@ -10,6 +10,7 @@ if "%~1"=="" goto arguments_ready
 if /I "%~1"=="--runtime-check" goto arguments_ready
 if /I "%~1"=="--offline-check" goto arguments_ready
 if /I "%~1"=="--check" goto arguments_ready
+if /I "%~1"=="--refresh-check" goto arguments_ready
 if /I "%~1"=="--validate" goto arguments_ready
 echo ERROR: Unsupported argument: %~1
 goto usage_error
@@ -85,11 +86,21 @@ if /I "%~1"=="--validate" (
 %PYTHON_CMD% -m pip check
 if errorlevel 1 goto fail
 
+if /I "%~1"=="--check" goto verify_project
 if /I "%~1"=="--offline-check" goto verify_project
 if /I "%~1"=="--validate" goto verify_project
 
+if /I "%~1"=="--refresh-check" goto refresh_project
+
 %PYTHON_CMD% run_all.py --mode api
 if errorlevel 1 goto fail
+goto verify_project
+
+:refresh_project
+echo Refreshing official CPBL data before verification...
+%PYTHON_CMD% run_all.py --mode api
+if errorlevel 1 goto fail
+goto verify_project
 
 :verify_project
 set "PYTEST_PARENT=%TEMP%\cpbl-analytics-dashboard_pytest_tmp"
@@ -113,6 +124,7 @@ if errorlevel 1 goto fail
 
 if /I "%~1"=="--check" goto smoke_check
 if /I "%~1"=="--offline-check" goto smoke_check
+if /I "%~1"=="--refresh-check" goto smoke_check
 if /I "%~1"=="--validate" goto smoke_check
 
 echo Starting CPBL dashboard at http://127.0.0.1:8501
@@ -152,11 +164,12 @@ if "%~1"=="" pause
 exit /b 1
 
 :usage
-echo Usage: run_project.bat [--runtime-check ^| --offline-check ^| --check ^| --validate ^| --help]
+echo Usage: run_project.bat [--runtime-check ^| --check ^| --refresh-check ^| --offline-check ^| --validate ^| --help]
 echo   no argument       Refresh official data, verify it, and start Streamlit.
+echo   --check           Verify checked-out artifacts without refreshing or writing release data.
+echo   --refresh-check   Refresh official data, then run the full acceptance checks.
 echo   --runtime-check   Verify the project Python runtime only.
 echo   --offline-check   Verify checked-out artifacts without network refresh.
-echo   --check           Refresh official data and run full acceptance checks.
 echo   --validate        Run offline zero-warning, compile, release, smoke, and security checks.
 exit /b 0
 

@@ -19,7 +19,7 @@
     {
       "id": "authoritative_validate", "category": "release", "type": "command",
       "profiles": ["full", "release"], "timeout_seconds": 1200,
-      "network": "required", "writes_project": true, "required": true,
+      "network": "required", "writes_project": false, "required": true,
       "command": ["cmd", "/d", "/c", "run_project.bat", "--validate"],
       "evidence": ["reports/metrics/public_release_manifest.json"]
     },

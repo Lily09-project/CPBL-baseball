@@ -23,11 +23,12 @@
 ```powershell
 run_project.bat --runtime-check
 run_project.bat --offline-check
+run_project.bat --check
 python run_all.py --mode api
 python -m pytest -q
 python -m src.release_gate
 python -m src.verify_public_release reports/metrics/public_release_manifest.json
-run_project.bat --check
+run_project.bat --refresh-check
 .venv\Scripts\python.exe quality\run_acceptance.py release
 .venv\Scripts\python.exe quality\run_benchmarks.py
 ```

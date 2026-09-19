@@ -56,6 +56,8 @@ cd CPBL-baseball
 .\run_project.bat --offline-check
 ```
 
+`--check` 與 `--offline-check` 都只驗證目前 checkout，不會刷新或覆寫發布資料；需要明確刷新官方資料時使用 `--refresh-check`，或直接執行資料管線。
+
 啟動 Streamlit 或執行資料流程：
 
 ```powershell
@@ -68,6 +70,7 @@ python -m streamlit run app.py
 ```powershell
 .\run_project.bat --check
 .\run_project.bat --offline-check
+.\run_project.bat --refresh-check
 .\run_project.bat --runtime-check
 python run_all.py --mode api
 python -m pytest -q

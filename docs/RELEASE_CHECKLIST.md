@@ -10,16 +10,16 @@
 run_project.bat --runtime-check
 run_project.bat --offline-check
 run_project.bat --check
+run_project.bat --refresh-check
 run_project.bat --validate
 .venv\Scripts\python.exe quality\run_acceptance.py release
 .venv\Scripts\python.exe quality\run_benchmarks.py
 ```
 
-`--check` 必須依序完成：
+`--check` 與 `--offline-check` 必須依序完成下列驗證，且不刷新或覆寫目前 checkout 的發布資料：
 
 - 依賴安裝與 `pip check`。
-- CPBL 官方資料 `--mode api` 刷新。
-- 資料品質報告與已驗證快照。
+- 目前 checkout 的資料品質報告與已驗證快照。
 - Release Health 報告：schema 漂移、列數驟降、基準版本與分析血緣。
 - `pytest` 完整測試套件。
 - `compileall` Python 編譯檢查。
@@ -27,7 +27,7 @@ run_project.bat --validate
 - `src.verify_public_release` 公開發布 allowlist、release_id、SHA-256 與 CSV 結構檢查。
 - Smoke test。
 
-`--offline-check` 不執行官方資料刷新，其餘驗收與 `--check` 相同；用於無網路審查或確認目前 checkout 的公開交付可以獨立重現。需要驗證資料新鮮度時仍必須執行 `--check`。
+`--offline-check` 是 `--check` 的明確離線別名。需要刷新官方資料並在刷新後執行同一套驗收時，使用 `--refresh-check`；它會明確寫入本機生成的發布產物，完成後應檢查 `git diff` 再決定是否提交。
 
 `--validate` 不刷新官方資料，並在離線交付驗收上再加入零 warning pytest、Bandit 與 pip-audit。正式 release candidate 必須通過此模式。
 
