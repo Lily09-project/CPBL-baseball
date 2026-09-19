@@ -6,7 +6,7 @@
 
 以 CPBL 官方公開資料建立的可追溯資料產品，涵蓋資料品質、球員評估、球探工作台與版本差異。Streamlit UI 支援桌面／行動裝置與深色／淺色模式。
 
-> 非 CPBL 官方服務；不預測比賽、不產生名單建議（不預測比賽或產生名單建議），也不對傷勢或未來表現下結論。
+> 非 CPBL 官方服務；不預測比賽或產生名單建議，也不對傷勢或未來表現下結論。
 
 ## 介面預覽
 
@@ -26,18 +26,9 @@
 
 資料管線從官方 CPBL 資料來源開始，經資料品質與可稽核性檢查後產生球探工作台、球探報告與版本快照。觀察名單可下載球探報告 Markdown、下載稽核 Manifest JSON；報告以 `report_id`、`report_threshold` 與 `player_id` 連回資料血緣。
 
-## 評估公式
+## 評估邊界
 
-資格門檻為打者 `PA >= 30`、投手 `IP >= 10`；`player_value_score` 是描述性排序工具，不是逐場表現或未來預測。
-
-```text
-player_value_score = 0.70 * power_score + 0.30 * hitter_value_score
-contact_score = 0.55 * contact_score + 0.45 * discipline_score
-pitcher_value_score = 0.75 * run_prevention_score + 0.25 * pitcher_value_score
-command_score = 0.70 * command_score + 0.30 * strikeout_score
-```
-
-LOG5 為情境計算，非校準預測模型；不推論傷勢、戰術、未來表現或球員名單決策。
+資格門檻為打者 `PA >= 30`、投手 `IP >= 10`。`player_value_score` 與球探優先分數只用於描述性排序；完整權重、驗證方式與限制見 [模型卡](docs/MODEL_CARD.md)。LOG5 僅供情境比較，不是校準預測模型。
 
 ## 官方來源與資料限制
 

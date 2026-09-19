@@ -14,7 +14,7 @@ def test_readme_explains_auditable_data_product_and_limits() -> None:
         "下載球探報告 Markdown",
         "下載稽核 Manifest JSON",
         "report_id",
-        "評估公式",
+        "評估邊界",
         "資料限制",
         "重現與測試",
         "公開儲存庫政策",
@@ -22,7 +22,7 @@ def test_readme_explains_auditable_data_product_and_limits() -> None:
         "data-health.yml",
         "/_stcore/health",
         "非 CPBL 官方服務",
-        "LOG5 為情境計算，非校準預測模型",
+        "LOG5 僅供情境比較",
         "https://cpbl.com.tw/player",
         "https://cpbl.com.tw/standings/season",
         "https://cpbl.com.tw/stats/recordallaction",
@@ -32,11 +32,9 @@ def test_readme_explains_auditable_data_product_and_limits() -> None:
         "IP >= 10",
         "player_value_score",
         "player_id",
-        "0.70 * power_score + 0.30 * hitter_value_score",
-        "0.55 * contact_score + 0.45 * discipline_score",
-        "0.75 * run_prevention_score + 0.25 * pitcher_value_score",
-        "0.70 * command_score + 0.30 * strikeout_score",
-        "傷勢、戰術、未來表現或球員名單決策",
+        "模型卡",
+        "描述性排序",
+        "不是校準預測模型",
         "不預測比賽或產生名單建議",
         ".env",
         ".streamlit/secrets.toml",
@@ -49,7 +47,6 @@ def test_readme_explains_auditable_data_product_and_limits() -> None:
         "發布健康",
         "player_movements.csv",
         "累計資料差異",
-        "不是逐場表現或未來預測",
         "run_project.bat --runtime-check",
         "run_project.bat --offline-check",
         "python run_all.py --mode api",
@@ -60,7 +57,7 @@ def test_readme_explains_auditable_data_product_and_limits() -> None:
 
     for term in required:
         assert term in readme
-    assert readme.count("player_value_score") >= 2
+    assert readme.count("player_value_score") == 1
 
     policy = readme.partition("## 公開儲存庫政策")[2]
     assert policy
