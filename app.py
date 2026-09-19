@@ -49,7 +49,7 @@ from src.scouting_report import (
     report_markdown,
 )
 from src.similarity import find_similar_players
-from src.theme import STREAMLIT_CSS, STREAMLIT_LAYOUT_CSS
+from src.theme import STREAMLIT_CSS, STREAMLIT_LAYOUT_CSS, STREAMLIT_LIGHT_CSS
 from src.utils import project_path
 
 
@@ -260,8 +260,14 @@ METRIC_HELP = {
 
 
 st.set_page_config(page_title=APP_TITLE, layout="wide")
+UI_THEME_OPTIONS = {"dark": "深色", "light": "淺色"}
+UI_THEME = str(st.session_state.get("ui_theme", "dark"))
+if UI_THEME not in UI_THEME_OPTIONS:
+    UI_THEME = "dark"
 st.markdown(STREAMLIT_CSS, unsafe_allow_html=True)
 st.markdown(STREAMLIT_LAYOUT_CSS, unsafe_allow_html=True)
+if UI_THEME == "light":
+    st.markdown(STREAMLIT_LIGHT_CSS, unsafe_allow_html=True)
 st.markdown(
     '<a class="skip-link" href="#cpbl-main">跳至主要內容</a><div id="cpbl-main" tabindex="-1"></div>',
     unsafe_allow_html=True,
@@ -331,12 +337,43 @@ SNAPSHOT_HISTORY = DATA["snapshot_history"]
 PLAYER_METRIC_HISTORY = DATA["player_metric_history"]
 TABLE_DOWNLOAD_INDEX = 0
 
-CHART_TEXT = "#e7efed"
-CHART_MUTED = "#9db0b5"
-CHART_GRID = "rgba(157,176,181,.22)"
-CHART_ACCENT = "#d85a52"
-CHART_SECONDARY = "#79b6bc"
-CHART_HIGHLIGHT = "#d3a354"
+CHART_PALETTES = {
+    "dark": {
+        "text": "#e7efed",
+        "muted": "#9db0b5",
+        "grid": "rgba(157,176,181,.22)",
+        "zero": "rgba(157,176,181,.38)",
+        "accent": "#d85a52",
+        "accent_fill": "rgba(216,90,82,.22)",
+        "secondary": "#79b6bc",
+        "highlight": "#d3a354",
+        "mint": "#65b995",
+        "danger_soft": "#e87d72",
+    },
+    "light": {
+        "text": "#0f172a",
+        "muted": "#475569",
+        "grid": "rgba(71,85,105,.22)",
+        "zero": "rgba(71,85,105,.38)",
+        "accent": "#b42318",
+        "accent_fill": "rgba(180,35,24,.16)",
+        "secondary": "#0369a1",
+        "highlight": "#a16207",
+        "mint": "#047857",
+        "danger_soft": "#d92d20",
+    },
+}
+CHART_PALETTE = CHART_PALETTES.get(UI_THEME, CHART_PALETTES["dark"])
+CHART_TEXT = CHART_PALETTE["text"]
+CHART_MUTED = CHART_PALETTE["muted"]
+CHART_GRID = CHART_PALETTE["grid"]
+CHART_ZERO = CHART_PALETTE["zero"]
+CHART_ACCENT = CHART_PALETTE["accent"]
+CHART_ACCENT_FILL = CHART_PALETTE["accent_fill"]
+CHART_SECONDARY = CHART_PALETTE["secondary"]
+CHART_HIGHLIGHT = CHART_PALETTE["highlight"]
+CHART_MINT = CHART_PALETTE["mint"]
+CHART_DANGER_SOFT = CHART_PALETTE["danger_soft"]
 HISTORY_METRICS = {
     "打者": ["ops", "batting_average", "obp", "slg", "iso", "bb_rate", "k_rate", "player_value_score"],
     "投手": ["era", "whip", "k_bb_ratio", "k_rate", "bb_rate", "player_value_score"],
@@ -462,7 +499,29 @@ def show_table(container, df: pd.DataFrame, columns: list[str] | None = None) ->
     global TABLE_DOWNLOAD_INDEX
     TABLE_DOWNLOAD_INDEX += 1
     display = to_display_table(df, columns)
-    container.dataframe(display, width="stretch", hide_index=True)
+    if UI_THEME == "light":
+        # Streamlit's Glide canvas receives its palette from the server-level
+        # theme. Render an escaped HTML table in light mode so the visual
+        # theme switch is immediate and every cell follows the light palette.
+        html_table = display.to_html(
+            index=False,
+            escape=True,
+            classes="dashboard-table",
+            border=0,
+        )
+        container.markdown(
+            f'<div class="table-shell" role="region" aria-label="資料表" tabindex="0">{html_table}</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        # Include the active UI theme in the widget key so Streamlit remounts
+        # the Glide canvas when users switch between dark and light modes.
+        container.dataframe(
+            display,
+            width="stretch",
+            hide_index=True,
+            key=f"cpbl_table_{UI_THEME}_{TABLE_DOWNLOAD_INDEX}",
+        )
     container.markdown(
         "<div class='table-toolbar'><span class='table-toolbar-label'>資料表</span><span class='table-toolbar-hint'>UTF-8 CSV</span></div>",
         unsafe_allow_html=True,
@@ -489,20 +548,20 @@ def apply_chart_theme(fig: go.Figure) -> go.Figure:
     )
     fig.update_xaxes(
         gridcolor=CHART_GRID,
-        zerolinecolor="rgba(157,176,181,.38)",
+        zerolinecolor=CHART_ZERO,
         title_font=dict(size=17),
         tickfont=dict(size=15, color=CHART_MUTED),
     )
     fig.update_yaxes(
         gridcolor=CHART_GRID,
-        zerolinecolor="rgba(157,176,181,.38)",
+        zerolinecolor=CHART_ZERO,
         title_font=dict(size=17),
         tickfont=dict(size=15, color=CHART_MUTED),
     )
     fig.update_polars(
         bgcolor="rgba(0,0,0,0)",
-        radialaxis=dict(gridcolor="rgba(157,176,181,.32)", tickfont=dict(size=14, color=CHART_MUTED)),
-        angularaxis=dict(gridcolor="rgba(157,176,181,.36)", tickfont=dict(size=16, color=CHART_TEXT)),
+        radialaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=14, color=CHART_MUTED)),
+        angularaxis=dict(gridcolor=CHART_GRID, tickfont=dict(size=16, color=CHART_TEXT)),
     )
     return fig
 
@@ -590,6 +649,7 @@ def page_kicker(section: str) -> str:
 
 
 def page_intro(section: str, title: str, description: str) -> None:
+    del description
     freshness = data_freshness(QUALITY_REPORT.get("generated_at", ""))
     st.markdown(
         "<div class='mobile-product-brand'>CPBL / SCOUTING DESK</div><section class='page-masthead' aria-label='頁面資料狀態'><div>"
@@ -599,7 +659,6 @@ def page_intro(section: str, title: str, description: str) -> None:
         unsafe_allow_html=True,
     )
     st.title(title)
-    st.caption(description)
 
 
 def switch_page(page: str) -> None:
@@ -718,7 +777,7 @@ def radar_chart(labels: list[str], values: list[float], title: str = "能力雷�
             mode="lines+markers",
             line=dict(color=CHART_ACCENT, width=3),
             marker=dict(size=7, color=CHART_HIGHLIGHT),
-            fillcolor="rgba(216,90,82,.22)",
+            fillcolor=CHART_ACCENT_FILL,
             hovertemplate="%{theta}: %{r:.1f}<extra></extra>",
         )
     )
@@ -728,8 +787,8 @@ def radar_chart(labels: list[str], values: list[float], title: str = "能力雷�
         polar=dict(
             bgcolor="rgba(0,0,0,0)",
             domain=dict(x=[0.16, 0.84], y=[0.08, 0.92]),
-            radialaxis=dict(visible=True, range=[0, 100], gridcolor="rgba(157,176,181,.32)"),
-            angularaxis=dict(gridcolor="rgba(157,176,181,.36)"),
+            radialaxis=dict(visible=True, range=[0, 100], gridcolor=CHART_GRID),
+            angularaxis=dict(gridcolor=CHART_GRID),
         ),
         height=420,
     )
@@ -763,7 +822,9 @@ def source_status_panel(compact: bool = False) -> None:
     pitcher_count = report.get("available_pitcher_count", 0)
     quality_label = quality_status_label(report.get("quality_status"))
     if compact:
-        st.caption(f"{text} 產生時間：{generated_at}。")
+        st.caption(f"官方資料 · 更新 {generated_at}")
+        with st.expander("資料來源詳情", expanded=False):
+            st.caption(f"{text} 產生時間：{generated_at}。")
         return
     safe_text = escape(str(text))
     safe_verified_date = escape(str(verified_date))
@@ -837,8 +898,16 @@ def render_data_trust_surface(
         details.append("發布 ID：未驗證")
     if player_type is not None and threshold is not None and population_count is not None:
         details.append(f"符合門檻母體：{population_count} 人（{qualification_label(player_type)} ≥ {threshold:g}）")
-    trust_items = "".join(f"<span class='trust-item'>{escape(item)}</span>" for item in details)
+    visible_details = details[:4]
+    lineage_details = details[4:]
+    if player_type is not None and threshold is not None and population_count is not None and details:
+        visible_details.append(details[-1])
+        lineage_details = details[4:-1]
+    trust_items = "".join(f"<span class='trust-item'>{escape(item)}</span>" for item in visible_details)
     st.markdown(f"<div class='trust-strip' role='note'>{trust_items}</div>", unsafe_allow_html=True)
+    if lineage_details:
+        with st.expander("版本與發布資訊", expanded=False):
+            st.caption(" · ".join(lineage_details))
     warnings = [str(item) for item in report.get("warnings", []) if str(item)]
     if quality_status != "pass" and warnings:
         st.warning("資料品質警示：" + "；".join(warnings))
@@ -851,7 +920,7 @@ def render_data_trust_surface(
             st.warning("發布健康提醒：" + message)
     if not release_is_valid:
         st.warning("公開發布 Manifest 無法驗證或與目前資料快照不一致，請先重新執行 run_project.bat --check。")
-    st.caption("LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。")
+    st.caption("分析模型為情境計算，不代表未來表現。")
 
 
 def render_player_evidence(row: pd.Series, population: pd.DataFrame, player_type: str, threshold: float) -> None:
@@ -934,7 +1003,7 @@ def league_percentile_chart(row: pd.Series, df: pd.DataFrame, metrics: list[tupl
             x=values,
             y=labels,
             orientation="h",
-            marker_color=[CHART_ACCENT, CHART_HIGHLIGHT, CHART_SECONDARY, "#65b995", "#e87d72"][: len(values)],
+            marker_color=[CHART_ACCENT, CHART_HIGHLIGHT, CHART_SECONDARY, CHART_MINT, CHART_DANGER_SOFT][: len(values)],
             text=[f"{value:.0f}" for value in values],
             textposition="auto",
             hovertemplate="%{y}: 第 %{x:.1f} 百分位<extra></extra>",
@@ -1132,6 +1201,13 @@ def render_player_movements(row: pd.Series, player_type: str) -> None:
 def page_home() -> None:
     page_intro("資料訊號總覽", "資料訊號總覽", "以 CPBL 官方資料建立本季觀察框架：先確認資料，再進入可重現的比較。")
     render_data_trust_surface(QUALITY_REPORT)
+    with st.expander("資料與限制", expanded=False):
+        st.caption(
+            f"CPBL 官方公開頁面擷取 · /player · /standings/season · /stats/recordall · "
+            f"品質狀態：{quality_status_label(QUALITY_REPORT.get('quality_status'))} · "
+            f"更新：{data_generated_time()}"
+        )
+        st.caption("資料可回答：資格與評估分數；資料限制：不預測未來表現。")
     metric_cards(
         [
             ("球隊數", TEAMS["team"].nunique(), "官方戰績資料"),
@@ -1142,36 +1218,12 @@ def page_home() -> None:
     )
     render_movement_focus()
     st.header("分析入口")
-    st.caption("從一項清楚的工作開始，避免在沒有資格門檻與母體基準的情況下直接比較數字。")
     render_analysis_routes()
-
-    st.header("資料可回答")
-    st.markdown(
-        "- 球員是否達到打席或投球局數資格門檻。\n"
-        "- 評估分數由哪些官方成績訊號推動。\n"
-        "- 球員在符合門檻母體中的相對百分位。\n"
-        "- 官方資料目前可支撐與不可支撐的判讀範圍。"
-    )
-    st.header("資料限制")
-    st.markdown(
-        "- 目前使用本季官方彙總成績，不投射未來表現。\n"
-        "- LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。\n"
-        "- 未列入官方本季全記錄表的現役球員只呈現名單資訊，不計算百分位或評估訊號。"
-    )
-    workflows = [
-        ("球探工作台", "查看打席與投球局數資格門檻、以官方成績產生固定評估分數，並比較符合門檻母體百分位。"),
-        ("聯盟總覽", "戰績、勝差、近況、得失分差與主客場勝率。"),
-        ("球員排行榜", "以 OPS、ISO、ERA、WHIP、K/BB 等指標篩選投打表現。"),
-        ("球員個人頁", "查看本季成績、評估依據、聯盟比較、百分位與相似球員。"),
-        ("投打對決", "以官方成績與聯盟平均 OBP 計算 LOG5 情境結果。"),
-        ("分項排行", "比較打者、投手與球隊的 Top / Bottom 結果。"),
-    ]
-    workflow_html = "\n".join(
-        f"<div class='workflow-row' role='listitem'><span class='workflow-label'>{escape(title)}</span><span class='workflow-description'>{escape(body)}</span></div>"
-        for title, body in workflows
-    )
-    st.markdown(f"<div class='workflow-grid' role='list' aria-label='完整分析流程'>{workflow_html}</div>", unsafe_allow_html=True)
-    source_status_panel()
+    with st.expander("資料可回答 / 資料限制", expanded=False):
+        st.markdown(
+            "資格門檻、固定評估分數與符合門檻母體百分位皆來自本季官方彙總成績。\n\n"
+            "LOG5 為情境計算，非校準預測模型；不可視為未來表現、勝負或名單決策預測。"
+        )
 
 
 def snapshot_option_label(snapshot_id: str) -> str:
@@ -1272,8 +1324,7 @@ def page_snapshot_trends() -> None:
         ]
     )
 
-    st.header("資料版本血緣")
-    st.caption("每個版本由處理後資料的 SHA-256 指紋識別；內部原始 HTML 與本機路徑不會出現在公開輸出。")
+    st.header("資料版本血緣 · SHA-256")
     nodes = []
     for index, row in history.iterrows():
         current_class = " snapshot-node-current" if index == len(history) - 1 else ""
@@ -1339,7 +1390,6 @@ def page_snapshot_trends() -> None:
     )
     selected_history = type_history.loc[type_history["player_id"].astype(str) == str(player_id)].copy()
     player_name = str(selected_history.iloc[-1]["player_name"])
-    st.caption(f"{metric_name(metric)} 僅反映各次官方彙總資料快照，不代表單場或逐打席表現。")
     show_chart(st, player_history_chart(selected_history, metric, player_name))
     trend_table = pd.DataFrame(
         {
@@ -1374,7 +1424,6 @@ def page_snapshot_trends() -> None:
         key=f"history_current_version_{baseline_id}",
         help="只顯示晚於目前基準的資料版本。",
     )
-    st.caption("已限制為時間順序有效的版本組合，避免反向或同版本比較。")
     comparison = compare_metric_versions(players, baseline_id, current_id, player_type, metric)
     if comparison.empty:
         st.info("所選版本沒有可比較的球員指標。")
@@ -1486,6 +1535,7 @@ def page_analysis_validation() -> None:
         "分析驗證",
         "以跨快照穩定性、資料分布變化與權重敏感度，檢查分析結果的可解釋範圍；這些是描述性驗證，不是未來表現預測。",
     )
+    st.caption("描述性驗證 · 不代表預測準確率")
     if SNAPSHOT_HISTORY.empty or PLAYER_METRIC_HISTORY.empty:
         st.info("目前尚未建立足夠的公開歷史資料。請先執行 python run_all.py --mode api。")
         return
@@ -1535,7 +1585,6 @@ def page_analysis_validation() -> None:
             key="validation_stability_top_k",
         )
         stability = rank_stability(history, player_type, metric, top_k=top_k)
-        st.caption("Top-K 重疊率越高，代表相鄰版本的前段名單越一致；Spearman ρ 越接近 1，代表整體排名順序越穩定。")
         if stability.empty:
             st.info("目前只有一個可用版本，尚無法計算相鄰版本排名穩定性。")
         else:
@@ -1576,7 +1625,6 @@ def page_analysis_validation() -> None:
             key="validation_drift_metric",
         )
         drift = summarize_data_drift(history, player_type, [drift_metric])
-        st.caption("中位數、平均數與涵蓋人數呈現官方彙總資料的版本差異；分布變化本身不等於資料品質錯誤。")
         if drift.empty:
             st.info("目前沒有可比較的分布資料。")
         else:
@@ -1641,7 +1689,6 @@ def page_analysis_validation() -> None:
             perturbation=perturbation,
             top_k=10,
         )
-        st.caption("每個情境把一項權重上下調整指定幅度，並按比例重分配其他權重；結果用來檢查排序是否過度依賴單一假設。")
         if sensitivity.empty:
             st.info("目前沒有符合條件的候選球員。")
         else:
@@ -1665,7 +1712,6 @@ def page_league() -> None:
         st.info("目前沒有可顯示的官方球隊戰績，請重新執行官方資料刷新。")
         return
     source_status_panel(compact=True)
-    st.caption("戰績表包含勝差、近況、勝率、得失分差與資料來源欄位。")
     season = st.selectbox("選擇年度", sorted(TEAMS["season"].unique(), reverse=True), key="league_season")
     season_teams = sorted_standings(TEAMS[TEAMS["season"] == season].copy())
     team_options = ["全部"] + sorted(season_teams["team"].unique())
@@ -1682,6 +1728,7 @@ def page_league() -> None:
         ]
     )
     st.header("戰績表")
+    st.caption("勝差 · 近況 · 勝率 · 得失分差")
     show_table(
         st,
         teams,
@@ -1698,7 +1745,7 @@ def page_league() -> None:
             orientation="h",
             title="勝率排行",
             color="win_pct",
-            color_continuous_scale=["#65b995", CHART_HIGHLIGHT],
+            color_continuous_scale=[CHART_MINT, CHART_HIGHLIGHT],
             labels={"win_pct": "勝率", "team": "球隊"},
         ),
     )
@@ -1711,7 +1758,7 @@ def page_league() -> None:
             orientation="h",
             title="得失分差",
             color="run_diff",
-            color_continuous_scale=["#e87d72", CHART_HIGHLIGHT],
+            color_continuous_scale=[CHART_DANGER_SOFT, CHART_HIGHLIGHT],
             labels={"run_diff": "得失分差", "team": "球隊"},
         ),
     )
@@ -1746,7 +1793,6 @@ def page_scouting_workbench() -> None:
     usage_label = qualification_label(player_type)
     default_threshold = DEFAULT_QUALIFICATION[player_type]
     maximum = qualification_upper_bound(source, player_type)
-    st.markdown("<span class='control-caption'>設定資料母體：球隊、資格門檻與評估重點會共同決定候選範圍。</span>", unsafe_allow_html=True)
     control_team, control_threshold, control_priority = st.columns(3, gap="medium")
     team = control_team.selectbox("球隊", ["全部", *sorted(source["team"].dropna().unique())], key=f"scouting_team_{player_type}")
     if player_type == "打者":
@@ -1763,7 +1809,6 @@ def page_scouting_workbench() -> None:
         return
 
     st.header("候選名單")
-    st.caption(f"評估重點：{priority}；排名依評估分數降冪，同分時依 CPBL 球員 ID 排序。")
     display_columns = (
         ["player_id", "player_name", "team", "pa", "priority_score", "qualified_percentile", "contact_score", "power_score", "discipline_score", "hitter_value_score", "evidence_strengths", "evidence_risks", "evidence_notes"]
         if player_type == "打者"
@@ -1782,7 +1827,7 @@ def page_scouting_workbench() -> None:
         help="最多選擇 4 位球員；比較表會保留此選擇順序。",
         key=f"scouting_compare_{player_type}",
     )
-    st.caption("最多選擇 4 位球員。")
+    st.caption("最多選擇 4 位球員")
     comparison = comparison_frame(candidates, [options[label] for label in selected_labels], player_type)
     st.header("並列比較")
     if comparison.empty:
@@ -1797,6 +1842,7 @@ def page_scouting_report() -> None:
         "球探報告",
         "把目前的球探候選人固定成一份具備資料版本、資格門檻與判讀依據的可下載觀察名單。",
     )
+    st.caption("資格門檻 · 評估重點")
     report_type_param = query_param_value("report_type")
     type_index = 1 if report_type_param == "投手" else 0
     player_type = st.radio("球員類型", ["打者", "投手"], index=type_index, horizontal=True, key="scouting_report_type")
@@ -1863,6 +1909,7 @@ def page_scouting_report() -> None:
         help="最多選擇 4 位球員；選取順序會保留在下載報告中。",
         key=f"report_watchlist_{player_type}",
     )
+    st.caption("最多選擇 4 位球員")
     selected_ids = [options[label] for label in selected_labels]
 
     action_share, action_clear = st.columns(2, gap="medium")
@@ -1875,10 +1922,6 @@ def page_scouting_report() -> None:
 
     report = build_watchlist_report(candidates, selected_ids, player_type)
     st.header("評估報告")
-    st.caption("資料版本與品質狀態會隨下載球探報告一併保留。")
-    st.caption("下載稽核 Manifest JSON 會保留報告條件與資料血緣。")
-    st.caption("建立可分享連結後，網址會保留目前的球員與評估條件。")
-    st.caption("選取球員後會顯示報告 ID，方便核對同一份分析成果。")
     if report.empty:
         st.info("選擇候選球員後，這裡會產生可下載的球探報告。")
         return
@@ -1897,7 +1940,8 @@ def page_scouting_report() -> None:
     }
     manifest = build_report_manifest(report, {**metadata, "team": team})
     report_id = str(manifest["report_id"])
-    st.caption(f"資料版本：{snapshot_id} · 產生時間：{metadata['generated_at']} · 品質狀態：{quality_status} · 報告 ID：{report_id}")
+    with st.expander("報告識別資訊", expanded=False):
+        st.caption(f"資料版本：{snapshot_id} · 產生時間：{metadata['generated_at']} · 品質狀態：{quality_status} · 報告 ID：{report_id}")
     chart = report.sort_values("priority_score", ascending=True)
     show_chart(
         st,
@@ -1909,7 +1953,7 @@ def page_scouting_report() -> None:
             title="觀察名單評估分數",
             labels={"priority_score": "評估分數", "player_name": "球員"},
             color="priority_score",
-            color_continuous_scale=["#79b6bc", CHART_HIGHLIGHT],
+            color_continuous_scale=[CHART_SECONDARY, CHART_HIGHLIGHT],
         ),
     )
     show_table(
@@ -2016,7 +2060,7 @@ def page_rankings() -> None:
 def page_player() -> None:
     page_intro("球員個人頁", "球員個人頁", "從官方名單或本季成績選擇球員，依序檢視事實、相對位置與可解釋的評估訊號。")
     source_status_panel(compact=True)
-    st.caption("全體球員以 CPBL 官方現役名單與官方全記錄成績表的聯集為主；本季一軍成績表未列出的球員會顯示為「官方現役名單」。")
+    st.caption("資料範圍：官方現役名單與本季成績")
     player_type = st.radio("球員類型", ["全體球員", "打者", "投手"], horizontal=True, key="player_type")
     requested_player_id = str(
         st.session_state.pop("requested_player_id", "") or query_param_value("player")
@@ -2313,7 +2357,7 @@ def page_metric_rankings() -> None:
 def render_product_footer() -> None:
     st.markdown(
         "<footer class='product-footer'><strong>獨立資料分析作品 · 非 CPBL 官方服務</strong>"
-        "<span>資料取自 CPBL 官方公開頁面；分析結果不構成投注、比賽結果或球員決策建議。</span></footer>",
+        "<span>CPBL 官方公開資料 · 非投注或決策建議</span></footer>",
         unsafe_allow_html=True,
     )
 
@@ -2351,6 +2395,13 @@ selected = st.sidebar.radio("頁面導覽", PAGES, label_visibility="collapsed",
 sync_page_query(selected)
 st.session_state["_last_synced_page"] = selected
 
+st.sidebar.selectbox(
+    "介面主題",
+    list(UI_THEME_OPTIONS),
+    format_func=lambda value: UI_THEME_OPTIONS[value],
+    key="ui_theme",
+)
+
 search_map = player_search_options(PLAYERS if not PLAYERS.empty else ROSTER)
 search_labels = ["選擇球員", *search_map]
 st.sidebar.markdown("<div class='sidebar-nav-label sidebar-search-label'>球員搜尋</div>", unsafe_allow_html=True)
@@ -2367,7 +2418,7 @@ st.sidebar.button(
 freshness = data_freshness(QUALITY_REPORT.get("generated_at", ""))
 st.sidebar.markdown(
     f"<div class='sidebar-status status-{escape(str(freshness['status']))}'><strong>官方資料已核對 · {escape(freshness_display_label())}</strong><br>"
-    f"更新日期：{escape(data_verified_date())}<br>術語：OPS · ISO · AVG · OBP · SLG · ERA · WHIP · K/BB · LOG5</div>",
+    f"更新日期：{escape(data_verified_date())}</div>",
     unsafe_allow_html=True,
 )
 PAGE_HANDLERS[selected]()

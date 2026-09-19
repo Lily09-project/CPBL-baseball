@@ -19,7 +19,7 @@
 - [ ] `python -m src.release_gate`
 - [ ] `python -m pip check`
 - [ ] `python -m bandit -r app.py src run_all.py -ll`
-- [ ] `python -m pip_audit -r requirements.lock`
+- [ ] `python -m pip_audit --local --strict`
 - [ ] `git diff --check`
 
 ## Data Review
