@@ -16,13 +16,20 @@ Run from the repository root with Python 3.12 and network access to the official
 
 ~~~powershell
 run_project.bat --runtime-check
+run_project.bat --offline-check
 python run_all.py --mode api
 python -m pytest -q
 python -m compileall -q app.py src tests
 python -m src.smoke_test
+.venv\Scripts\python.exe quality\run_acceptance.py release
+.venv\Scripts\python.exe quality\run_benchmarks.py
 ~~~
 
-run_project.bat --check is the Windows release-style acceptance command. It refreshes official data, applies the quality gate, runs the complete test suite, and executes the smoke test.
+`quality\run_acceptance.py release` is the authoritative machine-readable local release decision: it preserves gate-level logs and browser failure evidence and fails closed after a required gate failure. The benchmark command runs release integrity, AppTest, and all 10 routes across three viewports three times; do not replace the environment-specific baseline merely to silence a regression.
+
+run_project.bat --offline-check is the network-free reviewer command. It leaves published data unchanged and verifies dependencies, the complete test suite, compilation, release gate, public release manifest, and smoke test against the checked-out artifacts.
+
+run_project.bat --check is the Windows release-style acceptance command. It first refreshes official data, then performs the same repository verification. Use it when freshness, rather than reproducibility of the checked-out release, is under review.
 
 ## 3. Source and lineage contract
 

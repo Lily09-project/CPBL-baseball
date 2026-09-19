@@ -6,6 +6,8 @@ import pytest
 from src.fetch_cpbl_data import (
     CPBL_BASE_URL,
     CURRENT_SEASON,
+    PIPELINE_FETCH_ATTEMPTS,
+    add_player_ids,
     build_cpbl_session,
     clean_player_name,
     fetch_recordall,
@@ -45,6 +47,43 @@ def test_build_cpbl_session_configures_retry_for_official_reads():
     assert retry.total == 3
     assert retry.backoff_factor == 0.5
     assert {"GET", "POST"}.issubset(set(retry.allowed_methods))
+
+
+def test_official_pipeline_retries_an_incomplete_official_response(monkeypatch):
+    attempts = {"count": 0}
+
+    def fetch_once(timeout: int):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise RuntimeError("CPBL recordall 初始頁缺少 __RequestVerificationToken。")
+        return {"teams": pd.DataFrame()}
+
+    monkeypatch.setattr("src.fetch_cpbl_data._fetch_cpbl_official_data_once", fetch_once)
+    monkeypatch.setattr("src.fetch_cpbl_data.sleep", lambda _: None)
+
+    from src.fetch_cpbl_data import fetch_cpbl_official_data
+
+    result = fetch_cpbl_official_data()
+    assert list(result) == ["teams"]
+    assert isinstance(result["teams"], pd.DataFrame)
+    assert attempts["count"] == 2
+
+
+def test_official_pipeline_reports_the_last_failure_after_bounded_retries(monkeypatch):
+    attempts = {"count": 0}
+
+    def fetch_once(timeout: int):
+        attempts["count"] += 1
+        raise RuntimeError("CPBL 官方資料筆數異常")
+
+    monkeypatch.setattr("src.fetch_cpbl_data._fetch_cpbl_official_data_once", fetch_once)
+    monkeypatch.setattr("src.fetch_cpbl_data.sleep", lambda _: None)
+
+    from src.fetch_cpbl_data import fetch_cpbl_official_data
+
+    with pytest.raises(RuntimeError, match=f"{PIPELINE_FETCH_ATTEMPTS} 次嘗試後仍失敗"):
+        fetch_cpbl_official_data()
+    assert attempts["count"] == PIPELINE_FETCH_ATTEMPTS
 
 
 class _FakeResponse:
@@ -112,3 +151,24 @@ def test_normalize_batters_uses_fraction_fallback_when_percentage_columns_are_mi
 
     assert result["bb_rate"] == 0.10
     assert result["k_rate"] == 0.20
+
+
+def test_add_player_ids_uses_stable_ten_character_ids_for_stats_only_players():
+    stats = pd.DataFrame(
+        [
+            {"player_name": "新球員甲", "team": "測試隊"},
+            {"player_name": "新球員乙", "team": "測試隊"},
+        ]
+    )
+    roster = pd.DataFrame(columns=["player_id", "player_name", "team"])
+
+    forward = add_player_ids(stats, roster, "BAT")
+    reversed_rows = add_player_ids(stats.iloc[::-1], roster, "BAT")
+    forward_ids = dict(zip(forward["player_name"], forward["player_id"], strict=True))
+    reversed_ids = dict(
+        zip(reversed_rows["player_name"], reversed_rows["player_id"], strict=True)
+    )
+
+    assert forward_ids == reversed_ids
+    assert forward["player_id"].str.fullmatch(r"BAT[0-9A-F]{7}").all()
+    assert forward["player_id"].str.len().eq(10).all()

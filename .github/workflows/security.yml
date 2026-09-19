@@ -41,7 +41,8 @@ jobs:
       - name: Scan tracked files for secrets
         shell: bash
         run: |
-          git ls-files -z | xargs -0 detect-secrets scan --all-files --no-verify --exclude-lines '"(snapshot_id|previous_snapshot_id|relative_path|sha256|release_id)"\s*:' > /tmp/secret-scan.json
+          # These content-derived identifiers are public audit metadata, not credentials.
+          git ls-files -z | xargs -0 detect-secrets scan --all-files --no-verify --exclude-lines '"(snapshot_id|previous_snapshot_id|relative_path|sha256|release_id|fingerprint)"\s*:' > /tmp/secret-scan.json
           python - <<'PY'
           import json
           import sys
@@ -63,10 +64,10 @@ jobs:
           PY
 
       - name: Audit Python dependencies
-        run: python -m pip_audit -r requirements.lock
+        run: python -m pip_audit --local --strict
 
       - name: Run static security analysis
         run: python -m bandit -r app.py src run_all.py -ll
 
       - name: Run test suite
-        run: python -m pytest -q
+        run: python -m pytest -q --basetemp "${RUNNER_TEMP}/cpbl-security-pytest"
