@@ -78,7 +78,7 @@ def test_launcher_enforces_secure_dependency_floors_and_loopback_binding():
     for requirement in [
         "streamlit>=1.63.0",
         "pandas>=3.0.5",
-        "numpy>=2.5.1",
+        "numpy>=2.5.2",
         "plotly>=6.9.0",
         "requests>=2.34.2",
         "pytest>=9.1.1",
