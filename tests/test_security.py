@@ -82,7 +82,7 @@ def test_launcher_enforces_secure_dependency_floors_and_loopback_binding():
         "plotly>=6.9.0",
         "requests>=2.34.2",
         "pytest>=9.1.1",
-        "lxml>=6.1.1",
+        "lxml>=6.1.3",
         "gitpython>=3.1.61",
         "pillow>=12.3.0",
     ]:
