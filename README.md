@@ -40,6 +40,8 @@
 
 ## Quick start
 
+需求：Windows 與 Python 3.12。
+
 ```powershell
 git clone https://github.com/Lily09-project/CPBL-baseball.git
 cd CPBL-baseball

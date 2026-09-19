@@ -53,6 +53,15 @@ def test_launcher_documents_options_and_rejects_unknown_arguments() -> None:
     assert "exit /b 2" in launcher
 
 
+def test_launcher_requires_python_312_for_locked_dependencies() -> None:
+    launcher = (ROOT / "run_project.bat").read_text(encoding="utf-8")
+
+    assert "py -3.12 --version" in launcher
+    assert "sys.version_info[:2] == (3, 12)" in launcher
+    assert "Python 3.12 was not found" in launcher
+    assert "py -3 --version" not in launcher
+
+
 def test_validate_mode_runs_zero_warning_release_smoke_and_security_gates() -> None:
     launcher = (ROOT / "run_project.bat").read_text(encoding="utf-8")
 

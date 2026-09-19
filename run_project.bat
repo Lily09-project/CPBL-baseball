@@ -36,18 +36,13 @@ py -3.12 --version >nul 2>nul
 if not errorlevel 1 (
     set "BOOTSTRAP_CMD=py -3.12"
 ) else (
-    py -3 --version >nul 2>nul
+    python -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)" >nul 2>nul
     if not errorlevel 1 (
-        set "BOOTSTRAP_CMD=py -3"
+        set "BOOTSTRAP_CMD=python"
     ) else (
-        python --version >nul 2>nul
-        if not errorlevel 1 (
-            set "BOOTSTRAP_CMD=python"
-        ) else (
-            echo ERROR: Python was not found.
-            echo Install Python 3.12, then run this file again.
-            goto fail
-        )
+        echo ERROR: Python 3.12 was not found.
+        echo Install Python 3.12, then run this file again.
+        goto fail
     )
 )
 
