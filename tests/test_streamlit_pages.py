@@ -10,7 +10,10 @@ APP_PATH = ROOT / "app.py"
 PAGES = [
     "資料訊號總覽",
     "聯盟總覽",
+    "版本趨勢",
+    "分析驗證",
     "球探工作台",
+    "球探報告",
     "球員排行榜",
     "球員個人頁",
     "投打對決",
@@ -20,9 +23,12 @@ PAGES = [
 REMOVED_PAGES = ["相關新聞", "新聞 × 數據洞察", "資料品質與測試"]
 
 REQUIRED_FRONTEND_TERMS = {
-    "資料訊號總覽": ["資料訊號總覽", "球探工作台", "資料品質", "資料新鮮度", "資料可回答", "資料限制", "LOG5 為情境計算，非校準預測模型", "資格門檻", "固定評估分數", "符合門檻母體百分位", "評估分數變化焦點", "累計資料差異"],
+    "資料訊號總覽": ["資料訊號總覽", "球探工作台", "資料品質", "資料新鮮度", "發布健康", "發布 ID", "資料可回答", "資料限制", "LOG5 為情境計算，非校準預測模型", "資格門檻", "固定評估分數", "符合門檻母體百分位", "評估分數變化焦點", "累計資料差異"],
     "聯盟總覽": ["聯盟總覽", "戰績表", "勝差", "近況"],
+    "版本趨勢": ["版本趨勢", "資料版本血緣", "球員指標走勢", "版本差異比較", "SHA-256", "OPS"],
+    "分析驗證": ["分析驗證", "排名穩定性", "資料分布變化", "權重敏感度", "Top-K", "Spearman ρ", "描述性驗證"],
     "球探工作台": ["球探工作台", "最低打席 (PA)", "評估重點", "符合門檻母體", "最多選擇 4 位球員"],
+    "球探報告": ["球探報告", "觀察名單", "建立可分享連結", "資格門檻", "評估重點", "最多選擇 4 位球員"],
     "球員排行榜": ["球員排行榜", "打者", "投手", "OPS"],
     "球員個人頁": ["球員個人頁", "全體球員", "官方現役名單", "本季成績", "前次快照變化", "累計資料差異", "評估依據", "進階指標", "聯盟平均比較", "排行摘要", "聯盟百分位", "能力雷達圖", "相似球員推薦"],
     "投打對決": ["投打對決", "LOG5", "OBP", "SLG", "OPS", "ERA", "WHIP", "K/BB"],
@@ -55,6 +61,10 @@ def visible_text(app: AppTest) -> str:
     for multiselect in app.multiselect:
         parts.append(str(multiselect.label))
         parts.extend(str(option) for option in multiselect.options)
+    for button in app.button:
+        parts.append(str(button.label))
+    for button in app.download_button:
+        parts.append(str(button.label))
     for radio in app.radio:
         parts.append(str(radio.label))
         parts.extend(str(option) for option in radio.options)
@@ -141,7 +151,7 @@ def test_player_quick_search_reopens_player_after_manual_selection_change() -> N
     alternate = next(option for option in player_select.options if option != player_select.value)
     player_select.set_value(alternate)
     app.run(timeout=20)
-    assert alternate in visible_text(app)
+    assert str(alternate).split(" · ", 1)[0] in visible_text(app)
 
     next(button for button in app.sidebar.button if button.label == "開啟球員頁").click()
     app.run(timeout=20)
@@ -245,8 +255,8 @@ def test_data_signal_overview_exposes_lineage_quality_and_log5_limit() -> None:
     assert "資格門檻" in text
     assert "固定評估分數" in text
     assert "符合門檻母體百分位" in text
-    workflow_start = source.index("workflows = [")
-    assert source.index("(\"球探工作台\"", workflow_start) < source.index("(\"聯盟總覽\"", workflow_start)
+    assert "def render_analysis_routes(" in source
+    assert source.index('(\"球探工作台\"') < source.index('(\"球員排行榜\"')
 
 
 def test_snapshot_movement_sections_are_visible_and_explicitly_limited() -> None:
@@ -378,6 +388,77 @@ def test_scouting_workbench_filters_and_compares_without_errors() -> None:
     assert any(box.label == "比較球員" for box in app.multiselect)
 
 
+def test_scouting_report_page_builds_downloadable_watchlist() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    app.sidebar.radio[0].set_value("球探報告")
+    app.run(timeout=20)
+
+    assert len(app.exception) == 0
+    text = visible_text(app)
+    assert "觀察名單" in text
+    assert "最多選擇 4 位球員" in text
+    assert any(button.label == "建立可分享連結" for button in app.button)
+
+    watchlist = next(box for box in app.multiselect if box.label == "觀察名單")
+    watchlist.set_value(list(watchlist.options[:2]))
+    app.run(timeout=20)
+    assert len(app.exception) == 0
+    assert "評估報告" in visible_text(app)
+    assert len(app.dataframe) >= 1
+    assert any(button.label == "下載球探報告 Markdown" for button in app.download_button)
+    assert any(button.label == "下載球探報告 CSV" for button in app.download_button)
+    assert any(button.label == "下載稽核 Manifest JSON" for button in app.download_button)
+
+def test_scouting_report_deep_link_restores_watchlist_conditions() -> None:
+    import app as dashboard
+
+    candidates = dashboard.rank_scouting_candidates(
+        dashboard.BATTERS,
+        "打者",
+        dashboard.DEFAULT_QUALIFICATION["打者"],
+        "綜合價值",
+    )
+    selected_ids = candidates["player_id"].astype(str).head(2).tolist()
+    assert len(selected_ids) == 2
+
+    app = AppTest.from_file(APP_PATH)
+    app.query_params["page"] = "球探報告"
+    app.query_params["report_type"] = "打者"
+    app.query_params["report_threshold"] = "30"
+    app.query_params["report_focus"] = "綜合價值"
+    app.query_params["watchlist"] = ",".join(selected_ids)
+    app.run(timeout=20)
+
+    assert len(app.exception) == 0
+    assert app.sidebar.radio[0].value == "球探報告"
+    watchlist = next(box for box in app.multiselect if box.label == "觀察名單")
+    assert len(watchlist.value) == 2
+    assert all(str(player_id) in " ".join(watchlist.value) for player_id in selected_ids)
+
+    next(button for button in app.button if button.label == "建立可分享連結").click()
+    app.run(timeout=20)
+    assert app.query_params["page"] == ["球探報告"]
+    assert app.query_params["watchlist"] == [",".join(selected_ids)]
+
+
+def test_external_page_query_change_updates_navigation_after_session_started() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+
+    league_page = "\u806f\u76df\u7e3d\u89bd"
+    rankings_page = "\u7403\u54e1\u6392\u884c\u699c"
+
+    app.sidebar.radio[0].set_value(league_page)
+    app.run(timeout=20)
+    assert app.query_params["page"] == [league_page]
+
+    app.query_params["page"] = rankings_page
+    app.run(timeout=20)
+
+    assert len(app.exception) == 0
+    assert app.sidebar.radio[0].value == rankings_page
+
 def test_metric_ranking_team_view_renders_balanced_top_and_bottom_sections():
     app = AppTest.from_file(APP_PATH)
     app.run(timeout=20)
@@ -416,6 +497,23 @@ def test_theme_enforces_equal_cards_spacing_touch_targets_and_mobile_layout():
     assert "height: 224px" not in css
     assert "button:focus," not in css
     assert "transition: all" not in css
+
+
+def test_theme_stacks_masthead_when_sidebar_constrains_tablet_width():
+    css = Path("src/theme.py").read_text(encoding="utf-8-sig")
+    tablet_rules = css.split(
+        "@media (max-width: 1100px) and (min-width: 721px)", 1
+    )[1]
+
+    assert '.page-masthead,' in tablet_rules
+    assert '.player-identity {' in tablet_rules
+    assert 'display: flex !important;' in tablet_rules
+    assert 'flex-direction: column;' in tablet_rules
+    assert 'align-items: flex-start;' in tablet_rules
+    assert '.page-kicker {' in tablet_rules
+    assert 'flex-wrap: wrap;' in tablet_rules
+    assert '.data-status-line {' in tablet_rules
+    assert 'justify-self: start;' in tablet_rules
 
 
 def test_theme_uses_flat_editorial_data_tool_direction():
@@ -534,3 +632,130 @@ def test_scouting_desk_visual_system_is_available_to_every_page() -> None:
     assert "def render_analysis_routes(" in source
     assert "def switch_page(" in source
     assert 'key="main_navigation"' in source
+
+def test_snapshot_trend_page_renders_lineage_trend_and_version_comparison() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    app.sidebar.radio[0].set_value("版本趨勢")
+    app.run(timeout=20)
+
+    assert len(app.exception) == 0
+    text = visible_text(app)
+    for expected in ["版本趨勢", "資料版本血緣", "球員指標走勢", "版本差異比較", "SHA-256"]:
+        assert expected in text
+    labels = {box.label for box in app.selectbox}
+    assert {"球員類型", "球員", "指標", "基準版本", "比較版本"}.issubset(labels)
+    assert len(app.get("plotly_chart")) >= 2
+    assert len(app.dataframe) >= 2
+
+
+def test_snapshot_trend_controls_switch_to_pitcher_era_without_errors() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    app.sidebar.radio[0].set_value("版本趨勢")
+    app.run(timeout=20)
+
+    player_type = next(box for box in app.selectbox if box.label == "球員類型")
+    player_type.set_value("投手")
+    app.run(timeout=20)
+    metric = next(box for box in app.selectbox if box.label == "指標")
+    metric.set_value("era")
+    app.run(timeout=20)
+
+    assert len(app.exception) == 0
+    assert "防禦率 (ERA)" in visible_text(app)
+    assert any("chart-summary" in str(element.value) and "ERA" in str(element.value) for element in app.markdown)
+
+
+def test_snapshot_trend_theme_has_timeline_and_mobile_rules() -> None:
+    css = Path("src/theme.py").read_text(encoding="utf-8-sig")
+
+    for required_rule in [
+        ".snapshot-timeline",
+        ".snapshot-node",
+        ".snapshot-node-current",
+        "grid-auto-rows: 1fr",
+        "@media (max-width: 720px)",
+    ]:
+        assert required_rule in css
+
+def test_player_page_uses_unambiguous_cpbl_id_options() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=30)
+    app.sidebar.radio[0].set_value("球員個人頁")
+    app.run(timeout=30)
+
+    player_select = next(box for box in app.selectbox if box.label == "球員選擇")
+
+    assert player_select.options
+    assert all(len(str(option).rsplit(" · ", 1)[-1]) == 10 for option in player_select.options)
+    assert len(player_select.options) == len(set(player_select.options))
+
+
+def test_snapshot_comparison_controls_only_offer_forward_versions() -> None:
+    import app as dashboard
+
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=20)
+    app.sidebar.radio[0].set_value("版本趨勢")
+    app.run(timeout=20)
+
+    baseline = next(box for box in app.selectbox if box.label == "基準版本")
+    current = next(box for box in app.selectbox if box.label == "比較版本")
+    version_ids = dashboard.SNAPSHOT_HISTORY.sort_values("captured_at")["snapshot_id"].astype(str).tolist()
+
+    expected_baselines = [dashboard.snapshot_option_label(value) for value in version_ids[:-1]]
+    assert list(baseline.options) == expected_baselines
+    baseline_id = str(baseline.value)
+    baseline_index = version_ids.index(baseline_id)
+    expected_current = [dashboard.snapshot_option_label(value) for value in version_ids[baseline_index + 1 :]]
+    assert list(current.options) == expected_current
+
+    if len(version_ids) > 2:
+        baseline.set_value(version_ids[1])
+        app.run(timeout=20)
+        current = next(box for box in app.selectbox if box.label == "比較版本")
+        assert list(current.options) == [
+            dashboard.snapshot_option_label(value) for value in version_ids[2:]
+        ]
+
+def test_matchup_uses_unique_player_ids_and_recalculates() -> None:
+    app = AppTest.from_file(APP_PATH)
+    app.run(timeout=30)
+    app.sidebar.radio[0].set_value("投打對決")
+    app.run(timeout=30)
+
+    hitter = next(box for box in app.selectbox if box.label == "打者")
+    pitcher = next(box for box in app.selectbox if box.label == "投手")
+    assert all(len(str(option).rsplit(" · ", 1)[-1]) == 10 for option in hitter.options)
+    assert all(len(str(option).rsplit(" · ", 1)[-1]) == 10 for option in pitcher.options)
+
+    hitter.set_value(hitter.options[-1])
+    pitcher.set_value(pitcher.options[-1])
+    app.run(timeout=30)
+
+    assert len(app.exception) == 0
+    assert "LOG5 上壘機率" in visible_text(app)
+    assert len(app.get("plotly_chart")) == 2
+
+def test_freshness_display_explains_noncurrent_snapshot_age() -> None:
+    from datetime import datetime, timedelta, timezone
+
+    import app as dashboard
+
+    generated_at = (datetime.now(timezone.utc) - timedelta(hours=48)).isoformat()
+    label = dashboard.freshness_display_label({"generated_at": generated_at})
+
+    assert "資料近期更新" in label
+    assert "天前" in label
+
+
+def test_analysis_entry_cards_use_real_streamlit_actions() -> None:
+    source = APP_PATH.read_text(encoding="utf-8-sig")
+    css = Path("src/theme.py").read_text(encoding="utf-8-sig")
+
+    assert "route_columns = st.columns(3, gap=\"medium\")" in source
+    assert "f\"開啟 {target}\"" in source
+    assert "key=f\"route_card_{target}\"" in source
+    assert "on_click=switch_page" in source
+    assert "a:focus-visible" in css

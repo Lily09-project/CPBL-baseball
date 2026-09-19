@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from pathlib import Path
 from typing import Any
 
@@ -125,8 +126,23 @@ def _snapshot_frames(directory: Path) -> dict[str, pd.DataFrame]:
     return frames
 
 
+def _safe_snapshot_path(snapshot_root: Path, relative_path: str) -> Path:
+    root = snapshot_root.resolve()
+    candidate = (root / Path(relative_path)).resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as exc:
+        raise ValueError("snapshot path must remain within the snapshot root") from exc
+    if candidate == root:
+        raise ValueError("snapshot path must identify a directory below the snapshot root")
+    return candidate
+
+
 def _snapshot_directory(snapshot_root: Path, snapshot_id: str) -> Path:
-    matches = list(snapshot_root.rglob(f"snapshot_id={snapshot_id}/manifest.json"))
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", snapshot_id):
+        raise ValueError("snapshot_id has an unsafe format")
+    root = snapshot_root.resolve()
+    matches = list(root.rglob(f"snapshot_id={snapshot_id}/manifest.json"))
     if len(matches) != 1:
         raise FileNotFoundError(f"expected one manifest for snapshot {snapshot_id}, found {len(matches)}")
     return matches[0].parent
@@ -169,7 +185,7 @@ def generate_player_movements(
     current_relative_path = str(snapshot.get("relative_path", ""))
     if not current_snapshot_id or not current_relative_path:
         raise ValueError("current snapshot manifest is missing snapshot_id or relative_path")
-    current_directory = snapshot_root / Path(current_relative_path)
+    current_directory = _safe_snapshot_path(snapshot_root, current_relative_path)
     if not current_directory.exists():
         raise FileNotFoundError(f"current snapshot directory does not exist: {current_directory}")
 

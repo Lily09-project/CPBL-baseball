@@ -1,6 +1,8 @@
 import pandas as pd
 import pytest
 
+import src.scouting as scouting
+
 from src.scouting import (
     DEFAULT_QUALIFICATION,
     build_evidence_signals,
@@ -53,6 +55,24 @@ def test_percentile_rank_handles_direction_ties_missing_values_and_singleton(hit
     assert percentile_rank(hitter_population, middle, "era", lower_is_better=True) == 66.7
     assert percentile_rank(hitter_population, middle, "missing_metric") is None
     assert percentile_rank(hitter_population.iloc[[0]], hitter_population.iloc[0], "obp") == 100.0
+
+
+def test_percentile_ranks_vectorizes_ties_missing_values_and_direction() -> None:
+    population = pd.DataFrame(
+        {"metric": [3.0, "2.0", 2.0, None, "invalid", 1.0]},
+        index=[10, 20, 30, 40, 50, 60],
+    )
+
+    higher = scouting.percentile_ranks(population, "metric")
+    lower = scouting.percentile_ranks(population, "metric", lower_is_better=True)
+
+    assert higher.index.tolist() == population.index.tolist()
+    assert higher.tolist()[:3] == [100.0, 75.0, 75.0]
+    assert pd.isna(higher.loc[40]) and pd.isna(higher.loc[50])
+    assert higher.loc[60] == 25.0
+    assert lower.tolist()[:3] == [25.0, 75.0, 75.0]
+    assert lower.loc[60] == 100.0
+    assert scouting.percentile_ranks(population, "missing").isna().all()
 
 
 def test_qualified_population_rejects_unknown_type_and_negative_threshold(hitter_population: pd.DataFrame) -> None:

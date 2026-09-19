@@ -4,6 +4,7 @@ __pycache__/
 .pytest_cache/
 .pytest_tmp/
 reports/metrics/pytest_tmp*/
+reports/metrics/performance_latest.json
 models/
 reports/figures/
 
@@ -21,7 +22,8 @@ credentials.json
 # Runtime data and internal planning notes
 data/raw/
 data/snapshots/
-notes/source_prompt.txt
+notes/
+docs/superpowers/
 
 # Local databases, logs, and editor backups
 *.db
@@ -29,8 +31,15 @@ notes/source_prompt.txt
 *.sqlite3
 *.log
 *.bak
+*.err
+*.orig
+.idea/
+.vscode/
 
 # Local agent workspaces
 .worktrees/
 .superpowers/
 .pytest_sessions/
+docs/screenshots/ui-qa/
+reports/acceptance/
+reports/performance/

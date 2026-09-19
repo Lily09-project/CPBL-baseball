@@ -17,6 +17,7 @@ REQUIRED_COLUMNS = {
     "players_scored.csv": {"season", "player_id", "player_name", "team", "player_type", "player_value_score"},
 }
 UNIQUE_ID_FILES = {"roster.csv", "batters_scored.csv", "pitchers_scored.csv", "players_scored.csv"}
+MAX_QUALITY_REPORT_BYTES = 2 * 1024 * 1024
 RANGE_RULES = {
     "teams.csv": {"win_pct": (0.0, 1.0)},
     "players_scored.csv": {"player_value_score": (0.0, 100.0)},
@@ -35,7 +36,7 @@ def save_data_quality_report(report: dict) -> None:
     out_path = project_path("reports/metrics/data_quality_report.json")
     out_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
-def generate_data_quality_report(mode: str = "api", fallback_reason: str = "CPBL official API") -> dict:
+def generate_data_quality_report(mode: str = "api", fallback_reason: str = "CPBL official public pages") -> dict:
     ensure_dirs()
     processed_dir = project_path("data/processed")
     report: dict = {
@@ -120,8 +121,34 @@ def generate_data_quality_report(mode: str = "api", fallback_reason: str = "CPBL
     return report
 
 
+def _failed_quality_report(warning: str) -> dict:
+    return {
+        "mode": "unavailable",
+        "fallback_reason": "品質報告無法信任",
+        "generated_at": "",
+        "files": {},
+        "available_team_count": 0,
+        "available_player_count": 0,
+        "available_hitter_count": 0,
+        "available_pitcher_count": 0,
+        "official_roster_count": 0,
+        "player_summary_count": 0,
+        "model_status": "unavailable",
+        "quality_status": "failed",
+        "warnings": [warning],
+    }
+
+
 def load_data_quality_report() -> dict:
     path = project_path("reports/metrics/data_quality_report.json")
     if not path.exists():
         return generate_data_quality_report()
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        if path.stat().st_size > MAX_QUALITY_REPORT_BYTES:
+            return _failed_quality_report("品質報告檔案過大，已停止信任目前資料。")
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError, RecursionError):
+        return _failed_quality_report("品質報告無法讀取，已停止信任目前資料。")
+    if not isinstance(payload, dict) or payload.get("quality_status") not in {"pass", "warning", "failed"}:
+        return _failed_quality_report("品質報告格式無效，已停止信任目前資料。")
+    return payload

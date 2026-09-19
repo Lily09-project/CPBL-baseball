@@ -1,0 +1,104 @@
+name: Verified CPBL data refresh
+
+on:
+  schedule:
+    - cron: "15 16 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: cpbl-data-refresh
+  cancel-in-progress: true
+
+jobs:
+  refresh-and-open-pr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: Install locked environment
+        run: |
+          python -m pip install --upgrade "pip>=26.1.2"
+          python -m pip install -r requirements.lock
+          python -m pip check
+
+      - name: Refresh and validate official CPBL data
+        run: python run_all.py --mode api
+
+      - name: Run release checks
+        run: |
+          python -m compileall -q app.py src run_all.py
+          python -m pytest -q
+          python -m src.release_gate
+          python -m src.verify_public_release reports/metrics/public_release_manifest.json
+
+      - name: Open pull request for verified outputs
+        shell: bash
+        env:
+          # Prefer an optional least-privilege repository secret. The default
+          # GITHUB_TOKEN remains supported when the repository PR setting is on.
+          GH_TOKEN: ${{ secrets.CPBL_REFRESH_TOKEN || github.token }}
+          IS_SCHEDULED_RUN: ${{ github.event_name == 'schedule' }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/processed reports/metrics; then
+            echo "No verified data changes; no pull request required."
+            exit 0
+          fi
+
+          branch="automation/data-refresh-${GITHUB_RUN_ID}"
+
+          # Re-runs reuse the same run ID. Keep the job idempotent by reusing
+          # an existing PR, or removing an orphaned ref before recreating it.
+          if existing_pr="$(gh pr view "$branch" --repo "$GITHUB_REPOSITORY" --json url --jq '.url' 2>/dev/null)"; then
+            echo "Pull request already exists: $existing_pr"
+            exit 0
+          fi
+          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
+            echo "Removing stale remote refresh branch: $branch"
+            git push origin --delete "$branch"
+          fi
+
+          git switch -c "$branch"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/processed reports/metrics
+          git commit -m "chore(data): refresh verified CPBL data"
+          git push --set-upstream origin "$branch"
+
+          set +e
+          pr_output="$(gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "chore(data): refresh verified CPBL data" \
+            --body "Automated refresh from CPBL official public pages.\n\n- API mode only\n- Data quality report passed before snapshot creation\n- Release gate, public release manifest, and test suite passed\n- Review the generated snapshot, movement, history, analysis validation, and release integrity outputs before merging." 2>&1)"
+          pr_status=$?
+          set -e
+          printf '%s\n' "$pr_output"
+          if [ "$pr_status" -ne 0 ]; then
+            echo "::warning::Unable to create the verified-data pull request; removing the orphaned refresh branch."
+            git push origin --delete "$branch" || echo "::warning::Failed to remove refresh branch $branch"
+            if [ "$IS_SCHEDULED_RUN" = "true" ]; then
+              {
+                echo "## Verified data refresh needs repository attention"
+                echo "The data and release checks passed, but GitHub could not create its pull request."
+                echo "Enable **Allow GitHub Actions to create and approve pull requests** or configure the optional \`CPBL_REFRESH_TOKEN\` secret, then run this workflow manually."
+              } >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            exit "$pr_status"
+          fi
