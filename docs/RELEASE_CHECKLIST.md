@@ -71,7 +71,7 @@ python tools\ui_qa.py --url http://127.0.0.1:8852
 - 列數下降達 10% 會產生警示，達 25% 會阻擋發布；需在 PR 中確認是真實資料變化還是來源／分頁異常。
 - `player_id` 在公開資料表中保持字串且唯一。
 - README 的驗證數字與報告、測試結果一致。
-- `requirements.lock` 可在乾淨 Python 3.12 環境安裝並通過 `pip check`。
+- `requirements.lock.txt` 可在乾淨 Python 3.12 環境安裝並通過 `pip check`。
 - Git diff 不包含 `.env`、secrets、raw HTML、本機路徑、`.venv` 或暫存輸出。
 - `data-refresh.yml` 只對驗證後的 `data/processed` 與 `reports/metrics` 建立 reviewable PR，不直接推送 `main`。
 - Security、Release quality、Data health workflow 的權限與 action 版本符合預期。

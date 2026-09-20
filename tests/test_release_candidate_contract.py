@@ -24,7 +24,7 @@ def test_release_documents_and_pr_template_are_present() -> None:
     for term in [
         "User Acceptance",
         "Reviewer Acceptance",
-        "requirements.lock",
+        "requirements.lock.txt",
         "data-refresh.yml",
         "Stop Conditions",
     ]:

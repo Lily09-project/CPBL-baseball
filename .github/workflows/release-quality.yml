@@ -26,12 +26,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: requirements.lock
+          cache-dependency-path: requirements.lock.txt
 
       - name: Install locked environment
         run: |
           python -m pip install --upgrade "pip>=26.1.2"
-          python -m pip install -r requirements.lock
+          python -m pip install -r requirements.lock.txt
           python -m pip check
 
       - name: Compile Python sources

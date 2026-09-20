@@ -23,7 +23,7 @@ set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 if exist "%VENV_PY%" (
     "%VENV_PY%" -c "from importlib.metadata import version; [version(name) for name in ('lxml', 'numpy', 'pandas', 'plotly', 'pytest', 'requests', 'streamlit')]" >nul 2>nul
     if not errorlevel 1 (
-        "%VENV_PY%" -c "from importlib.metadata import version; from pathlib import Path; from packaging.requirements import Requirement; reqs=[Requirement(line) for line in Path('requirements.lock').read_text(encoding='utf-8').splitlines() if line.strip() and not line.lstrip().startswith('#')]; raise SystemExit(0 if all(req.specifier.contains(version(req.name), prereleases=True) for req in reqs) else 1)" >nul 2>nul
+        "%VENV_PY%" -c "from importlib.metadata import version; from pathlib import Path; from packaging.requirements import Requirement; reqs=[Requirement(line) for line in Path('requirements.lock.txt').read_text(encoding='utf-8').splitlines() if line.strip() and not line.lstrip().startswith('#')]; raise SystemExit(0 if all(req.specifier.contains(version(req.name), prereleases=True) for req in reqs) else 1)" >nul 2>nul
         if not errorlevel 1 (
             set "PYTHON_CMD="%VENV_PY%""
             goto runtime_ready
@@ -58,7 +58,7 @@ echo Updating secure packaging tools...
 if errorlevel 1 goto dependency_fail
 
 echo Installing locked project requirements...
-"%VENV_PY%" -m pip install --disable-pip-version-check --upgrade -r requirements.lock
+"%VENV_PY%" -m pip install --disable-pip-version-check --upgrade -r requirements.lock.txt
 if errorlevel 1 goto dependency_fail
 
 "%VENV_PY%" -c "import lxml, numpy, pandas, plotly, pytest, requests, streamlit" >nul 2>nul

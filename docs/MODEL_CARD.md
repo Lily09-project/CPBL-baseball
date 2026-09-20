@@ -84,7 +84,7 @@
 本機執行：
 
 ```powershell
-python -m pip install -r requirements.lock
+python -m pip install -r requirements.lock.txt
 python run_all.py --mode api
 python -m src.release_gate
 python -m pytest -q

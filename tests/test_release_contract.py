@@ -5,12 +5,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_locked_environment_and_quality_gate_are_declared() -> None:
-    lock = (ROOT / "requirements.lock").read_text(encoding="utf-8-sig")
+    lock = (ROOT / "requirements.lock.txt").read_text(encoding="utf-8-sig")
     workflow = (ROOT / ".github/workflows/release-quality.yml").read_text(encoding="utf-8-sig")
 
     assert "streamlit==1.63.0" in lock
     assert "pandas==3.0.5" in lock
-    assert "requirements.lock" in workflow
+    assert "requirements.lock.txt" in workflow
     assert "python -m pip check" in workflow
     assert "python -m src.release_gate" in workflow
     assert "permissions:\n  contents: read" in workflow
