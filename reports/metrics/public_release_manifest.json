@@ -26,8 +26,8 @@
       ],
       "path": "data/processed/teams.csv",
       "row_count": 6,
-      "sha256": "3b2a7017b64f1475a9bb2da7bdfe1a515da2e771af002e4252bebe2e0eae7ca9",
-      "size_bytes": 813
+      "sha256": "244eb5e032ec1001ca7ac809dc277f5402596bf0a5335ad69fe4125c69fd3790",
+      "size_bytes": 814
     },
     {
       "columns": [
@@ -78,9 +78,9 @@
         "player_type"
       ],
       "path": "data/processed/batters_scored.csv",
-      "row_count": 172,
-      "sha256": "ea27de354f14cc808b5de33b27e4a7a092fa07745d4ebb349e4f43dbe7968cb4",
-      "size_bytes": 31431
+      "row_count": 173,
+      "sha256": "079ab306356a949e6c09231ae047c8939e399d6a4a7893c472e9ea470a1015b4",
+      "size_bytes": 31623
     },
     {
       "columns": [
@@ -110,9 +110,9 @@
         "player_type"
       ],
       "path": "data/processed/pitchers_scored.csv",
-      "row_count": 166,
-      "sha256": "1227bc59556f31753029d0ac25cf067953206981f0dca1477899c5f10005027f",
-      "size_bytes": 26205
+      "row_count": 167,
+      "sha256": "13b541bd11b19a890a848443c5135d30d6802a25e329950c108daa23d2c35551",
+      "size_bytes": 26373
     },
     {
       "columns": [
@@ -129,8 +129,8 @@
       ],
       "path": "data/processed/players_scored.csv",
       "row_count": 504,
-      "sha256": "16c52da857397325e343d831d36b904a227e372c01a31211b20a6fd86761a221",
-      "size_bytes": 75918
+      "sha256": "617a4a6fbd09d14fc1fa3ebd49f6e9a3500cff9e2fa3334fafd26d6764a11691",
+      "size_bytes": 75896
     },
     {
       "columns": [
@@ -172,9 +172,9 @@
         "schema_changed_files"
       ],
       "path": "data/processed/snapshot_history.csv",
-      "row_count": 16,
-      "sha256": "075d050c66a060d8136c88bc4a4c05f6cccba1874b67e5b2da87c2f0f032f06b",
-      "size_bytes": 2102
+      "row_count": 17,
+      "sha256": "872a87c27cf0504d655bb3cdc47d28db85f790e0f3d884cdbe5e94e7bdc9ad06",
+      "size_bytes": 2195
     },
     {
       "columns": [
@@ -220,28 +220,28 @@
         "player_value_score"
       ],
       "path": "data/processed/player_metric_history.csv",
-      "row_count": 5166,
-      "sha256": "4ba2d6e4fe8b77189424b868ff016f8c299d3ff51e8bfcad7c767c05d7e89be1",
-      "size_bytes": 1105984
+      "row_count": 5506,
+      "sha256": "39f01fba8aac5ae7d0ca56b18f314f657b0554c3b609c307ef01be9daf639bc0",
+      "size_bytes": 1178765
     },
     {
       "path": "reports/metrics/data_quality_report.json",
-      "sha256": "b7db2f01d70754c3f99a223a529843551852ddb57f7dbf92b7978d5bf5e99100",
+      "sha256": "88b24753fae5c01032e92e084cd6ff495b623633f7d58743ecc4ed91c1f45317",
       "size_bytes": 8702
     },
     {
       "path": "reports/metrics/analysis_validation.json",
-      "sha256": "962441dd7adc3582634981afe7c9e8ba63b24a67c32b1fe81cba0142a7de4a9c",
+      "sha256": "47f8cf7d396a8e0865c84485f382f24672e4a03b01251c769b711c0585adab1d",
       "size_bytes": 2434
     },
     {
       "path": "reports/metrics/release_health.json",
-      "sha256": "d145688db235ea3ae2428351153b40036eeb09aa46abeee12b2456824e1d568e",
+      "sha256": "09ce37d12197175c2b29cdc18ada12ac2c44fa607850fa3c8a750520ae8eb602",
       "size_bytes": 1539
     }
   ],
-  "generated_at": "2026-09-18T11:23:10+00:00",
-  "release_id": "rel-aef7d87192c1362d06a5dd73",
+  "generated_at": "2026-09-20T18:49:15+00:00",
+  "release_id": "rel-861c71d84c1c18db9339bf33",
   "schema_version": "1.1",
-  "snapshot_id": "20260918T112310Z-8f8e01d8ec46"
+  "snapshot_id": "20260920T184915Z-b1b9c39bc95c"
 }
