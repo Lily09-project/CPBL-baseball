@@ -16,7 +16,7 @@
       "details": [],
       "name": "snapshot_lineage",
       "status": "passed",
-      "summary": "已建立可追溯資料快照 20260918T112310Z-8f8e01d8ec46。"
+      "summary": "已建立可追溯資料快照 20260920T050132Z-0a3cfdc4e421。"
     },
     {
       "details": [],
@@ -43,9 +43,9 @@
       "summary": "快照、歷史與分析驗證報告指向同一最新版本。"
     }
   ],
-  "generated_at": "2026-09-18T11:23:10+00:00",
+  "generated_at": "2026-09-20T05:01:32+00:00",
   "schema_version": "1.0",
-  "snapshot_id": "20260918T112310Z-8f8e01d8ec46",
+  "snapshot_id": "20260920T050132Z-0a3cfdc4e421",
   "status": "warning",
   "summary": {
     "failed": 0,
