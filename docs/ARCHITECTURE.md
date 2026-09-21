@@ -89,6 +89,8 @@ Tracked outputs are limited to source code, tests, documentation, sanitized proc
 - `security.yml`: secret history scan, dependency audit, Bandit and tests.
 - `data-health.yml`: scheduled official API verification, release Manifest verification and read-only repository permission.
 - `data-refresh.yml`: scheduled official API refresh, quality gate, Manifest verification and reviewable PR for data outputs only.
+- `data-health.yml` 對排程來源暫時不可用採 deferred（不把舊資料標記為最新驗證）；手動執行仍 fail-closed。
+- `data-refresh.yml` 對排程來源暫時不可用採 deferred（不發布舊資料、不建立 PR）；手動執行仍 fail-closed，避免掩蓋真正的程式或資料品質錯誤。
 - `release-quality.yml`: locked environment, `pip check`, compile, tests, release artifact gate and independent Manifest verifier.
 
 `src/release_health.py` intentionally separates base data quality from release regression checks. A real roster change may produce a warning, while a likely pagination failure or schema drift blocks publication.

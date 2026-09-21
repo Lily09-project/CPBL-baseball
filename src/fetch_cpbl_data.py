@@ -211,6 +211,9 @@ def _validate_official_url(url: str, context: str) -> None:
 
 def _checked_response_text(response: Any, context: str) -> str:
     response.raise_for_status()
+    status_code = getattr(response, "status_code", None)
+    if status_code is not None and 300 <= int(status_code) < 400:
+        raise RuntimeError(f"{context} 不允許 HTTP 重新導向。")
     response_url = str(getattr(response, "url", ""))
     parsed = urlparse(response_url)
     if (
@@ -221,7 +224,38 @@ def _checked_response_text(response: Any, context: str) -> str:
         or parsed.password
     ):
         raise RuntimeError(f"{context} 回應網域不是 CPBL 官方網域。")
-    text = response.text
+    headers = getattr(response, "headers", {}) or {}
+    content_length = headers.get("content-length") or headers.get("Content-Length")
+    if content_length:
+        try:
+            if int(content_length) > MAX_OFFICIAL_RESPONSE_BYTES:
+                raise RuntimeError(
+                    f"{context} 回應內容超過安全上限：{MAX_OFFICIAL_RESPONSE_BYTES} bytes。"
+                )
+        except (TypeError, ValueError) as exc:
+            if isinstance(exc, ValueError) and "超過安全上限" in str(exc):
+                raise
+
+    iterator = getattr(response, "iter_content", None)
+    if callable(iterator):
+        chunks: list[bytes] = []
+        total = 0
+        for chunk in iterator(chunk_size=64 * 1024):
+            if not chunk:
+                continue
+            chunk_bytes = bytes(chunk)
+            total += len(chunk_bytes)
+            if total > MAX_OFFICIAL_RESPONSE_BYTES:
+                raise RuntimeError(
+                    f"{context} 回應內容超過安全上限：{MAX_OFFICIAL_RESPONSE_BYTES} bytes。"
+                )
+            chunks.append(chunk_bytes)
+        raw = b"".join(chunks)
+        encoding = getattr(response, "encoding", None) or "utf-8"
+        return raw.decode(encoding, errors="replace")
+
+    # Small response doubles used by unit tests may only expose ``text``.
+    text = str(getattr(response, "text", ""))
     if len(text.encode("utf-8")) > MAX_OFFICIAL_RESPONSE_BYTES:
         raise RuntimeError(
             f"{context} 回應內容超過安全上限：{MAX_OFFICIAL_RESPONSE_BYTES} bytes。"
@@ -231,8 +265,13 @@ def _checked_response_text(response: Any, context: str) -> str:
 
 def fetch_text(session: requests.Session, url: str, timeout: int) -> str:
     _validate_official_url(url, "CPBL 官方請求")
-    response = session.get(url, timeout=timeout)
-    return _checked_response_text(response, "CPBL 官方頁面")
+    response = session.get(url, timeout=timeout, stream=True, allow_redirects=False)
+    try:
+        return _checked_response_text(response, "CPBL 官方頁面")
+    finally:
+        close = getattr(response, "close", None)
+        if callable(close):
+            close()
 
 def build_cpbl_session(retries: int = 3) -> requests.Session:
     retry_policy = Retry(
@@ -292,9 +331,15 @@ def fetch_recordall(session: requests.Session, position: str, sortby: str, timeo
     if type(page_size) is not int or not 1 <= page_size <= 500:
         raise ValueError("CPBL 分頁大小必須介於 1 到 500。")
     start_url = f"{CPBL_BASE_URL}{OFFICIAL_SOURCE_PATHS['statistics']}?year={CURRENT_SEASON}&kindcode=A&position={position}&sortby={sortby}"
-    page = session.get(start_url, timeout=timeout)
-    page_text = _checked_response_text(page, "CPBL recordall 初始頁")
-    token = extract_verification_token(page_text)
+    page = session.get(start_url, timeout=timeout, stream=True, allow_redirects=False)
+    try:
+        page_text = _checked_response_text(page, "CPBL recordall 初始頁")
+        token = extract_verification_token(page_text)
+        page_url = str(getattr(page, "url", start_url))
+    finally:
+        close = getattr(page, "close", None)
+        if callable(close):
+            close()
     rows: list[pd.DataFrame] = []
     total_pages = 1
     page_index = 0
@@ -315,9 +360,16 @@ def fetch_recordall(session: requests.Session, position: str, sortby: str, timeo
             f"{CPBL_BASE_URL}{OFFICIAL_SOURCE_PATHS['statistics_action']}",
             data=data,
             timeout=timeout,
-            headers={"Referer": page.url},
+            headers={"Referer": page_url},
+            stream=True,
+            allow_redirects=False,
         )
-        response_text = _checked_response_text(response, f"CPBL recordall 第 {page_index + 1} 頁")
+        try:
+            response_text = _checked_response_text(response, f"CPBL recordall 第 {page_index + 1} 頁")
+        finally:
+            close = getattr(response, "close", None)
+            if callable(close):
+                close()
         raw_path = project_path(f"data/raw/cpbl_recordall_position_{position}_page_{page_index + 1}.html")
         raw_path.write_text(response_text, encoding="utf-8")
         table = parse_html_table(response_text)

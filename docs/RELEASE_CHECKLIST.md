@@ -74,6 +74,7 @@ python tools\ui_qa.py --url http://127.0.0.1:8852
 - `requirements.lock.txt` 可在乾淨 Python 3.12 環境安裝並通過 `pip check`。
 - Git diff 不包含 `.env`、secrets、raw HTML、本機路徑、`.venv` 或暫存輸出。
 - `data-refresh.yml` 只對驗證後的 `data/processed` 與 `reports/metrics` 建立 reviewable PR，不直接推送 `main`。
+- 排程刷新或 data-health 若遇官方頁面暫時回傳 403／429／5xx 或網路不可用，應標記為 deferred、跳過後續發布驗證並保留現有驗證資料；手動執行仍須失敗以保留可追蹤訊號。
 - Security、Release quality、Data health workflow 的權限與 action 版本符合預期。
 
 ## Commit Boundary

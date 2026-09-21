@@ -22,6 +22,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -37,9 +38,44 @@ jobs:
           python -m pip check
 
       - name: Refresh and validate official CPBL data
-        run: python run_all.py --mode api
+        id: refresh
+        shell: bash
+        run: |
+          set -o pipefail
+          log_file="$(mktemp)"
+          set +e
+          python run_all.py --mode api 2>&1 | tee "$log_file"
+          refresh_status=${PIPESTATUS[0]}
+          set -e
+
+          if [ "$refresh_status" -eq 0 ]; then
+            echo "status=refreshed" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # The official site occasionally rejects GitHub-hosted runner IPs
+          # (HTTP 403) or is temporarily unavailable. Do not publish stale
+          # data, but keep scheduled maintenance runs green and explicit.
+          # Manual runs still fail so an operator gets an actionable signal.
+          if [ "${{ github.event_name }}" = "schedule" ] \
+            && grep -Eiq '(403 Client Error|429 Client Error|[45][0-9]{2} Server Error|ConnectionError|Timeout|Max retries exceeded)' "$log_file"; then
+            echo "status=deferred" >> "$GITHUB_OUTPUT"
+            echo "::warning::Official CPBL pages were temporarily unavailable; no data refresh was published."
+            {
+              echo "## Verified data refresh deferred"
+              echo
+              echo "The official CPBL public pages temporarily rejected or could not serve the GitHub-hosted runner."
+              echo "No processed data or release metadata was changed; the previous verified release remains in place."
+              echo "Run this workflow manually after the official source is available again."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "status=failed" >> "$GITHUB_OUTPUT"
+          exit "$refresh_status"
 
       - name: Run release checks
+        if: steps.refresh.outputs.status == 'refreshed'
         run: |
           python -m compileall -q app.py src run_all.py
           python -m pytest -q
@@ -47,6 +83,7 @@ jobs:
           python -m src.verify_public_release reports/metrics/public_release_manifest.json
 
       - name: Open pull request for verified outputs
+        if: steps.refresh.outputs.status == 'refreshed'
         shell: bash
         env:
           # Prefer an optional least-privilege repository secret. The default

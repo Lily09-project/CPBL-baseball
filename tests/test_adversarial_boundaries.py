@@ -89,6 +89,93 @@ def test_fetch_text_rejects_external_url_before_network_call():
         fetch_text(_NoRequestSession(), "https://evil.invalid/page", timeout=1)
 
 
+def test_fetch_text_disables_redirects_and_closes_streamed_response():
+    captured: dict[str, object] = {}
+
+    class _StreamResponse(_FakeResponse):
+        status_code = 200
+        headers = {"content-length": "2"}
+        encoding = "utf-8"
+
+        def __init__(self):
+            super().__init__("ignored")
+            self.closed = False
+
+        def iter_content(self, chunk_size: int):
+            assert chunk_size == 64 * 1024
+            yield b"ok"
+
+        def close(self) -> None:
+            self.closed = True
+
+    response = _StreamResponse()
+
+    class _Session:
+        def get(self, _url: str, **kwargs):
+            captured.update(kwargs)
+            return response
+
+    assert fetch_text(_Session(), "https://cpbl.com.tw/player", timeout=1) == "ok"
+    assert captured["stream"] is True
+    assert captured["allow_redirects"] is False
+    assert response.closed is True
+
+
+def test_official_response_rejects_redirect_and_streamed_oversize_body():
+    class _RedirectResponse(_FakeResponse):
+        status_code = 307
+
+    with pytest.raises(RuntimeError, match="重新導向"):
+        _checked_response_text(_RedirectResponse("ok"), "測試")
+
+    class _ChunkedResponse:
+        status_code = 200
+        headers: dict[str, str] = {}
+        url = "https://cpbl.com.tw/stats/recordall"
+
+        def raise_for_status(self) -> None:
+            return None
+
+        @property
+        def text(self):
+            raise AssertionError("streamed responses must not materialize text first")
+
+        def iter_content(self, chunk_size: int):
+            yield b"x" * MAX_OFFICIAL_RESPONSE_BYTES
+            yield b"y"
+
+    with pytest.raises(RuntimeError, match="回應內容超過安全上限"):
+        _checked_response_text(_ChunkedResponse(), "測試")
+
+
+def test_recordall_disables_redirects_for_tokenized_form_post(monkeypatch, tmp_path):
+    monkeypatch.setattr("src.fetch_cpbl_data.project_path", lambda *parts: tmp_path.joinpath(*parts))
+    (tmp_path / "data" / "raw").mkdir(parents=True)
+    captured: dict[str, object] = {}
+
+    class _Session:
+        def get(self, _url: str, **kwargs):
+            captured["get"] = kwargs
+            return _FakeResponse(
+                '<input name="__RequestVerificationToken" value="token">',
+                url="https://cpbl.com.tw/stats/recordall",
+            )
+
+        def post(self, _url: str, **kwargs):
+            captured["post"] = kwargs
+            return _FakeResponse(
+                '<div total-paging="1"></div><table><tr><th>球員</th></tr><tr><td>測試球員</td></tr></table>',
+                url="https://cpbl.com.tw/stats/recordallaction",
+            )
+
+    result = fetch_recordall(_Session(), position="01", sortby="02", timeout=1)
+
+    assert not result.empty
+    assert captured["get"]["allow_redirects"] is False
+    assert captured["post"]["allow_redirects"] is False
+    assert captured["post"]["stream"] is True
+
+
 def test_recordall_rejects_query_parameter_injection_before_network_call():
     with pytest.raises(ValueError, match="查詢參數格式不正確"):
         fetch_recordall(_FakeSession(""), position="01&next=https://evil.invalid", sortby="02")
