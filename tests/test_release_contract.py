@@ -26,6 +26,7 @@ def test_data_refresh_only_opens_a_reviewable_pr_for_verified_outputs() -> None:
         "status=deferred",
         "Official CPBL pages were temporarily unavailable",
         "if: steps.refresh.outputs.status == 'refreshed'",
+        "gh auth setup-git",
         "python -m pytest -q",
         "python -m src.release_gate",
         "python -m src.verify_public_release reports/metrics/public_release_manifest.json",

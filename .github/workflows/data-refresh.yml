@@ -92,6 +92,10 @@ jobs:
           IS_SCHEDULED_RUN: ${{ github.event_name == 'schedule' }}
         run: |
           set -euo pipefail
+          # checkout deliberately does not persist credentials; configure an
+          # ephemeral GitHub CLI helper for the authenticated remote operations
+          # below without embedding a token in the repository URL.
+          gh auth setup-git
           if git diff --quiet -- data/processed reports/metrics; then
             echo "No verified data changes; no pull request required."
             exit 0
