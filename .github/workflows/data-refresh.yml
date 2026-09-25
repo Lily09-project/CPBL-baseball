@@ -101,17 +101,22 @@ jobs:
             exit 0
           fi
 
+          # Reuse the newest open bot refresh PR so scheduled updates do not
+          # leave one pending pull request and branch per day. Keep older PRs
+          # untouched; maintainers can review or close those separately.
+          existing_pr="$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --state open \
+            --base main \
+            --limit 100 \
+            --json author,headRefName,number,title,url \
+            --jq 'map(select(.author.login == "github-actions[bot]" and .title == "chore(data): refresh verified CPBL data" and (.headRefName | startswith("automation/data-refresh-")))) | sort_by(.number) | last | [.headRefName // "", .number // "", .url // ""] | @tsv')"
           branch="automation/data-refresh-${GITHUB_RUN_ID}"
-
-          # Re-runs reuse the same run ID. Keep the job idempotent by reusing
-          # an existing PR, or removing an orphaned ref before recreating it.
-          if existing_pr="$(gh pr view "$branch" --repo "$GITHUB_REPOSITORY" --json url --jq '.url' 2>/dev/null)"; then
-            echo "Pull request already exists: $existing_pr"
-            exit 0
-          fi
-          if git ls-remote --exit-code --heads origin "$branch" >/dev/null 2>&1; then
-            echo "Removing stale remote refresh branch: $branch"
-            git push origin --delete "$branch"
+          existing_number=""
+          existing_url=""
+          if [ -n "$existing_pr" ]; then
+            IFS=$'\t' read -r branch existing_number existing_url <<< "$existing_pr"
+            echo "Updating existing verified-data pull request #${existing_number}: ${existing_url}"
           fi
 
           git switch -c "$branch"
@@ -119,7 +124,22 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/processed reports/metrics
           git commit -m "chore(data): refresh verified CPBL data"
-          git push --set-upstream origin "$branch"
+
+          if [ -n "$existing_number" ]; then
+            remote_head="$(git ls-remote --heads origin "refs/heads/$branch" | awk 'NR == 1 { print $1 }')"
+            if [ -n "$remote_head" ]; then
+              git push --force-with-lease="refs/heads/$branch:$remote_head" --set-upstream origin "$branch"
+            else
+              git push --set-upstream origin "$branch"
+            fi
+          else
+            git push --set-upstream origin "$branch"
+          fi
+
+          if [ -n "$existing_number" ]; then
+            echo "Updated existing pull request #${existing_number}; no new pull request was created."
+            exit 0
+          fi
 
           set +e
           pr_output="$(gh pr create \
