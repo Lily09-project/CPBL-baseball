@@ -119,7 +119,6 @@ jobs:
             echo "Updating existing verified-data pull request #${existing_number}: ${existing_url}"
           fi
 
-          git switch -c "$branch"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/processed reports/metrics
@@ -128,12 +127,12 @@ jobs:
           if [ -n "$existing_number" ]; then
             remote_head="$(git ls-remote --heads origin "refs/heads/$branch" | awk 'NR == 1 { print $1 }')"
             if [ -n "$remote_head" ]; then
-              git push --force-with-lease="refs/heads/$branch:$remote_head" --set-upstream origin "$branch"
+              git push --force-with-lease="refs/heads/$branch:$remote_head" origin "HEAD:refs/heads/$branch"
             else
-              git push --set-upstream origin "$branch"
+              git push origin "HEAD:refs/heads/$branch"
             fi
           else
-            git push --set-upstream origin "$branch"
+            git push origin "HEAD:refs/heads/$branch"
           fi
 
           if [ -n "$existing_number" ]; then

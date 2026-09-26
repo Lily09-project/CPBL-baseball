@@ -35,6 +35,12 @@ def test_data_refresh_only_opens_a_reviewable_pr_for_verified_outputs() -> None:
         "gh pr create",
     ]:
         assert required in workflow
+    # The runner may reuse a branch that already exists on the remote. Push the
+    # verified commit directly to that ref instead of creating a colliding local
+    # branch, which previously terminated scheduled refreshes with exit 128.
+    assert 'git switch -c "$branch"' not in workflow
+    assert 'origin "HEAD:refs/heads/$branch"' in workflow
+    assert '--force-with-lease="refs/heads/$branch:$remote_head"' in workflow
     assert "git push origin main" not in workflow
     assert "data/raw" not in workflow
     assert "run_all.py --mode sample" not in workflow
