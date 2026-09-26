@@ -101,16 +101,17 @@ jobs:
             exit 0
           fi
 
-          # Reuse the newest open bot refresh PR so scheduled updates do not
-          # leave one pending pull request and branch per day. Keep older PRs
-          # untouched; maintainers can review or close those separately.
+          # Reuse the newest open same-repository refresh PR so scheduled
+          # updates do not leave one pending pull request and branch per day.
+          # A scoped token may make the repository owner (rather than the bot)
+          # the PR author, so trust the branch location and exact title instead.
           existing_pr="$(gh pr list \
             --repo "$GITHUB_REPOSITORY" \
             --state open \
             --base main \
             --limit 100 \
-            --json author,headRefName,number,title,url \
-            --jq 'map(select(.author.login == "github-actions[bot]" and .title == "chore(data): refresh verified CPBL data" and (.headRefName | startswith("automation/data-refresh-")))) | sort_by(.number) | last | [.headRefName // "", .number // "", .url // ""] | @tsv')"
+            --json headRefName,isCrossRepository,number,title,url \
+            --jq 'map(select(.isCrossRepository == false and .title == "chore(data): refresh verified CPBL data" and (.headRefName | startswith("automation/data-refresh-")))) | sort_by(.number) | (last // empty) | [.headRefName, (.number | tostring), .url] | @tsv')"
           branch="automation/data-refresh-${GITHUB_RUN_ID}"
           existing_number=""
           existing_url=""

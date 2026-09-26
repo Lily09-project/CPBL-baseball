@@ -41,6 +41,11 @@ def test_data_refresh_only_opens_a_reviewable_pr_for_verified_outputs() -> None:
     assert 'git switch -c "$branch"' not in workflow
     assert 'origin "HEAD:refs/heads/$branch"' in workflow
     assert '--force-with-lease="refs/heads/$branch:$remote_head"' in workflow
+    # No match must produce an empty string. A TSV row containing only empty
+    # fields is truthy in Bash and previously yielded an empty branch/refspec.
+    assert "(last // empty)" in workflow
+    assert ".isCrossRepository == false" in workflow
+    assert '.author.login == "github-actions[bot]"' not in workflow
     assert "git push origin main" not in workflow
     assert "data/raw" not in workflow
     assert "run_all.py --mode sample" not in workflow
