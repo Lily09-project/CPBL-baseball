@@ -269,7 +269,7 @@ st.markdown(STREAMLIT_LAYOUT_CSS, unsafe_allow_html=True)
 if UI_THEME == "light":
     st.markdown(STREAMLIT_LIGHT_CSS, unsafe_allow_html=True)
 st.markdown(
-    '<a class="skip-link" href="#cpbl-main">跳至主要內容</a><div id="cpbl-main" tabindex="-1"></div>',
+    '<a class="skip-link" href="#cpbl-main" tabindex="1">跳至主要內容</a><div id="cpbl-main" tabindex="-1"></div>',
     unsafe_allow_html=True,
 )
 
