@@ -89,7 +89,6 @@ jobs:
           # Prefer an optional least-privilege repository secret. The default
           # GITHUB_TOKEN remains supported when the repository PR setting is on.
           GH_TOKEN: ${{ secrets.CPBL_REFRESH_TOKEN || github.token }}
-          IS_SCHEDULED_RUN: ${{ github.event_name == 'schedule' }}
         run: |
           set -euo pipefail
           # checkout deliberately does not persist credentials; configure an
@@ -151,15 +150,14 @@ jobs:
           set -e
           printf '%s\n' "$pr_output"
           if [ "$pr_status" -ne 0 ]; then
-            echo "::warning::Unable to create the verified-data pull request; removing the orphaned refresh branch."
-            git push origin --delete "$branch" || echo "::warning::Failed to remove refresh branch $branch"
-            if [ "$IS_SCHEDULED_RUN" = "true" ]; then
-              {
-                echo "## Verified data refresh needs repository attention"
-                echo "The data and release checks passed, but GitHub could not create its pull request."
-                echo "Enable **Allow GitHub Actions to create and approve pull requests** or configure the optional \`CPBL_REFRESH_TOKEN\` secret, then run this workflow manually."
-              } >> "$GITHUB_STEP_SUMMARY"
-              exit 0
-            fi
+            echo "::error::Unable to create the verified-data pull request. The verified refresh branch was preserved for manual recovery: $branch"
+            {
+              echo "## Verified data refresh needs repository attention"
+              echo
+              echo "The data and release checks passed, but GitHub could not create its pull request."
+              echo "The verified refresh branch was preserved for manual recovery: \`$branch\`."
+              echo "Create the pull request manually after correcting repository permissions:"
+              echo "\`gh pr create --repo $GITHUB_REPOSITORY --base main --head $branch\`"
+            } >> "$GITHUB_STEP_SUMMARY"
             exit "$pr_status"
           fi

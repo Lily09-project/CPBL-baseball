@@ -49,6 +49,9 @@ def test_data_refresh_only_opens_a_reviewable_pr_for_verified_outputs() -> None:
     assert "git push origin main" not in workflow
     assert "data/raw" not in workflow
     assert "run_all.py --mode sample" not in workflow
+    assert 'git push origin --delete "$branch"' not in workflow
+    assert "The verified refresh branch was preserved for manual recovery" in workflow
+    assert 'exit "$pr_status"' in workflow
 
 
 def test_data_health_independently_verifies_public_release_bundle() -> None:
