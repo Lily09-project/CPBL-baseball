@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
+import src.snapshots as snapshots_module
 from src.snapshots import (
     SNAPSHOT_SCHEMA_VERSION,
     compare_processed_directories,
@@ -86,3 +87,47 @@ def test_create_processed_snapshot_is_idempotent_and_keeps_lineage(tmp_path: Pat
     assert "player_movements.csv" not in first["files"]
     assert (snapshots / first["relative_path"] / "manifest.json").exists()
     assert len(list(snapshots.rglob("manifest.json"))) == 1
+
+
+def test_create_processed_snapshot_uses_staged_baseline_when_store_is_empty(tmp_path: Path) -> None:
+    baseline = tmp_path / "baseline"
+    processed = tmp_path / "processed"
+    snapshots = tmp_path / "snapshots"
+    write_processed_fixture(baseline)
+    write_processed_fixture(processed, changed=True)
+
+    snapshot = create_processed_snapshot(
+        processed,
+        snapshots,
+        {"quality_status": "pass", "generated_at": "2026-09-27T19:46:54+00:00"},
+        captured_at=datetime(2026, 9, 27, 19, 46, 54, tzinfo=timezone.utc),
+        baseline_processed_dir=baseline,
+        baseline_snapshot_id="snapshot-previous",
+    )
+
+    assert snapshot["previous_snapshot_id"] == "snapshot-previous"
+    assert snapshot["diff"]["files"]["batters_scored.csv"]["previous_row_count"] == 2
+    assert snapshot["diff"]["files"]["batters_scored.csv"]["current_row_count"] == 2
+    assert snapshot["diff"]["files"]["batters_scored.csv"]["added_rows"] == 1
+    assert snapshot["diff"]["files"]["batters_scored.csv"]["removed_rows"] == 1
+
+
+def test_stage_processed_baseline_copies_release_files_and_returns_latest_id(tmp_path: Path) -> None:
+    processed = tmp_path / "processed"
+    staged = tmp_path / "staged"
+    write_processed_fixture(processed)
+    pd.DataFrame(
+        [
+            {"snapshot_id": "snapshot-old", "captured_at": "2026-09-01T00:00:00+00:00"},
+            {"snapshot_id": "snapshot-latest", "captured_at": "2026-09-27T00:00:00+00:00"},
+        ]
+    ).to_csv(processed / "snapshot_history.csv", index=False)
+
+    stage_processed_baseline = getattr(snapshots_module, "stage_processed_baseline", None)
+    assert callable(stage_processed_baseline)
+    baseline_id = stage_processed_baseline(processed, staged)
+
+    assert baseline_id == "snapshot-latest"
+    assert sorted(path.name for path in staged.glob("*.csv")) == sorted(
+        name for name in snapshots_module.SNAPSHOT_FILE_NAMES if (processed / name).exists()
+    )

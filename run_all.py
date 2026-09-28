@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pandas as pd
 from src.analysis_validation import build_analysis_validation_report, write_analysis_validation_report
@@ -10,7 +12,7 @@ from src.movements import generate_player_movements
 from src.preprocess import preprocess
 from src.public_release_manifest import build_public_release_manifest, write_public_release_manifest
 from src.release_health import build_release_health_report, write_release_health_report
-from src.snapshots import create_processed_snapshot
+from src.snapshots import create_processed_snapshot, stage_processed_baseline
 from src.source_contract import build_pipeline_source_reason
 from src.utils import project_path
 
@@ -20,15 +22,21 @@ def main() -> None:
     parser.add_argument("--mode", choices=["api"], default="api")
     args = parser.parse_args()
     fallback_reason = build_pipeline_source_reason(args.mode)
-    outputs = preprocess(mode=args.mode)
-    report = generate_data_quality_report(mode=args.mode, fallback_reason=fallback_reason)
-    if report["quality_status"] == "failed":
-        raise RuntimeError("資料品質檢查失敗，停止啟動前端。")
-    snapshot = create_processed_snapshot(
-        project_path("data/processed"),
-        project_path("data/snapshots"),
-        report,
-    )
+    processed_dir = project_path("data/processed")
+    with TemporaryDirectory(prefix="cpbl-release-baseline-") as temporary_root:
+        baseline_dir = Path(temporary_root)
+        baseline_snapshot_id = stage_processed_baseline(processed_dir, baseline_dir)
+        outputs = preprocess(mode=args.mode)
+        report = generate_data_quality_report(mode=args.mode, fallback_reason=fallback_reason)
+        if report["quality_status"] == "failed":
+            raise RuntimeError("資料品質檢查失敗，停止啟動前端。")
+        snapshot = create_processed_snapshot(
+            processed_dir,
+            project_path("data/snapshots"),
+            report,
+            baseline_processed_dir=baseline_dir,
+            baseline_snapshot_id=baseline_snapshot_id,
+        )
     report["snapshot"] = {
         key: snapshot.get(key)
         for key in [

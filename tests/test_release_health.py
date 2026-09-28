@@ -69,3 +69,17 @@ def test_release_health_fails_when_artifacts_point_to_different_snapshots() -> N
 
     assert report["status"] == "failed"
     assert _checks(report)["artifact_lineage"]["status"] == "failed"
+
+
+def test_release_health_warns_when_snapshot_baseline_is_missing() -> None:
+    quality = _quality_report()
+    quality["snapshot"]["previous_snapshot_id"] = None
+    quality["snapshot"]["diff"] = None
+
+    report = build_release_health_report(quality)
+    checks = _checks(report)
+
+    assert report["status"] == "warning"
+    assert checks["row_count_regression"]["status"] == "warning"
+    assert checks["baseline_lineage"]["status"] == "warning"
+    assert "None" not in checks["baseline_lineage"]["summary"]

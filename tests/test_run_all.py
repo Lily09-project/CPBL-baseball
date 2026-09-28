@@ -29,7 +29,7 @@ def test_run_all_defaults_to_api(monkeypatch, capsys):
     monkeypatch.setattr(
         run_all,
         "create_processed_snapshot",
-        lambda processed_dir, snapshot_root, report: {"snapshot_id": "test-snapshot", "relative_path": "test", "diff": None},
+        lambda processed_dir, snapshot_root, report, **kwargs: {"snapshot_id": "test-snapshot", "relative_path": "test", "diff": None},
         raising=False,
     )
     monkeypatch.setattr(
@@ -125,7 +125,7 @@ def test_run_all_attaches_snapshot_only_after_quality_passes(monkeypatch):
     monkeypatch.setattr(
         run_all,
         "create_processed_snapshot",
-        lambda processed_dir, snapshot_root, report: {
+        lambda processed_dir, snapshot_root, report, **kwargs: {
             "snapshot_id": "snapshot-1",
             "relative_path": "season=2026/snapshot_id=snapshot-1",
             "diff": None,

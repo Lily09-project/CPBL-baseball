@@ -23,6 +23,28 @@ KEY_COLUMNS = {
 SNAPSHOT_FILE_NAMES = tuple(KEY_COLUMNS)
 
 
+def stage_processed_baseline(processed_dir: Path, baseline_dir: Path) -> str | None:
+    """Copy the tracked release inputs before refresh and return their latest snapshot ID."""
+    baseline_dir.mkdir(parents=True, exist_ok=True)
+    for name in SNAPSHOT_FILE_NAMES:
+        source = processed_dir / name
+        if source.exists():
+            shutil.copy2(source, baseline_dir / name)
+
+    history_path = processed_dir / "snapshot_history.csv"
+    if not history_path.exists():
+        return None
+    try:
+        history = pd.read_csv(history_path, dtype={"snapshot_id": "string"})
+    except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError, UnicodeError):
+        return None
+    if "snapshot_id" not in history.columns:
+        return None
+    snapshot_ids = history["snapshot_id"].dropna().astype("string").str.strip()
+    snapshot_ids = snapshot_ids[snapshot_ids != ""]
+    return None if snapshot_ids.empty else str(snapshot_ids.iloc[-1])
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -160,6 +182,8 @@ def create_processed_snapshot(
     quality_report: dict[str, Any],
     *,
     captured_at: datetime | None = None,
+    baseline_processed_dir: Path | None = None,
+    baseline_snapshot_id: str | None = None,
 ) -> dict[str, Any]:
     if quality_report.get("quality_status") not in {"pass", "warning"}:
         raise ValueError("Only quality-checked processed data can be snapshotted")
@@ -183,7 +207,16 @@ def create_processed_snapshot(
         return json.loads(manifest_path.read_text(encoding="utf-8"))
 
     previous = _latest_snapshot_directory(snapshot_root, destination)
-    diff = compare_processed_directories(previous, processed_dir) if previous else None
+    comparison_dir = previous
+    previous_snapshot_id = previous.name.removeprefix("snapshot_id=") if previous else None
+    if comparison_dir is None and baseline_processed_dir is not None:
+        baseline_available = any(
+            (baseline_processed_dir / name).exists() for name in SNAPSHOT_FILE_NAMES
+        )
+        if baseline_available:
+            comparison_dir = baseline_processed_dir
+            previous_snapshot_id = str(baseline_snapshot_id or "").strip() or None
+    diff = compare_processed_directories(comparison_dir, processed_dir) if comparison_dir else None
     destination.mkdir(parents=True, exist_ok=True)
     for source in source_files:
         shutil.copy2(source, destination / source.name)
@@ -198,7 +231,7 @@ def create_processed_snapshot(
         "quality_status": quality_report["quality_status"],
         "quality_report_generated_at": quality_report.get("generated_at", ""),
         "files": files,
-        "previous_snapshot_id": previous.name.removeprefix("snapshot_id=") if previous else None,
+        "previous_snapshot_id": previous_snapshot_id,
         "diff": diff,
     }
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")

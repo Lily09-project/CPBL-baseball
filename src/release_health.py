@@ -135,7 +135,7 @@ def build_release_health_report(quality_report: dict[str, Any]) -> dict[str, Any
 
     checks.append(_row_count_check(diff))
 
-    previous_snapshot_id = str(snapshot.get("previous_snapshot_id", ""))
+    previous_snapshot_id = str(snapshot.get("previous_snapshot_id") or "").strip()
     if previous_snapshot_id:
         checks.append(_check("baseline_lineage", "passed", f"已與前一版本 {previous_snapshot_id} 建立差異比較。"))
     else:
