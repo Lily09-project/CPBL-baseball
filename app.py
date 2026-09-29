@@ -259,7 +259,7 @@ METRIC_HELP = {
 }
 
 
-st.set_page_config(page_title=APP_TITLE, layout="wide")
+st.set_page_config(page_title=APP_TITLE, layout="wide", initial_sidebar_state="collapsed")
 UI_THEME_OPTIONS = {"dark": "深色", "light": "淺色"}
 UI_THEME = str(st.session_state.get("ui_theme", "dark"))
 if UI_THEME not in UI_THEME_OPTIONS:
