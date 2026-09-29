@@ -924,7 +924,7 @@ html {
   [data-testid="stBaseButton-headerNoPadding"] {
     position: fixed !important;
     top: .75rem !important;
-    left: .75rem !important;
+    left: 300px !important;
     z-index: 1001 !important;
     width: 44px !important;
     height: 44px !important;
