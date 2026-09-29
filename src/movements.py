@@ -148,6 +148,21 @@ def _snapshot_directory(snapshot_root: Path, snapshot_id: str) -> Path:
     return matches[0].parent
 
 
+def _baseline_captured_at(directory: Path, snapshot_id: str) -> str:
+    history_path = directory / "snapshot_history.csv"
+    if not history_path.exists():
+        return ""
+    history = pd.read_csv(history_path, dtype={"snapshot_id": "string"})
+    required_columns = {"snapshot_id", "captured_at"}
+    if not required_columns.issubset(history.columns):
+        return ""
+    matches = history.loc[
+        history["snapshot_id"].astype("string") == snapshot_id,
+        "captured_at",
+    ].dropna()
+    return "" if matches.empty else str(matches.iloc[-1])
+
+
 def _write_movements(frame: pd.DataFrame, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     frame.reindex(columns=MOVEMENT_COLUMNS).to_csv(output_path, index=False, encoding="utf-8-sig")
@@ -180,6 +195,8 @@ def generate_player_movements(
     snapshot_root: Path,
     snapshot: dict[str, Any],
     output_path: Path,
+    *,
+    baseline_processed_dir: Path | None = None,
 ) -> dict[str, object]:
     current_snapshot_id = str(snapshot.get("snapshot_id", ""))
     current_relative_path = str(snapshot.get("relative_path", ""))
@@ -211,12 +228,23 @@ def generate_player_movements(
             **base_metadata,
         }
 
-    baseline_directory = _snapshot_directory(snapshot_root, str(baseline_snapshot_id))
-    baseline_manifest = json.loads((baseline_directory / "manifest.json").read_text(encoding="utf-8"))
+    try:
+        baseline_directory = _snapshot_directory(snapshot_root, str(baseline_snapshot_id))
+    except FileNotFoundError:
+        if baseline_processed_dir is None:
+            raise
+        baseline_directory = baseline_processed_dir
+        baseline_captured_at = _baseline_captured_at(
+            baseline_directory,
+            str(baseline_snapshot_id),
+        )
+    else:
+        baseline_manifest = json.loads((baseline_directory / "manifest.json").read_text(encoding="utf-8"))
+        baseline_captured_at = str(baseline_manifest.get("captured_at", ""))
     metadata = {
         "baseline_snapshot_id": str(baseline_snapshot_id),
         "current_snapshot_id": current_snapshot_id,
-        "baseline_captured_at": str(baseline_manifest.get("captured_at", "")),
+        "baseline_captured_at": baseline_captured_at,
         "current_captured_at": str(snapshot.get("captured_at", "")),
     }
     movements = compare_player_snapshots(
