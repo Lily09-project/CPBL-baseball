@@ -48,6 +48,11 @@ jobs:
           python -m src.verify_public_release reports/metrics/public_release_manifest.json
 
   browser-ui:
+    name: Browser UI (${{ matrix.theme }})
+    strategy:
+      fail-fast: false
+      matrix:
+        theme: [light, dark]
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -64,9 +69,11 @@ jobs:
           python -m pip install -r requirements-e2e.txt
           python -m playwright install --with-deps chromium
       - name: Start Streamlit against verified artifacts
+        env:
+          UI_THEME: ${{ matrix.theme }}
         shell: bash
         run: |
-          nohup python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8852 --server.headless true > streamlit-ui-qa.log 2>&1 &
+          nohup python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8852 --server.headless true --theme.base "$UI_THEME" > streamlit-ui-qa.log 2>&1 &
           for attempt in {1..30}; do
             if curl --fail --silent http://127.0.0.1:8852/_stcore/health | grep --quiet ok; then
               exit 0
