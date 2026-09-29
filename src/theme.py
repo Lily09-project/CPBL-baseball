@@ -168,6 +168,10 @@ div {
   border-right: 1px solid var(--line);
 }
 
+[data-testid="stSidebar"][aria-expanded="false"] {
+  visibility: hidden !important;
+}
+
 [data-testid="stSidebar"] > div:first-child {
   padding: 1rem .9rem 1.5rem;
 }
@@ -898,6 +902,13 @@ html {
 
 @media (max-width: 720px) {
   html { scroll-padding-top: 4.5rem; }
+
+  [data-testid="stSidebar"][aria-expanded="true"] {
+    left: 0 !important;
+    width: min(21rem, 100vw) !important;
+    max-width: 100vw !important;
+    transform: translateX(0) !important;
+  }
 
   [data-testid="stPlotlyChart"] {
     padding: 0;
