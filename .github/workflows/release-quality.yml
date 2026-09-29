@@ -83,6 +83,6 @@ jobs:
           cat streamlit-ui-qa.log
           exit 1
       - name: Run responsive browser QA
-        run: python tools/ui_qa.py --url http://127.0.0.1:8852
+        run: python tools/ui_qa.py --url http://127.0.0.1:8852 --theme-mode "$UI_THEME"
       - name: Run extended 200% text browser QA
-        run: python tools/ui_qa.py --url http://127.0.0.1:8852 --extended --text-scale
+        run: python tools/ui_qa.py --url http://127.0.0.1:8852 --extended --text-scale --theme-mode "$UI_THEME"
