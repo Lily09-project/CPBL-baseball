@@ -34,6 +34,7 @@ def stage_processed_baseline(processed_dir: Path, baseline_dir: Path) -> str | N
     history_path = processed_dir / "snapshot_history.csv"
     if not history_path.exists():
         return None
+    shutil.copy2(history_path, baseline_dir / history_path.name)
     try:
         history = pd.read_csv(history_path, dtype={"snapshot_id": "string"})
     except (OSError, pd.errors.EmptyDataError, pd.errors.ParserError, UnicodeError):
