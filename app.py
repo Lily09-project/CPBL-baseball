@@ -265,9 +265,9 @@ UI_THEME = str(st.session_state.get("ui_theme", "dark"))
 if UI_THEME not in UI_THEME_OPTIONS:
     UI_THEME = "dark"
 st.markdown(STREAMLIT_CSS, unsafe_allow_html=True)
-st.markdown(STREAMLIT_LAYOUT_CSS, unsafe_allow_html=True)
 if UI_THEME == "light":
     st.markdown(STREAMLIT_LIGHT_CSS, unsafe_allow_html=True)
+st.markdown(STREAMLIT_LAYOUT_CSS, unsafe_allow_html=True)
 st.markdown(
     '<a class="skip-link" href="#cpbl-main" tabindex="0">跳至主要內容</a><div id="cpbl-main" tabindex="-1"></div>',
     unsafe_allow_html=True,

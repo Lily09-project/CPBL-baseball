@@ -76,6 +76,31 @@ def test_focus_audit_uses_real_keyboard_tab_navigation() -> None:
     assert '<a class="skip-link" href="#cpbl-main" tabindex="0">' in app_source
 
 
+def test_focus_audit_validates_radio_proxy_and_mobile_controls() -> None:
+    source = Path("tools/ui_qa.py").read_text(encoding="utf-8")
+    start = source.index("def focus_issues(page)")
+    focus_source = source[start:source.index("
+def ", start + 1)]
+
+    assert 'page.keyboard.press("Tab")' in focus_source
+    assert "page.wait_for_function(" in focus_source
+    assert "DOMMatrixReadOnly" in focus_source
+    assert "page.wait_for_timeout(300)" not in focus_source
+    assert 'input[type="radio"]' in focus_source
+    assert "keyboard-focused radio proxy lacks a visible focus indicator" in focus_source
+
+    theme = Path("src/theme.py").read_text(encoding="utf-8")
+    assert ':has(input[type="radio"]:focus-visible)' in theme
+    assert 'data-testid="stExpandSidebarButton"' in theme
+    assert 'data-testid="stSidebarCollapseButton"' in theme
+    assert 'visibility: hidden !important;' in theme
+
+    app_source = Path("app.py").read_text(encoding="utf-8")
+    assert app_source.index("st.markdown(STREAMLIT_LIGHT_CSS") < app_source.index(
+        "st.markdown(STREAMLIT_LAYOUT_CSS"
+    )
+
+
 def test_browser_failure_evidence_is_structured_and_atomic(tmp_path: Path) -> None:
     (tmp_path / "failure-player-mobile.png").write_bytes(b"png")
     (tmp_path / "player-mobile.png").write_bytes(b"png")
