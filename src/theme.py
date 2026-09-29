@@ -66,7 +66,7 @@ body {
   position: fixed;
   top: max(.75rem, env(safe-area-inset-top));
   left: max(.75rem, env(safe-area-inset-left));
-  z-index: 100;
+  z-index: 1000001;
   transform: translateY(-180%);
   padding: .65rem .9rem;
   border: 2px solid var(--focus);
