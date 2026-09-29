@@ -909,6 +909,13 @@ html {
     max-width: 100vw !important;
     transform: translateX(0) !important;
   }
+  [data-testid="stSidebarCollapseButton"] {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    transform: none !important;
+    z-index: 1000 !important;
+  }
   [data-testid="stBaseButton-headerNoPadding"] {
     position: fixed !important;
     top: .75rem !important;
