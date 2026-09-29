@@ -196,6 +196,41 @@ def test_generate_player_movements_writes_schema_when_baseline_is_pending(tmp_pa
     assert "output_path" not in metadata
     assert list(saved.columns) == list(MOVEMENT_COLUMNS)
 
+
+def test_generate_player_movements_uses_staged_baseline_without_manifest(tmp_path) -> None:
+    snapshots = tmp_path / "snapshots"
+    current_dir = snapshots / "season=2026" / "snapshot_id=snapshot-new"
+    current_manifest = {
+        "snapshot_id": "snapshot-new",
+        "captured_at": "2026-08-09T11:14:07+00:00",
+        "relative_path": "season=2026/snapshot_id=snapshot-new",
+        "previous_snapshot_id": "snapshot-old",
+    }
+    write_snapshot(current_dir, snapshot_frames(current=True), current_manifest)
+
+    baseline_dir = tmp_path / "baseline"
+    baseline_dir.mkdir()
+    baseline_frames = snapshot_frames(current=False)
+    baseline_frames["batters"].to_csv(baseline_dir / "batters_scored.csv", index=False)
+    baseline_frames["pitchers"].to_csv(baseline_dir / "pitchers_scored.csv", index=False)
+    pd.DataFrame(
+        [{"snapshot_id": "snapshot-old", "captured_at": "2026-08-06T14:44:58+00:00"}]
+    ).to_csv(baseline_dir / "snapshot_history.csv", index=False)
+
+    output = tmp_path / "processed" / "player_movements.csv"
+    metadata = generate_player_movements(
+        snapshots,
+        current_manifest,
+        output,
+        baseline_processed_dir=baseline_dir,
+    )
+
+    assert metadata["status"] == "ready"
+    assert metadata["row_count"] > 0
+    assert metadata["baseline_snapshot_id"] == "snapshot-old"
+    assert metadata["baseline_captured_at"] == "2026-08-06T14:44:58+00:00"
+
+
 def test_generate_player_movements_preserves_public_history_without_local_baseline(tmp_path) -> None:
     snapshots = tmp_path / "snapshots"
     current_dir = snapshots / "season=2026" / "snapshot_id=snapshot-first"

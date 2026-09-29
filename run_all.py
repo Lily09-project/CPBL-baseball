@@ -37,25 +37,26 @@ def main() -> None:
             baseline_processed_dir=baseline_dir,
             baseline_snapshot_id=baseline_snapshot_id,
         )
-    report["snapshot"] = {
-        key: snapshot.get(key)
-        for key in [
-            "schema_version",
-            "snapshot_id",
-            "captured_at",
-            "season",
-            "relative_path",
-            "previous_snapshot_id",
-            "diff",
-        ]
-    }
-    movement_path = project_path("data/processed/player_movements.csv")
-    movement = generate_player_movements(
-        project_path("data/snapshots"),
-        snapshot,
-        movement_path,
-    )
-    outputs["player_movements"] = str(movement_path)
+        report["snapshot"] = {
+            key: snapshot.get(key)
+            for key in [
+                "schema_version",
+                "snapshot_id",
+                "captured_at",
+                "season",
+                "relative_path",
+                "previous_snapshot_id",
+                "diff",
+            ]
+        }
+        movement_path = project_path("data/processed/player_movements.csv")
+        movement = generate_player_movements(
+            project_path("data/snapshots"),
+            snapshot,
+            movement_path,
+            baseline_processed_dir=baseline_dir,
+        )
+        outputs["player_movements"] = str(movement_path)
     report["movement"] = movement
     history = generate_history_outputs(
         project_path("data/snapshots"),

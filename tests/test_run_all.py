@@ -35,7 +35,7 @@ def test_run_all_defaults_to_api(monkeypatch, capsys):
     monkeypatch.setattr(
         run_all,
         "generate_player_movements",
-        lambda snapshot_root, snapshot, output_path: {"status": "ready", "row_count": 3},
+        lambda snapshot_root, snapshot, output_path, **kwargs: {"status": "ready", "row_count": 3},
         raising=False,
     )
     monkeypatch.setattr(
@@ -175,7 +175,7 @@ def test_run_all_attaches_snapshot_only_after_quality_passes(monkeypatch):
     monkeypatch.setattr(
         run_all,
         "generate_player_movements",
-        lambda snapshot_root, snapshot, output_path: {
+        lambda snapshot_root, snapshot, output_path, **kwargs: {
             "status": "ready",
             "row_count": 12,
             "baseline_snapshot_id": "snapshot-0",
