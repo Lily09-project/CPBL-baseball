@@ -55,6 +55,8 @@ jobs:
         theme: [light, dark]
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      UI_THEME: ${{ matrix.theme }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -69,8 +71,6 @@ jobs:
           python -m pip install -r requirements-e2e.txt
           python -m playwright install --with-deps chromium
       - name: Start Streamlit against verified artifacts
-        env:
-          UI_THEME: ${{ matrix.theme }}
         shell: bash
         run: |
           nohup python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8852 --server.headless true --theme.base "$UI_THEME" > streamlit-ui-qa.log 2>&1 &
