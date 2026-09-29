@@ -128,6 +128,10 @@ def test_stage_processed_baseline_copies_release_files_and_returns_latest_id(tmp
     baseline_id = stage_processed_baseline(processed, staged)
 
     assert baseline_id == "snapshot-latest"
+    expected_files = [
+        *snapshots_module.SNAPSHOT_FILE_NAMES,
+        "snapshot_history.csv",
+    ]
     assert sorted(path.name for path in staged.glob("*.csv")) == sorted(
-        name for name in snapshots_module.SNAPSHOT_FILE_NAMES if (processed / name).exists()
+        name for name in expected_files if (processed / name).exists()
     )
