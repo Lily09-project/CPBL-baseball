@@ -66,7 +66,7 @@ body {
   position: fixed;
   top: max(.75rem, env(safe-area-inset-top));
   left: max(.75rem, env(safe-area-inset-left));
-  z-index: 1000001;
+  z-index: 1000001 !important;
   transform: translateY(-180%);
   padding: .65rem .9rem;
   border: 2px solid var(--focus);
@@ -909,7 +909,6 @@ html {
     max-width: 100vw !important;
     transform: translateX(0) !important;
   }
-  [data-testid="stSidebar"][aria-expanded="true"]
   [data-testid="stBaseButton-headerNoPadding"] {
     position: fixed !important;
     top: .75rem !important;
