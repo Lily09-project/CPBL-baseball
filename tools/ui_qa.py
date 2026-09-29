@@ -440,9 +440,9 @@ def run_browser_checks(
                     page.on("pageerror", lambda error, errors=console_errors: errors.append(str(error)))
                     try:
                         if theme_mode is None:
-                page.emulate_media(reduced_motion="reduce")
-            else:
-                page.emulate_media(reduced_motion="reduce", color_scheme=theme_mode)
+                            page.emulate_media(reduced_motion="reduce")
+                        else:
+                            page.emulate_media(reduced_motion="reduce", color_scheme=theme_mode)
                         url = f"{base_url.rstrip('/')}/?{urlencode({'page': page_name})}"
                         page.goto(url, wait_until="domcontentloaded", timeout=60_000)
                         page.get_by_role("heading", name=page_name, exact=True).wait_for(timeout=60_000)
