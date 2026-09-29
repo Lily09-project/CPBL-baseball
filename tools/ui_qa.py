@@ -106,6 +106,9 @@ def focus_issues(page) -> list[str]:
     page.evaluate(
         """() => {
             document.activeElement?.blur();
+            document.body.setAttribute('tabindex', '-1');
+            document.body.focus();
+            document.body.removeAttribute('tabindex');
             window.scrollTo(0, 0);
         }"""
     )
@@ -138,7 +141,7 @@ def focus_issues(page) -> list[str]:
                 const rendered = element => {
                     if (!element || !(element instanceof Element)) return false;
                     const rect = element.getBoundingClientRect();
-                    if (rect.width <= 0 || rect.height <= 0 || !inViewport(rect)) return false;
+                    if (rect.width <= 0 || rect.height <= 0) return false;
                     for (let node = element; node && node instanceof HTMLElement; node = node.parentElement) {
                         const style = getComputedStyle(node);
                         if (style.display === 'none' || style.visibility === 'hidden'

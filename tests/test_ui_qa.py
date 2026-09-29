@@ -84,6 +84,7 @@ def test_focus_audit_validates_radio_proxy_and_mobile_controls() -> None:
     assert 'page.keyboard.press("Tab")' in focus_source
     assert "page.wait_for_function(" in focus_source
     assert "DOMMatrixReadOnly" in focus_source
+    assert "document.body.setAttribute('tabindex', '-1')" in focus_source
     assert "page.wait_for_timeout(300)" not in focus_source
     assert 'input[type="radio"]' in focus_source
     assert "keyboard-focused radio proxy lacks a visible focus indicator" in focus_source
@@ -93,6 +94,7 @@ def test_focus_audit_validates_radio_proxy_and_mobile_controls() -> None:
     assert 'data-testid="stExpandSidebarButton"' in theme
     assert 'data-testid="stSidebarCollapseButton"' in theme
     assert 'visibility: hidden !important;' in theme
+    assert '[data-testid="stSidebar"][aria-expanded="false"] *' in theme
 
     app_source = Path("app.py").read_text(encoding="utf-8")
     assert app_source.index("st.markdown(STREAMLIT_LIGHT_CSS") < app_source.index(
