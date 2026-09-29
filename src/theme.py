@@ -909,6 +909,15 @@ html {
     max-width: 100vw !important;
     transform: translateX(0) !important;
   }
+  [data-testid="stSidebar"][aria-expanded="true"]
+  [data-testid="stBaseButton-headerNoPadding"] {
+    position: fixed !important;
+    top: .75rem !important;
+    left: .75rem !important;
+    z-index: 1001 !important;
+    width: 44px !important;
+    height: 44px !important;
+  }
 
   [data-testid="stPlotlyChart"] {
     padding: 0;
