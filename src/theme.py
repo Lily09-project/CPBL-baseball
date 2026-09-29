@@ -66,7 +66,7 @@ body {
   position: fixed;
   top: max(.75rem, env(safe-area-inset-top));
   left: max(.75rem, env(safe-area-inset-left));
-  z-index: 100;
+  z-index: 1000003 !important;
   transform: translateY(-180%);
   padding: .65rem .9rem;
   border: 2px solid var(--focus);
@@ -166,6 +166,10 @@ div {
 [data-testid="stSidebar"] {
   background: #06151a;
   border-right: 1px solid var(--line);
+}
+
+[data-testid="stSidebar"][aria-expanded="false"] {
+  visibility: hidden !important;
 }
 
 [data-testid="stSidebar"] > div:first-child {
@@ -898,6 +902,33 @@ html {
 
 @media (max-width: 720px) {
   html { scroll-padding-top: 4.5rem; }
+
+  [data-testid="stSidebar"][aria-expanded="true"] {
+    left: 0 !important;
+    width: min(21rem, 100vw) !important;
+    max-width: 100vw !important;
+    transform: translateX(0) !important;
+  }
+  html body [data-testid="stSidebarCollapseButton"] {
+    position: fixed !important;
+    inset: 0 auto auto 0 !important;
+    left: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    width: min(21rem, 100vw) !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    transform: none !important;
+    z-index: 1000002 !important;
+  }
+  [data-testid="stBaseButton-headerNoPadding"] {
+    position: fixed !important;
+    top: .75rem !important;
+    left: 300px !important;
+    z-index: 1000002 !important;
+    width: 44px !important;
+    height: 44px !important;
+  }
 
   [data-testid="stPlotlyChart"] {
     padding: 0;
@@ -2120,5 +2151,88 @@ h3 {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+        /* Show keyboard focus on the visible option, not the clipped framework input. */
+        [data-baseweb="radio"]:has(input[type="radio"]:focus-visible),
+        [role="radio"]:has(input[type="radio"]:focus-visible),
+        label:has(input[type="radio"]:focus-visible),
+        input[type="radio"]:focus-visible + label,
+        input[type="radio"]:focus-visible ~ label,
+        [data-baseweb="radio"]:has(input[type="radio"]:focus-visible) + label,
+        [data-baseweb="radio"]:has(input[type="radio"]:focus-visible) ~ label,
+        [role="radio"]:has(input[type="radio"]:focus-visible) + label,
+        [role="radio"]:has(input[type="radio"]:focus-visible) ~ label {
+            outline: 3px solid var(--accent, #2563eb) !important;
+            outline-offset: 3px !important;
+            border-radius: .6rem !important;
+        }
+        /* Do not leave invisible sidebar controls in the keyboard sequence. */
+        [data-testid="stSidebar"][aria-expanded="false"] {
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+        [data-testid="stSidebar"][aria-expanded="true"] {
+            visibility: visible !important;
+            pointer-events: auto !important;
+        }
+        body:has([data-testid="stSidebar"][aria-expanded="false"]) [data-testid="stSidebarCollapseButton"] {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+        body:has([data-testid="stSidebar"][aria-expanded="true"]) [data-testid="stExpandSidebarButton"] {
+            display: none !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+        @media (max-width: 1024px) {
+            [data-testid="stExpandSidebarButton"] {
+                position: fixed !important;
+                top: max(.75rem, env(safe-area-inset-top, 0px)) !important;
+                left: max(.75rem, env(safe-area-inset-left, 0px)) !important;
+                right: auto !important;
+                bottom: auto !important;
+                width: 44px !important;
+                height: 44px !important;
+                margin: 0 !important;
+                transform: none !important;
+                z-index: 1000003 !important;
+                pointer-events: auto !important;
+            }
+            [data-testid="stExpandSidebarButton"] button {
+                min-width: 44px !important;
+                width: 44px !important;
+                min-height: 44px !important;
+                height: 44px !important;
+            }
+            body:has([data-testid="stSidebar"][aria-expanded="true"]) [data-testid="stSidebarCollapseButton"] {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: auto !important;
+                bottom: auto !important;
+                width: min(21rem, 100vw) !important;
+                max-width: 100vw !important;
+                margin: 0 !important;
+                transform: none !important;
+                z-index: 1000002 !important;
+                pointer-events: auto !important;
+            }
+            body:has([data-testid="stSidebar"][aria-expanded="true"]) [data-testid="stSidebarCollapseButton"] [data-testid="stBaseButton-headerNoPadding"] {
+                position: fixed !important;
+                top: max(.75rem, env(safe-area-inset-top, 0px)) !important;
+                left: max(0px, min(17.25rem, calc(100vw - 44px))) !important;
+                right: auto !important;
+                width: 44px !important;
+                height: 44px !important;
+                margin: 0 !important;
+                transform: none !important;
+                z-index: 1000003 !important;
+            }
+        }
+        /* Keep hidden sidebar descendants out of the keyboard sequence. */
+        [data-testid="stSidebar"][aria-expanded="false"] * {
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
 </style>
 """
