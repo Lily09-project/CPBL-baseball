@@ -281,6 +281,20 @@ def interaction_smoke(page, base_url: str) -> list[str]:
     page.goto(f"{base_url.rstrip('/')}/?page=球探工作台", wait_until="domcontentloaded", timeout=60_000)
     page.get_by_role("heading", name="球探工作台", exact=True).wait_for(timeout=60_000)
     sidebar = page.locator('[data-testid="stSidebar"]')
+    try:
+        if sidebar.get_attribute("aria-expanded") != "true":
+            expand_control = page.locator('[data-testid="stExpandSidebarButton"]')
+            expand_button = expand_control.locator("button")
+            if expand_button.count():
+                expand_button.click(timeout=15_000)
+            else:
+                expand_control.click(timeout=15_000)
+            page.wait_for_function(
+                "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('aria-expanded') === 'true'",
+                timeout=30_000,
+            )
+    except PlaywrightError:
+        failures.append("sidebar did not open through its expand control")
     labels = sidebar.locator('[data-testid="stRadio"] label')
     try:
         page.wait_for_function(

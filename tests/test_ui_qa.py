@@ -102,6 +102,13 @@ def test_focus_audit_validates_radio_proxy_and_mobile_controls() -> None:
     )
 
 
+def test_interaction_smoke_opens_collapsed_sidebar_with_user_control() -> None:
+    source = Path("tools/ui_qa.py").read_text(encoding="utf-8")
+
+    assert 'data-testid="stExpandSidebarButton"' in source
+    assert 'get_attribute("aria-expanded")' in source
+
+
 def test_browser_failure_evidence_is_structured_and_atomic(tmp_path: Path) -> None:
     (tmp_path / "failure-player-mobile.png").write_bytes(b"png")
     (tmp_path / "player-mobile.png").write_bytes(b"png")
