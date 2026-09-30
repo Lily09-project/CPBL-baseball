@@ -403,19 +403,12 @@ def apply_theme_mode(
         selector = page.get_by_role("combobox", name=selector_label)
         selector.click(timeout=15_000)
         option = page.get_by_role("option", name=option_label, exact=True)
-        if option.get_attribute("aria-selected") == "true":
-            page.keyboard.press("Escape")
-        else:
-            try:
-                option.click(timeout=15_000)
-            except Exception as click_error:
-                # Streamlit can rerender and detach the selected option during a
-                # theme change. Accept that only when the rendered theme confirms it.
-                rendered_theme = page.evaluate(
-                    "getComputedStyle(document.documentElement).colorScheme"
-                )
-                if rendered_theme != theme_mode:
-                    raise click_error
+        option.wait_for(state="visible", timeout=15_000)
+        # Select the adjacent app theme with the keyboard. Clicking a Streamlit
+        # option can trigger its rerun on pointer-down and detach the option
+        # before Playwright finishes the click action.
+        page.keyboard.press("ArrowDown" if theme_mode == "light" else "ArrowUp")
+        page.keyboard.press("Enter")
         collapse_button = page.locator('[data-testid="stSidebarCollapseButton"] button')
         if sidebar.get_attribute("aria-expanded") == "true" and collapse_button.count():
             collapse_button.click(timeout=15_000)
