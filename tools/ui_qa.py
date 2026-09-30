@@ -385,7 +385,10 @@ def apply_theme_mode(
         return
     if theme_mode not in {"light", "dark"}:
         raise ValueError("theme_mode must be light or dark")
-    if selector_label is not None:
+    current_theme = page.evaluate(
+        "getComputedStyle(document.documentElement).colorScheme"
+    )
+    if selector_label is not None and current_theme != theme_mode:
         sidebar = page.locator('[data-testid="stSidebar"]')
         if sidebar.get_attribute("aria-expanded") != "true":
             expand_control = page.locator('[data-testid="stExpandSidebarButton"]')
