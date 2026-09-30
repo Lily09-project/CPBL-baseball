@@ -401,13 +401,16 @@ def apply_theme_mode(
         if not option_label:
             raise ValueError(f"missing app theme label for {theme_mode}")
         selector = page.get_by_role("combobox", name=selector_label)
+        selector.scroll_into_view_if_needed(timeout=15_000)
         selector.click(timeout=15_000)
         option = page.get_by_role("option", name=option_label, exact=True)
         option.wait_for(state="visible", timeout=15_000)
-        # Select the adjacent app theme with the keyboard. Clicking a Streamlit
-        # option can trigger its rerun on pointer-down and detach the option
-        # before Playwright finishes the click action.
-        page.keyboard.press("ArrowDown" if theme_mode == "light" else "ArrowUp")
+        # Use absolute keyboard navigation because Streamlit may detach a menu
+        # option during a pointer click. The app's theme options are ordered
+        # dark, then light.
+        page.keyboard.press("Home")
+        if theme_mode == "light":
+            page.keyboard.press("ArrowDown")
         page.keyboard.press("Enter")
         collapse_button = page.locator('[data-testid="stSidebarCollapseButton"] button')
         if sidebar.get_attribute("aria-expanded") == "true" and collapse_button.count():
