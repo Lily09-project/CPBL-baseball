@@ -397,8 +397,22 @@ def apply_theme_mode(
         option_label = (option_labels or {}).get(theme_mode)
         if not option_label:
             raise ValueError(f"missing app theme label for {theme_mode}")
-        page.get_by_role("combobox", name=selector_label).click(timeout=15_000)
-        page.get_by_role("option", name=option_label, exact=True).click(timeout=15_000)
+        selector = page.get_by_role("combobox", name=selector_label)
+        selector.click(timeout=15_000)
+        option = page.get_by_role("option", name=option_label, exact=True)
+        if option.get_attribute("aria-selected") == "true":
+            page.keyboard.press("Escape")
+        else:
+            try:
+                option.click(timeout=15_000)
+            except Exception as click_error:
+                # Streamlit can rerender and detach the selected option during a
+                # theme change. Accept that only when the rendered theme confirms it.
+                rendered_theme = page.evaluate(
+                    "getComputedStyle(document.documentElement).colorScheme"
+                )
+                if rendered_theme != theme_mode:
+                    raise click_error
         collapse_button = page.locator('[data-testid="stSidebarCollapseButton"] button')
         if sidebar.get_attribute("aria-expanded") == "true" and collapse_button.count():
             collapse_button.click(timeout=15_000)
