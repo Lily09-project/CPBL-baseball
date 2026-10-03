@@ -7,3 +7,5 @@ pytest>=9.1.1
 lxml>=6.1.3
 gitpython>=3.1.61
 pillow>=12.3.0
+# Security floor for requests' HTTP transport dependency.
+urllib3>=2.8.0,<3
