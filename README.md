@@ -8,6 +8,10 @@
 
 > 非 CPBL 官方服務；不預測比賽或產生名單建議，也不對傷勢或未來表現下結論。
 
+## 公開展示版
+
+互動式 GitHub Pages 版提供搜尋、篩選、圖表、明細比較與 CSV／JSON 下載，支援手機與深淺主題。Python／Streamlit 版本保留完整分析流程；展示版的資料模式與部署方式見 [GitHub Pages](docs/GITHUB_PAGES.md)。
+
 ## 介面預覽
 
 ![資料訊號總覽](docs/screenshots/ui-data-health.png)
