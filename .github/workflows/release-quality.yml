@@ -48,8 +48,15 @@ jobs:
           python -m src.verify_public_release reports/metrics/public_release_manifest.json
 
   browser-ui:
+    name: Browser UI (${{ matrix.theme }})
+    strategy:
+      fail-fast: false
+      matrix:
+        theme: [light, dark]
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      UI_THEME: ${{ matrix.theme }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -66,7 +73,7 @@ jobs:
       - name: Start Streamlit against verified artifacts
         shell: bash
         run: |
-          nohup python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8852 --server.headless true > streamlit-ui-qa.log 2>&1 &
+          nohup python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8852 --server.headless true --theme.base "$UI_THEME" > streamlit-ui-qa.log 2>&1 &
           for attempt in {1..30}; do
             if curl --fail --silent http://127.0.0.1:8852/_stcore/health | grep --quiet ok; then
               exit 0
@@ -75,7 +82,23 @@ jobs:
           done
           cat streamlit-ui-qa.log
           exit 1
+      - name: Verify selected-player downloads before layout matrix
+        run: |
+          python - <<'PY'
+          import os
+          from playwright.sync_api import sync_playwright
+          from tools.ui_qa import functional_download_smoke
+          with sync_playwright() as engine:
+              browser = engine.chromium.launch()
+              for width in (1440, 320):
+                  page = browser.new_page(viewport={"width": width, "height": 1000}, accept_downloads=True)
+                  page.emulate_media(reduced_motion="reduce", color_scheme=os.environ["UI_THEME"])
+                  functional_download_smoke(page, "http://127.0.0.1:8852", os.environ["UI_THEME"])
+                  page.close()
+              browser.close()
+          print("PASS: desktop and 320px player selection, report downloads and clearing")
+          PY
       - name: Run responsive browser QA
-        run: python tools/ui_qa.py --url http://127.0.0.1:8852
+        run: python tools/ui_qa.py --url http://127.0.0.1:8852 --theme-mode "$UI_THEME"
       - name: Run extended 200% text browser QA
-        run: python tools/ui_qa.py --url http://127.0.0.1:8852 --extended --text-scale
+        run: python tools/ui_qa.py --url http://127.0.0.1:8852 --extended --text-scale --theme-mode "$UI_THEME"

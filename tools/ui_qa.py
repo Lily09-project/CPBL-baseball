@@ -35,6 +35,7 @@ EXTENDED_VIEWPORTS = (
 VIEWPORTS = CORE_VIEWPORTS
 STREAMLIT_EXCEPTION_SELECTOR = '[data-testid="stException"]'
 TEXT_SCALE_CSS = ":root { font-size: 200% !important; }"
+THEME_OPTION_LABELS = {"light":"淺色","dark":"深色"}
 # WCAG-friendly touch target floor for user-facing controls. Streamlit's
 # internal toolbar/header controls are explicitly excluded below.
 MIN_INTERACTIVE_TARGET_PX = 44
@@ -98,10 +99,27 @@ def layout_issues(page) -> list[str]:
     )
 
 
+def wait_for_app_idle(page) -> None:
+    """Synchronize with Streamlit reruns before judging rendered UI or uploading."""
+    # Widgets debounce before starting a rerun; wait for the actual completion
+    # state and removed skeletons, as Streamlit's own browser tests do.
+    page.wait_for_timeout(250)
+    page.locator(
+        '[data-testid="stApp"][data-test-connection-state="CONNECTED"]'
+        '[data-test-script-state="notRunning"]'
+    ).wait_for(state="attached", timeout=60_000)
+    page.wait_for_function(
+        "() => document.querySelectorAll('[data-testid=stSkeleton]').length === 0",
+        timeout=60_000,
+    )
+    page.wait_for_timeout(100)
+
+
 def focus_issues(page) -> list[str]:
     """Traverse real Tab order, validating visible controls and their focused proxies."""
     from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
+    wait_for_app_idle(page)
     issues: list[str] = []
     page.evaluate(
         """() => {
@@ -197,6 +215,10 @@ def focus_issues(page) -> list[str]:
                     visibility: style.visibility,
                     position: style.position,
                     transform: style.transform,
+                    occluder: (() => {
+                        const top = document.elementFromPoint(Math.max(1, Math.min(innerWidth - 1, rect.left + rect.width / 2)), Math.max(1, Math.min(innerHeight - 1, rect.top + rect.height / 2)));
+                        return top ? top.outerHTML.slice(0, 500) : null;
+                    })(),
                 });
                 const key = [
                     target.tagName, target.id || '', target.getAttribute('data-testid') || '',
@@ -373,11 +395,165 @@ def check_health(base_url: str) -> None:
         raise RuntimeError(f"Unexpected Streamlit health response: {body[:200]}")
 
 
+def apply_theme_mode(
+    page,
+    theme_mode: str | None,
+    *,
+    selector_label: str | None = None,
+    option_labels: dict[str, str] | None = None,
+) -> None:
+    if theme_mode is None:
+        return
+    if theme_mode not in {"light", "dark"}:
+        raise ValueError("theme_mode must be light or dark")
+    current_theme = page.evaluate(
+        "getComputedStyle(document.documentElement).colorScheme"
+    )
+    if selector_label is not None and current_theme != theme_mode:
+        sidebar = page.locator('[data-testid="stSidebar"]')
+        if sidebar.get_attribute("aria-expanded") != "true":
+            expand_control = page.locator('[data-testid="stExpandSidebarButton"]')
+            expand_button = expand_control.locator("button")
+            if expand_button.count():
+                expand_button.click(timeout=15_000)
+            else:
+                expand_control.click(timeout=15_000)
+        option_label = (option_labels or {}).get(theme_mode)
+        if not option_label:
+            raise ValueError(f"missing app theme label for {theme_mode}")
+        selector = page.get_by_role("combobox", name=selector_label)
+        selector.scroll_into_view_if_needed(timeout=15_000)
+        selector.click(timeout=15_000)
+        option = page.get_by_role("option", name=option_label, exact=True)
+        option.wait_for(state="visible", timeout=15_000)
+        # Use absolute keyboard navigation because Streamlit may detach a menu
+        # option during a pointer click. The app's theme options are ordered
+        # dark, then light.
+        page.keyboard.press("Home")
+        if theme_mode == "light":
+            page.keyboard.press("ArrowDown")
+        page.keyboard.press("Enter")
+        collapse_button = page.locator('[data-testid="stSidebarCollapseButton"] button')
+        if sidebar.get_attribute("aria-expanded") == "true" and collapse_button.count():
+            collapse_button.click(timeout=15_000)
+    page.wait_for_function(
+        "expected => getComputedStyle(document.documentElement).colorScheme === expected",
+        arg=theme_mode,
+        timeout=15_000,
+    )
+
+
+def download_payload(page, label: str, suffix: str) -> bytes:
+    """Read the real browser download, not the button's presence or URL."""
+    wait_for_app_idle(page)
+    with page.expect_download(timeout=30_000) as pending:
+        page.get_by_role("button", name=label).click(timeout=30_000)
+    download = pending.value
+    failure = download.failure()
+    if failure or not download.suggested_filename.endswith(suffix):
+        raise RuntimeError(f"download failed or unexpected filename: {label}: {failure}")
+    path = download.path()
+    if path is None:
+        raise RuntimeError(f"download has no readable payload: {label}")
+    payload = Path(path).read_bytes()
+    if not payload:
+        raise RuntimeError(f"download is empty: {label}")
+    return payload
+
+
+def open_sidebar(page) -> None:
+    sidebar = page.locator('[data-testid="stSidebar"]')
+    if sidebar.get_attribute("aria-expanded") != "true":
+        control = page.locator('[data-testid="stExpandSidebarButton"]')
+        button = control.locator("button")
+        (button if button.count() else control).click(timeout=15_000)
+    page.wait_for_function(
+        "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('aria-expanded') === 'true'",
+        timeout=15_000,
+    )
+
+
+def choose_option(page, label: str, value: str) -> None:
+    selector = page.get_by_role("combobox", name=label)
+    selector.scroll_into_view_if_needed()
+    selector.click()
+    page.get_by_role("option", name=value, exact=True).click()
+    page.keyboard.press("Escape")
+    wait_for_app_idle(page)
+
+
+def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> None:
+    import csv
+    import re
+    from io import StringIO
+
+    root = str(Path(__file__).resolve().parents[1])
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from src.scouting_report import verify_report_manifest
+
+    page.goto(f"{base_url.rstrip('/')}/?{urlencode({'page': '球探報告'})}", wait_until="domcontentloaded", timeout=60_000)
+    page.get_by_role("heading", name="球探報告", exact=True).wait_for(timeout=60_000)
+    apply_theme_mode(page, theme_mode, selector_label="介面主題", option_labels=THEME_OPTION_LABELS)
+    threshold = page.get_by_role("spinbutton", name="最低打席 (PA)", exact=True)
+    threshold.fill("50")
+    threshold.press("Enter")
+    wait_for_app_idle(page)
+    page.get_by_role("button", name="清除觀察名單").click()
+    wait_for_app_idle(page)
+    selected_labels: list[str] = []
+    for _ in range(2):
+        selector = page.get_by_role("combobox", name="觀察名單")
+        selector.scroll_into_view_if_needed()
+        selector.click()
+        # Streamlit includes a bulk "Select all" row. Choose only a real
+        # player option carrying its stable ten-digit identity.
+        options = page.get_by_role("option").filter(has_text=re.compile(r" · \d{10}\s*$"))
+        for selected_label in selected_labels:
+            # The menu can retain selected rows; clicking one again removes it.
+            options = options.filter(has_not_text=re.compile(re.escape(selected_label)))
+        option = options.first
+        option.wait_for(state="visible", timeout=15_000)
+        label = option.inner_text().strip()
+        player_id = label.rsplit(" · ", 1)[-1]
+        selector.fill(player_id)
+        page.get_by_role("option", name=label, exact=True).click()
+        wait_for_app_idle(page)
+        page.keyboard.press("Escape")
+        selected_labels.append(label)
+        page.locator('[data-testid="stMultiSelect"]').get_by_text(label, exact=True).wait_for(timeout=30_000)
+        wait_for_app_idle(page)
+        for selected_label in selected_labels:
+            page.locator('[data-testid="stMultiSelect"]').get_by_text(selected_label, exact=True).wait_for(timeout=30_000)
+    manifest = json.loads(download_payload(page, "下載稽核 Manifest JSON", ".json"))
+    verified = verify_report_manifest(manifest)
+    markdown = download_payload(page, "下載球探報告 Markdown", ".md").decode("utf-8")
+    csv_payload = download_payload(page, "下載球探報告 CSV", ".csv")
+    rows = list(csv.DictReader(StringIO(csv_payload.decode("utf-8-sig"))))
+    players = manifest["players"]
+    ids = [str(player["player_id"]) for player in players]
+    if verified["player_count"] != 2 or manifest["analysis"]["qualification"] != "PA ≥ 50":
+        raise RuntimeError("CPBL report lost the selected threshold or watchlist")
+    if ids != [label.rsplit(" · ", 1)[-1].strip() for label in selected_labels]:
+        raise RuntimeError("CPBL report changed the chosen player identities or order")
+    if [row["球員 ID"] for row in rows] != ids or any(float(row["資格量"]) < 50 for row in rows):
+        raise RuntimeError("CPBL report CSV disagrees with the verified manifest")
+    if manifest["report_id"] not in markdown or any(player_id not in markdown for player_id in ids):
+        raise RuntimeError("CPBL Markdown lost its report identity or selected players")
+    page.get_by_role("button", name="清除觀察名單").click()
+    wait_for_app_idle(page)
+    page.get_by_text("選擇候選球員後，這裡會產生可下載的球探報告。", exact=True).wait_for(timeout=30_000)
+    if page.get_by_role("button", name="下載稽核 Manifest JSON").count():
+        raise RuntimeError("cleared watchlist still offers a stale report download")
+
+
+
 def run_browser_checks(
     base_url: str,
     screenshot_dir: Path,
     extended: bool = False,
     text_scale: bool = False,
+    theme_mode: str | None = None,
 ) -> str:
     try:
         from playwright.sync_api import Error as PlaywrightError
@@ -403,10 +579,19 @@ def run_browser_checks(
                     )
                     page.on("pageerror", lambda error, errors=console_errors: errors.append(str(error)))
                     try:
-                        page.emulate_media(reduced_motion="reduce")
+                        if theme_mode is None:
+                            page.emulate_media(reduced_motion="reduce")
+                        else:
+                            page.emulate_media(reduced_motion="reduce", color_scheme=theme_mode)
                         url = f"{base_url.rstrip('/')}/?{urlencode({'page': page_name})}"
                         page.goto(url, wait_until="domcontentloaded", timeout=60_000)
                         page.get_by_role("heading", name=page_name, exact=True).wait_for(timeout=60_000)
+                        apply_theme_mode(
+                            page,
+                            theme_mode,
+                            selector_label="介面主題",
+                            option_labels=THEME_OPTION_LABELS,
+                        )
                         skip_link = page.locator('a.skip-link[href="#cpbl-main"]')
                         main_anchor = page.locator("#cpbl-main")
                         try:
@@ -469,6 +654,26 @@ def run_browser_checks(
             failures.append(f"interaction flow browser error: {exc}")
         finally:
             interaction_page.close()
+
+        for flow_name, flow_width, flow_height in (
+            ("desktop", 1440, 1000),
+            ("mobile", 320 if extended else 375, 812),
+        ):
+            flow_page = browser.new_page(viewport={"width": flow_width, "height": flow_height}, accept_downloads=True)
+            try:
+                if theme_mode is None:
+                    flow_page.emulate_media(reduced_motion="reduce")
+                else:
+                    flow_page.emulate_media(reduced_motion="reduce", color_scheme=theme_mode)
+                functional_download_smoke(flow_page, base_url, theme_mode)
+                if flow_page.locator(STREAMLIT_EXCEPTION_SELECTOR).count():
+                    failures.append(f"{flow_name}/downloads: Streamlit runtime exception")
+            except (PlaywrightError, RuntimeError, ValueError, OSError) as exc:
+                failures.append(f"{flow_name}/downloads: {exc}")
+                print(f"DOWNLOAD FAILURE DOM ({flow_name}): {flow_page.locator('body').inner_text()[-8000:]}")
+                flow_page.screenshot(path=str(screenshot_dir / f"failure-downloads-{flow_name}.png"), full_page=True)
+            finally:
+                flow_page.close()
         browser.close()
     if failures:
         raise RuntimeError("; ".join(failures[:20]))
@@ -490,6 +695,7 @@ def main() -> int:
         action="store_true",
         help="apply 200% root text scaling and rerun reflow checks",
     )
+    parser.add_argument("--theme-mode", choices=("light", "dark"))
     args = parser.parse_args()
     screenshot_dir = Path(args.screenshots)
     (screenshot_dir / "failure-evidence.json").unlink(missing_ok=True)
@@ -502,6 +708,7 @@ def main() -> int:
             screenshot_dir,
             extended=args.extended,
             text_scale=args.text_scale,
+            theme_mode=args.theme_mode,
         )
     except (OSError, urllib.error.URLError, RuntimeError, ValueError) as exc:
         evidence = write_failure_evidence(args.url, screenshot_dir, str(exc))

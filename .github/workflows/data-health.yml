@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "30 15 * * *"
   workflow_dispatch:
+    inputs:
+      source_diagnostics:
+        description: "On failure, run bounded read-only official endpoint diagnostics"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -40,7 +45,7 @@ jobs:
           set -o pipefail
           log_file="$(mktemp)"
           set +e
-          python run_all.py --mode api 2>&1 | tee "$log_file"
+          python -m src.verified_pipeline --mode api 2>&1 | tee "$log_file"
           pipeline_status=${PIPESTATUS[0]}
           set -e
 
@@ -53,7 +58,7 @@ jobs:
           # block/outage from a product regression. Never turn stale data into
           # a passing verification; defer the dependent checks instead.
           if [ "${{ github.event_name }}" = "schedule" ] \
-            && grep -Eiq '(403 Client Error|429 Client Error|[45][0-9]{2} Server Error|ConnectionError|Timeout|Max retries exceeded)' "$log_file"; then
+            && [ "$pipeline_status" -eq 75 ]; then
             echo "status=deferred" >> "$GITHUB_OUTPUT"
             echo "::warning::Official CPBL pages were temporarily unavailable; live-data health verification was deferred."
             {
@@ -67,6 +72,10 @@ jobs:
 
           echo "status=failed" >> "$GITHUB_OUTPUT"
           exit "$pipeline_status"
+
+      - name: Diagnose official source access without publishing
+        if: failure() && github.event_name == 'workflow_dispatch' && inputs.source_diagnostics
+        run: python -m src.source_access_check
 
       - name: Run product test suite
         if: steps.live_data.outputs.status == 'verified'

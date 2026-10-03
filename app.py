@@ -690,6 +690,10 @@ def set_report_query(player_type: str, team: str, threshold: float, priority: st
 
 
 def clear_report_query() -> None:
+    # Button callbacks run before widgets are recreated, so clearing the URL
+    # also clears the widget-owned selection without mutating it after render.
+    for key in ("report_watchlist_打者", "report_watchlist_投手"):
+        st.session_state.pop(key, None)
     for name in ("watchlist", "report_type", "report_team", "report_threshold", "report_focus"):
         if name in st.query_params:
             del st.query_params[name]
@@ -1916,9 +1920,10 @@ def page_scouting_report() -> None:
     if action_share.button("建立可分享連結", icon=":material/link:", width="stretch", key="report_share"):
         set_report_query(player_type, team, float(threshold), priority, selected_ids)
         st.success("已將球員、資格門檻與評估重點寫入目前網址參數。")
-    if action_clear.button("清除觀察名單", icon=":material/clear_all:", width="stretch", key="report_clear"):
-        clear_report_query()
-        st.rerun()
+    action_clear.button(
+        "清除觀察名單", icon=":material/clear_all:", width="stretch",
+        key="report_clear", on_click=clear_report_query,
+    )
 
     report = build_watchlist_report(candidates, selected_ids, player_type)
     st.header("評估報告")

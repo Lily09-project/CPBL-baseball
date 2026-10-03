@@ -4,6 +4,9 @@ from __future__ import annotations
 
 
 CPBL_BASE_URL = "https://cpbl.com.tw"
+# Public profile links retain their normalized identity; ingestion goes directly
+# to the official www endpoint so HTTP redirect protection remains enabled.
+CPBL_FETCH_BASE_URL = "https://www.cpbl.com.tw"
 
 # The action endpoint is included because the official statistics page uses it
 # for its server-rendered pagination form. It is not an API claim.
@@ -13,7 +16,7 @@ OFFICIAL_SOURCE_PATHS = {
     "statistics": "/stats/recordall",
     "statistics_action": "/stats/recordallaction",
 }
-OFFICIAL_SOURCE_URLS = tuple(f"{CPBL_BASE_URL}{path}" for path in OFFICIAL_SOURCE_PATHS.values())
+OFFICIAL_SOURCE_URLS = tuple(f"{CPBL_FETCH_BASE_URL}{path}" for path in OFFICIAL_SOURCE_PATHS.values())
 SOURCE_DISPLAY_NAME = "CPBL 官方公開頁面擷取"
 SOURCE_PATH_LABEL = "、".join(
     OFFICIAL_SOURCE_PATHS[name] for name in ("roster", "standings", "statistics")
