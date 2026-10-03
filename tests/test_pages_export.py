@@ -114,3 +114,25 @@ def test_deploy_job_is_main_only_and_has_minimal_permissions():
 def test_cloud_build_uses_explicit_constraints():
     text = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
     assert "-c requirements.lock.txt" in text
+
+
+@pytest.mark.parametrize("prefix", ["BAT", "PIT"])
+def test_stats_only_identity_matches_existing_source_contract(prefix):
+    from src.fetch_cpbl_data import synthetic_player_id
+    row = {"player_name": "Stats Only", "team": "Team", "player_id": synthetic_player_id(prefix, "Stats Only", "Team")}
+    builder.verify_player_identity(row, prefix)
+    row["player_name"] = "Tampered Name"
+    with pytest.raises(ValueError, match="Invalid public player identity"):
+        builder.verify_player_identity(row, prefix)
+
+
+@pytest.mark.parametrize("identity", [None, "", "000001", "０００００００００１", "BAT0000000", "PIT0000000", "javascript:alert(1)"])
+def test_invalid_player_identities_fail_closed(identity):
+    with pytest.raises(ValueError, match="Invalid public player identity"):
+        builder.verify_player_identity({"player_id": identity, "player_name": "Unknown", "team": "Team"}, "BAT")
+
+
+def test_official_numeric_identity_preserves_leading_zeros():
+    row = {"player_id": "0000000001"}
+    builder.verify_player_identity(row, None)
+    assert row["player_id"] == "0000000001"

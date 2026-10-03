@@ -5,6 +5,7 @@ import csv
 import hashlib
 import json
 import math
+import re
 import shutil
 import sys
 from datetime import datetime
@@ -148,6 +149,18 @@ def write_release(root: Path, payload: dict) -> Path:
     return destination
 
 
+def verify_player_identity(row: dict, prefix: str | None) -> None:
+    identity = row.get("player_id")
+    if isinstance(identity, str) and re.fullmatch(r"[0-9]{10}", identity):
+        return
+    if prefix not in {"BAT", "PIT"}:
+        raise ValueError("Invalid public player identity")
+    from src.fetch_cpbl_data import synthetic_player_id
+    expected = synthetic_player_id(prefix, row.get("player_name"), row.get("team"))
+    if identity != expected:
+        raise ValueError("Invalid public player identity")
+
+
 def build_payload(root: Path) -> dict:
     from src.public_release_manifest import verify_public_release_manifest_file
     manifest_path = safe_path(root, "reports/metrics/public_release_manifest.json")
@@ -189,9 +202,10 @@ def build_payload(root: Path) -> dict:
     history = dataset(root, "history", "更新歷程", "data/processed/snapshot_history.csv", history_columns,
                       identity=["snapshot_id"], group="season", group_label="球季",
                       value="total_rows", date="captured_at", chart_label="公開快照筆數", sort="captured_at")
-    for item in (batters, pitchers, roster):
-        if any(not row["player_id"].isdigit() or len(row["player_id"]) != 10 for row in item["rows"]):
-            raise ValueError("Invalid public player identity")
+    for item, prefix in ((batters, "BAT"), (pitchers, "PIT"), (roster, None)):
+        for row in item["rows"]:
+            row_prefix = prefix or {"打者": "BAT", "投手": "PIT"}.get(row["player_type"])
+            verify_player_identity(row, row_prefix)
     return {"schema_version": "pages-data/1", "kind": "cpbl", "project": "CPBL-baseball",
             "title": "中職球探資料室", "brand": "CPBL SCOUTING DESK",
             "source": {"mode": "官方資料快照", "range": manifest["generated_at"][:10],
@@ -200,7 +214,7 @@ def build_payload(root: Path) -> dict:
             "disclaimer": "非 CPBL 官方服務。資料以 CPBL 官方公告為準；分數僅供分析參考。",
             "quality": {"來源": "CPBL 官方公開資料", "資料完整性": "發布 Manifest 與逐檔 SHA-256 核對通過",
                         "資料更新": manifest["generated_at"], "發布版本": manifest["release_id"],
-                        "球員 ID": "保留十位數字與前導零", "更新限制": "官方來源存取異常時保留上一份核對快照，不改寫更新日期"},
+                        "球員 ID": "官方十位數字保留前導零；僅有成績資料者使用專案穩定代碼，不提供官方球員連結", "更新限制": "官方來源存取異常時保留上一份核對快照，不改寫更新日期"},
             "datasets": [teams, batters, pitchers, roster, history]}
 
 def build(root: Path = ROOT) -> Path:
