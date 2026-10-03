@@ -22,7 +22,7 @@ def test_data_refresh_only_opens_a_reviewable_pr_for_verified_outputs() -> None:
     for required in [
         "workflow_dispatch",
         "id: refresh",
-        "python run_all.py --mode api",
+        "python -m src.verified_pipeline --mode api",
         "status=deferred",
         "Official CPBL pages were temporarily unavailable",
         "if: steps.refresh.outputs.status == 'refreshed'",

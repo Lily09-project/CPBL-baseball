@@ -165,7 +165,7 @@ def test_scheduled_data_health_check_is_read_only():
         "schedule:",
         "workflow_dispatch:",
         "contents: read",
-        "python run_all.py --mode api",
+        "python -m src.verified_pipeline --mode api",
         "python -m pytest -q",
         "quality_status",
         "player_movements.csv",

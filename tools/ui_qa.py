@@ -421,6 +421,82 @@ def apply_theme_mode(
         timeout=15_000,
     )
 
+
+def download_payload(page, label: str, suffix: str) -> bytes:
+    """Read the real browser download, not the button's presence or URL."""
+    with page.expect_download(timeout=30_000) as pending:
+        page.get_by_role("button", name=label, exact=True).click(timeout=30_000)
+    download = pending.value
+    failure = download.failure()
+    if failure or not download.suggested_filename.endswith(suffix):
+        raise RuntimeError(f"download failed or unexpected filename: {label}: {failure}")
+    path = download.path()
+    if path is None:
+        raise RuntimeError(f"download has no readable payload: {label}")
+    payload = Path(path).read_bytes()
+    if not payload:
+        raise RuntimeError(f"download is empty: {label}")
+    return payload
+
+
+def open_sidebar(page) -> None:
+    sidebar = page.locator('[data-testid="stSidebar"]')
+    if sidebar.get_attribute("aria-expanded") != "true":
+        control = page.locator('[data-testid="stExpandSidebarButton"]')
+        button = control.locator("button")
+        (button if button.count() else control).click(timeout=15_000)
+    page.wait_for_function(
+        "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('aria-expanded') === 'true'",
+        timeout=15_000,
+    )
+
+
+def choose_option(page, label: str, value: str) -> None:
+    selector = page.get_by_role("combobox", name=label, exact=True)
+    selector.scroll_into_view_if_needed()
+    selector.click()
+    page.get_by_role("option", name=value, exact=True).click()
+    page.keyboard.press("Escape")
+
+
+def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> None:
+    import csv
+    from io import StringIO
+
+    root = str(Path(__file__).resolve().parents[1])
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from src.scouting_report import verify_report_manifest
+
+    page.goto(f"{base_url.rstrip('/')}/?{urlencode({'page': '球探報告'})}", wait_until="domcontentloaded", timeout=60_000)
+    page.get_by_role("heading", name="球探報告", exact=True).wait_for(timeout=60_000)
+    apply_theme_mode(page, theme_mode, selector_label="介面主題", option_labels=THEME_OPTION_LABELS)
+    threshold = page.get_by_role("spinbutton", name="最低打席 (PA)", exact=True)
+    threshold.fill("50")
+    threshold.press("Enter")
+    for _ in range(2):
+        selector = page.get_by_role("combobox", name="觀察名單", exact=True)
+        selector.scroll_into_view_if_needed()
+        selector.click()
+        option = page.get_by_role("option").first
+        option.wait_for(state="visible", timeout=15_000)
+        option.click()
+        page.keyboard.press("Escape")
+    manifest = json.loads(download_payload(page, "下載稽核 Manifest JSON", ".json"))
+    verified = verify_report_manifest(manifest)
+    markdown = download_payload(page, "下載球探報告 Markdown", ".md").decode("utf-8")
+    csv_payload = download_payload(page, "下載球探報告 CSV", ".csv")
+    rows = list(csv.DictReader(StringIO(csv_payload.decode("utf-8-sig"))))
+    players = manifest["players"]
+    ids = [str(player["player_id"]) for player in players]
+    if verified["player_count"] != 2 or manifest["analysis"]["qualification"] != "PA ≥ 50":
+        raise RuntimeError("CPBL report lost the selected threshold or watchlist")
+    if [row["球員 ID"] for row in rows] != ids or any(float(row["資格量"]) < 50 for row in rows):
+        raise RuntimeError("CPBL report CSV disagrees with the verified manifest")
+    if manifest["report_id"] not in markdown or any(player_id not in markdown for player_id in ids):
+        raise RuntimeError("CPBL Markdown lost its report identity or selected players")
+
+
 def run_browser_checks(
     base_url: str,
     screenshot_dir: Path,
@@ -527,6 +603,25 @@ def run_browser_checks(
             failures.append(f"interaction flow browser error: {exc}")
         finally:
             interaction_page.close()
+
+        for flow_name, flow_width, flow_height in (
+            ("desktop", 1440, 1000),
+            ("mobile", 320 if extended else 375, 812),
+        ):
+            flow_page = browser.new_page(viewport={"width": flow_width, "height": flow_height}, accept_downloads=True)
+            try:
+                if theme_mode is None:
+                    flow_page.emulate_media(reduced_motion="reduce")
+                else:
+                    flow_page.emulate_media(reduced_motion="reduce", color_scheme=theme_mode)
+                functional_download_smoke(flow_page, base_url, theme_mode)
+                if flow_page.locator(STREAMLIT_EXCEPTION_SELECTOR).count():
+                    failures.append(f"{flow_name}/downloads: Streamlit runtime exception")
+            except (PlaywrightError, RuntimeError, ValueError, OSError) as exc:
+                failures.append(f"{flow_name}/downloads: {exc}")
+                flow_page.screenshot(path=str(screenshot_dir / f"failure-downloads-{flow_name}.png"), full_page=True)
+            finally:
+                flow_page.close()
         browser.close()
     if failures:
         raise RuntimeError("; ".join(failures[:20]))
