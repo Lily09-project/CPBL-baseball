@@ -484,6 +484,7 @@ def choose_option(page, label: str, value: str) -> None:
 
 def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> None:
     import csv
+    import re
     from io import StringIO
 
     root = str(Path(__file__).resolve().parents[1])
@@ -505,7 +506,9 @@ def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> No
         selector = page.get_by_role("combobox", name="觀察名單")
         selector.scroll_into_view_if_needed()
         selector.click()
-        option = page.get_by_role("option").first
+        # Streamlit includes a bulk "Select all" row. Choose only a real
+        # player option carrying its stable ten-digit identity.
+        option = page.get_by_role("option").filter(has_text=re.compile(r" · \d{10}\s*$")).first
         option.wait_for(state="visible", timeout=15_000)
         label = option.inner_text()
         option.click()
@@ -527,6 +530,12 @@ def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> No
         raise RuntimeError("CPBL report CSV disagrees with the verified manifest")
     if manifest["report_id"] not in markdown or any(player_id not in markdown for player_id in ids):
         raise RuntimeError("CPBL Markdown lost its report identity or selected players")
+    page.get_by_role("button", name="清除觀察名單").click()
+    wait_for_app_idle(page)
+    page.get_by_text("選擇候選球員後，這裡會產生可下載的球探報告。", exact=True).wait_for(timeout=30_000)
+    if page.get_by_role("button", name="下載稽核 Manifest JSON").count():
+        raise RuntimeError("cleared watchlist still offers a stale report download")
+
 
 
 def run_browser_checks(
