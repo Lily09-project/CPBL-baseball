@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "30 15 * * *"
   workflow_dispatch:
+    inputs:
+      source_diagnostics:
+        description: "On failure, run bounded read-only official endpoint diagnostics"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -67,6 +72,10 @@ jobs:
 
           echo "status=failed" >> "$GITHUB_OUTPUT"
           exit "$pipeline_status"
+
+      - name: Diagnose official source access without publishing
+        if: failure() && github.event_name == 'workflow_dispatch' && inputs.source_diagnostics
+        run: python -m src.source_access_check
 
       - name: Run product test suite
         if: steps.live_data.outputs.status == 'verified'
