@@ -518,10 +518,10 @@ def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> No
         option.click()
         page.keyboard.press("Escape")
         selected_labels.append(label)
-        page.locator(".st-key-report_watchlist_打者").get_by_text(label, exact=True).wait_for(timeout=30_000)
+        page.locator('[data-testid="stMultiSelect"]').get_by_text(label, exact=True).wait_for(timeout=30_000)
         wait_for_app_idle(page)
         for selected_label in selected_labels:
-            page.locator(".st-key-report_watchlist_打者").get_by_text(selected_label, exact=True).wait_for(timeout=30_000)
+            page.locator('[data-testid="stMultiSelect"]').get_by_text(selected_label, exact=True).wait_for(timeout=30_000)
     manifest = json.loads(download_payload(page, "下載稽核 Manifest JSON", ".json"))
     verified = verify_report_manifest(manifest)
     markdown = download_payload(page, "下載球探報告 Markdown", ".md").decode("utf-8")
