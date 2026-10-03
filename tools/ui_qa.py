@@ -508,13 +508,20 @@ def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> No
         selector.click()
         # Streamlit includes a bulk "Select all" row. Choose only a real
         # player option carrying its stable ten-digit identity.
-        option = page.get_by_role("option").filter(has_text=re.compile(r" · \d{10}\s*$")).first
+        options = page.get_by_role("option").filter(has_text=re.compile(r" · \d{10}\s*$"))
+        for selected_label in selected_labels:
+            # The menu can retain selected rows; clicking one again removes it.
+            options = options.filter(has_not_text=re.compile(re.escape(selected_label)))
+        option = options.first
         option.wait_for(state="visible", timeout=15_000)
         label = option.inner_text()
         option.click()
         page.keyboard.press("Escape")
         selected_labels.append(label)
+        page.locator(".st-key-report_watchlist_打者").get_by_text(label, exact=True).wait_for(timeout=30_000)
         wait_for_app_idle(page)
+        for selected_label in selected_labels:
+            page.locator(".st-key-report_watchlist_打者").get_by_text(selected_label, exact=True).wait_for(timeout=30_000)
     manifest = json.loads(download_payload(page, "下載稽核 Manifest JSON", ".json"))
     verified = verify_report_manifest(manifest)
     markdown = download_payload(page, "下載球探報告 Markdown", ".md").decode("utf-8")
