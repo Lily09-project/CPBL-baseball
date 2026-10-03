@@ -425,7 +425,7 @@ def apply_theme_mode(
 def download_payload(page, label: str, suffix: str) -> bytes:
     """Read the real browser download, not the button's presence or URL."""
     with page.expect_download(timeout=30_000) as pending:
-        page.get_by_role("button", name=label, exact=True).click(timeout=30_000)
+        page.get_by_role("button", name=label).click(timeout=30_000)
     download = pending.value
     failure = download.failure()
     if failure or not download.suggested_filename.endswith(suffix):
@@ -452,7 +452,7 @@ def open_sidebar(page) -> None:
 
 
 def choose_option(page, label: str, value: str) -> None:
-    selector = page.get_by_role("combobox", name=label, exact=True)
+    selector = page.get_by_role("combobox", name=label)
     selector.scroll_into_view_if_needed()
     selector.click()
     page.get_by_role("option", name=value, exact=True).click()
@@ -475,7 +475,7 @@ def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> No
     threshold.fill("50")
     threshold.press("Enter")
     for _ in range(2):
-        selector = page.get_by_role("combobox", name="觀察名單", exact=True)
+        selector = page.get_by_role("combobox", name="觀察名單")
         selector.scroll_into_view_if_needed()
         selector.click()
         option = page.get_by_role("option").first
@@ -619,6 +619,7 @@ def run_browser_checks(
                     failures.append(f"{flow_name}/downloads: Streamlit runtime exception")
             except (PlaywrightError, RuntimeError, ValueError, OSError) as exc:
                 failures.append(f"{flow_name}/downloads: {exc}")
+                print(f"DOWNLOAD FAILURE DOM ({flow_name}): {flow_page.locator('body').inner_text()[-8000:]}")
                 flow_page.screenshot(path=str(screenshot_dir / f"failure-downloads-{flow_name}.png"), full_page=True)
             finally:
                 flow_page.close()

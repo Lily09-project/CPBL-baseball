@@ -14,7 +14,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from src.source_contract import CPBL_BASE_URL, OFFICIAL_SOURCE_PATHS
+from src.source_contract import CPBL_BASE_URL, CPBL_FETCH_BASE_URL, OFFICIAL_SOURCE_PATHS
 from src.source_failure import TemporaryOfficialSourceError, is_temporary_transport_error
 from src.utils import ensure_dirs, project_path, safe_divide
 
@@ -295,7 +295,7 @@ def build_cpbl_session(retries: int = 3) -> requests.Session:
 
 
 def fetch_roster(session: requests.Session, timeout: int = 20) -> pd.DataFrame:
-    html = fetch_text(session, f"{CPBL_BASE_URL}/player", timeout)
+    html = fetch_text(session, f"{CPBL_FETCH_BASE_URL}/player", timeout)
     project_path("data/raw/cpbl_player.html").write_text(html, encoding="utf-8")
     parser = PlayerListParser()
     parser.feed(html)
@@ -332,7 +332,7 @@ def fetch_recordall(session: requests.Session, position: str, sortby: str, timeo
         raise ValueError("CPBL recordall 查詢參數格式不正確。")
     if type(page_size) is not int or not 1 <= page_size <= 500:
         raise ValueError("CPBL 分頁大小必須介於 1 到 500。")
-    start_url = f"{CPBL_BASE_URL}{OFFICIAL_SOURCE_PATHS['statistics']}?year={CURRENT_SEASON}&kindcode=A&position={position}&sortby={sortby}"
+    start_url = f"{CPBL_FETCH_BASE_URL}{OFFICIAL_SOURCE_PATHS['statistics']}?year={CURRENT_SEASON}&kindcode=A&position={position}&sortby={sortby}"
     page = session.get(start_url, timeout=timeout, stream=True, allow_redirects=False)
     try:
         page_text = _checked_response_text(page, "CPBL recordall 初始頁")
@@ -359,7 +359,7 @@ def fetch_recordall(session: requests.Session, position: str, sortby: str, timeo
             "PageSize": str(page_size),
         }
         response = session.post(
-            f"{CPBL_BASE_URL}{OFFICIAL_SOURCE_PATHS['statistics_action']}",
+            f"{CPBL_FETCH_BASE_URL}{OFFICIAL_SOURCE_PATHS['statistics_action']}",
             data=data,
             timeout=timeout,
             headers={"Referer": page_url},
@@ -402,7 +402,7 @@ def fetch_recordall(session: requests.Session, position: str, sortby: str, timeo
 
 
 def fetch_standings(session: requests.Session, timeout: int = 20) -> pd.DataFrame:
-    html = fetch_text(session, f"{CPBL_BASE_URL}/standings/season", timeout)
+    html = fetch_text(session, f"{CPBL_FETCH_BASE_URL}/standings/season", timeout)
     project_path("data/raw/cpbl_standings_season.html").write_text(html, encoding="utf-8")
     try:
         tables = pd.read_html(StringIO(html))
