@@ -1,7 +1,7 @@
 # Reproducible application and test environment.
 # Refresh this file deliberately after a dependency review; CI installs this
 # lock instead of resolving the open-ended requirements.txt ranges.
-altair==6.2.2
+altair==6.3.0
 anyio==4.14.2
 attrs==26.1.0
 blinker==1.9.0
