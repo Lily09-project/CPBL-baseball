@@ -99,10 +99,27 @@ def layout_issues(page) -> list[str]:
     )
 
 
+def wait_for_app_idle(page) -> None:
+    """Synchronize with Streamlit reruns before judging rendered UI or uploading."""
+    # Widgets debounce before starting a rerun; wait for the actual completion
+    # state and removed skeletons, as Streamlit's own browser tests do.
+    page.wait_for_timeout(250)
+    page.locator(
+        '[data-testid="stApp"][data-test-connection-state="CONNECTED"]'
+        '[data-test-script-state="notRunning"]'
+    ).wait_for(state="attached", timeout=60_000)
+    page.wait_for_function(
+        "() => document.querySelectorAll('[data-testid=stSkeleton]').length === 0",
+        timeout=60_000,
+    )
+    page.wait_for_timeout(100)
+
+
 def focus_issues(page) -> list[str]:
     """Traverse real Tab order, validating visible controls and their focused proxies."""
     from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
 
+    wait_for_app_idle(page)
     issues: list[str] = []
     page.evaluate(
         """() => {
@@ -198,6 +215,10 @@ def focus_issues(page) -> list[str]:
                     visibility: style.visibility,
                     position: style.position,
                     transform: style.transform,
+                    occluder: (() => {
+                        const top = document.elementFromPoint(Math.max(1, Math.min(innerWidth - 1, rect.left + rect.width / 2)), Math.max(1, Math.min(innerHeight - 1, rect.top + rect.height / 2)));
+                        return top ? top.outerHTML.slice(0, 500) : null;
+                    })(),
                 });
                 const key = [
                     target.tagName, target.id || '', target.getAttribute('data-testid') || '',
@@ -424,6 +445,7 @@ def apply_theme_mode(
 
 def download_payload(page, label: str, suffix: str) -> bytes:
     """Read the real browser download, not the button's presence or URL."""
+    wait_for_app_idle(page)
     with page.expect_download(timeout=30_000) as pending:
         page.get_by_role("button", name=label).click(timeout=30_000)
     download = pending.value
@@ -457,6 +479,7 @@ def choose_option(page, label: str, value: str) -> None:
     selector.click()
     page.get_by_role("option", name=value, exact=True).click()
     page.keyboard.press("Escape")
+    wait_for_app_idle(page)
 
 
 def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> None:
@@ -474,14 +497,21 @@ def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> No
     threshold = page.get_by_role("spinbutton", name="最低打席 (PA)", exact=True)
     threshold.fill("50")
     threshold.press("Enter")
+    wait_for_app_idle(page)
+    page.get_by_role("button", name="清除觀察名單").click()
+    wait_for_app_idle(page)
+    selected_labels: list[str] = []
     for _ in range(2):
         selector = page.get_by_role("combobox", name="觀察名單")
         selector.scroll_into_view_if_needed()
         selector.click()
         option = page.get_by_role("option").first
         option.wait_for(state="visible", timeout=15_000)
+        label = option.inner_text()
         option.click()
         page.keyboard.press("Escape")
+        selected_labels.append(label)
+        wait_for_app_idle(page)
     manifest = json.loads(download_payload(page, "下載稽核 Manifest JSON", ".json"))
     verified = verify_report_manifest(manifest)
     markdown = download_payload(page, "下載球探報告 Markdown", ".md").decode("utf-8")
@@ -491,6 +521,8 @@ def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> No
     ids = [str(player["player_id"]) for player in players]
     if verified["player_count"] != 2 or manifest["analysis"]["qualification"] != "PA ≥ 50":
         raise RuntimeError("CPBL report lost the selected threshold or watchlist")
+    if ids != [label.rsplit(" · ", 1)[-1].strip() for label in selected_labels]:
+        raise RuntimeError("CPBL report changed the chosen player identities or order")
     if [row["球員 ID"] for row in rows] != ids or any(float(row["資格量"]) < 50 for row in rows):
         raise RuntimeError("CPBL report CSV disagrees with the verified manifest")
     if manifest["report_id"] not in markdown or any(player_id not in markdown for player_id in ids):
