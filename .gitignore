@@ -43,3 +43,8 @@ docs/superpowers/
 docs/screenshots/ui-qa/
 reports/acceptance/
 reports/performance/
+
+# Static releases and browser evidence are generated in CI only.
+pages-dist/
+reports/pages-qa/
+first-build.sha256
