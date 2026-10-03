@@ -180,6 +180,9 @@ def build_payload(root: Path) -> dict:
     roster = dataset(root, "roster", "完整球員名單", "data/processed/players_scored.csv", roster_columns,
                      identity=["player_id", "team", "player_type"], group="team", group_label="球隊",
                      value="player_value_score", date=None, name="player_name", chart_label="具統計紀錄球員的分析分數")
+    for row in roster["rows"]:
+        if row["player_type"] == "名單":
+            row["player_value_score"] = None
     history_columns = [("season", "球季", "number"), ("snapshot_id", "快照 ID", "text"), ("captured_at", "資料時間", "date"),
                        ("roster_rows", "名單人數", "number"), ("hitter_rows", "打者筆數", "number"),
                        ("pitcher_rows", "投手筆數", "number"), ("total_rows", "總筆數", "number")]
