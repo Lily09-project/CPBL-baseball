@@ -514,8 +514,11 @@ def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> No
             options = options.filter(has_not_text=re.compile(re.escape(selected_label)))
         option = options.first
         option.wait_for(state="visible", timeout=15_000)
-        label = option.inner_text()
-        option.click()
+        label = option.inner_text().strip()
+        player_id = label.rsplit(" · ", 1)[-1]
+        selector.fill(player_id)
+        page.get_by_role("option", name=label, exact=True).click()
+        wait_for_app_idle(page)
         page.keyboard.press("Escape")
         selected_labels.append(label)
         page.locator('[data-testid="stMultiSelect"]').get_by_text(label, exact=True).wait_for(timeout=30_000)
