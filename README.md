@@ -22,7 +22,7 @@
 ![球探工作台](docs/screenshots/ui-scouting-workbench.png)
 ![球員個人頁](docs/screenshots/ui-player-profile.png)
 
-## 功能
+## 功能與評估邊界
 
 - 資料管線通過資料品質與可稽核性檢查，採用官方 CPBL 資料來源（[球員](https://cpbl.com.tw/player)、[戰績](https://cpbl.com.tw/standings/season)、[成績](https://cpbl.com.tw/stats/recordallaction)），並以 schema、涵蓋量與資料血緣檢查把關發布。
 - 球探工作台支援打者／投手門檻、球隊篩選與最多四人比較。
