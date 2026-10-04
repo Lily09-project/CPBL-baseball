@@ -139,6 +139,9 @@ def product_composition_check(page, bundle, view):
             if cards.count() > 1:
                 a, b = cards.nth(0).bounding_box(), cards.nth(1).bounding_box()
                 assert abs(a["y"] - b["y"]) <= 1 and a["x"] + a["width"] <= b["x"] + 1
+    if page.viewport_size["width"] == 320 and page.locator("html").evaluate("(node) => parseFloat(getComputedStyle(node).fontSize)") == 32:
+        for label in page.locator("#views .control-label").all():
+            assert label.evaluate("(node) => node.getBoundingClientRect().height <= 2 * parseFloat(getComputedStyle(node).lineHeight) + 1"), "zoomed navigation label must not become vertical lettering"
     assert page.locator(".compare-panel .actions").is_visible() == (
         page.locator("#comparison article").count() > 0)
 
