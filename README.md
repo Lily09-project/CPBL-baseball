@@ -24,9 +24,9 @@
 
 ## 功能
 
-- 以官方來源、schema、重複 ID、數值範圍、涵蓋量與資料血緣檢查把關發布。
+- 資料管線採用官方 CPBL 資料來源（[球員](https://cpbl.com.tw/player)、[戰績](https://cpbl.com.tw/standings/season)、[成績](https://cpbl.com.tw/stats/recordallaction)），並以 schema、涵蓋量與資料血緣檢查把關發布。
 - 球探工作台支援打者／投手門檻、球隊篩選與最多四人比較。
-- 球探報告與發布 Manifest 可下載並核對版本、球員 ID 與 SHA-256。
+- 觀察名單可下載球探報告 Markdown 與稽核 Manifest，包含 `report_id`、`report_threshold`、`player_id` 與 SHA-256。
 - `player_value_score` 僅作描述性排序；LOG5 僅供情境比較，不是校準預測模型。
 
 ## Quick start
@@ -52,6 +52,9 @@ python -m pytest -q
 python -m src.verify_public_release reports/metrics/public_release_manifest.json
 ```
 
-CI 另執行安全、資料健康、發布品質與瀏覽器驗收。部署與發布流程見 [部署指南](docs/DEPLOYMENT.md)、[發布檢查清單](docs/RELEASE_CHECKLIST.md)；公開資料政策見 [安全政策](SECURITY.md)。
+CI 另執行安全、資料健康、發布品質與瀏覽器驗收。深入細節見 [模型卡](docs/MODEL_CARD.md)、[部署指南](docs/DEPLOYMENT.md)、[發布檢查清單](docs/RELEASE_CHECKLIST.md)、[審查指南](docs/REVIEW_GUIDE.md)、[GitHub Pages 指南](docs/GITHUB_PAGES.md) 與 [安全政策](SECURITY.md)。
 
-公開儲存庫只保留程式碼、測試、驗證過的展示資料、必要文件與介面截圖；原始資料、非發布用衍生資料、個人筆記、secrets、cache 與本機暫存不提交。
+## 公開儲存庫政策
+
+可公開追蹤：程式碼、測試、已驗證的展示資料、必要文件與介面截圖。
+永不追蹤：`data/raw/`、非發布用 `data/processed/`、`notes/`、`.env`、`.streamlit/secrets.toml`、cache、測試暫存與個人資料。
