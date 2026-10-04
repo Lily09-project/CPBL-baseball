@@ -24,7 +24,7 @@
 
 ## 功能
 
-- 資料管線採用官方 CPBL 資料來源（[球員](https://cpbl.com.tw/player)、[戰績](https://cpbl.com.tw/standings/season)、[成績](https://cpbl.com.tw/stats/recordallaction)），並以 schema、涵蓋量與資料血緣檢查把關發布。
+- 資料管線通過資料品質與可稽核性檢查，採用官方 CPBL 資料來源（[球員](https://cpbl.com.tw/player)、[戰績](https://cpbl.com.tw/standings/season)、[成績](https://cpbl.com.tw/stats/recordallaction)），並以 schema、涵蓋量與資料血緣檢查把關發布。
 - 球探工作台支援打者／投手門檻、球隊篩選與最多四人比較。
 - 觀察名單可下載球探報告 Markdown 與稽核 Manifest，包含 `report_id`、`report_threshold`、`player_id` 與 SHA-256。
 - `player_value_score` 僅作描述性排序；LOG5 僅供情境比較，不是校準預測模型。
