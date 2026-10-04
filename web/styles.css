@@ -109,3 +109,88 @@ main.shell{container-type:inline-size}
  td label.pick{flex-direction:row}
  tr{padding:.75rem}
 }
+
+
+/* Product-specific visual system: CPBL scouting scorebook */
+:root[data-product="cpbl"]{
+  color-scheme:light;
+  --bg:#F6F2E8;--surface:#FFFEFA;--text:#25313A;--muted:#556471;
+  --border:#837A6B;--divider:#D9D1C0;--raised:#EEE9DD;--shadow:none;
+  --accent:#173F5A;--on-accent:#FFFFFF;--tint:#E6EDF0;--error:#A73A32;
+  --chart2:#AC3F33;--chart3:#315E4A;--ring:#173F5A
+}
+:root[data-product="cpbl"][data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121C23;--surface:#1D2A33;--text:#F3F0E6;--muted:#C4CDD0;
+  --border:#74838A;--divider:#40515A;--raised:#273741;--shadow:none;
+  --accent:#83B7D1;--on-accent:#10232C;--tint:#2D404A;--error:#FF958A;
+  --chart2:#F09282;--chart3:#90C5A6;--ring:#B6DCED
+}
+:root[data-product="cpbl"] body{background:var(--bg)}
+:root[data-product="cpbl"] .shell{width:min(1280px,100%)}
+:root[data-product="cpbl"] .header{
+  align-items:center;flex-direction:row;padding-block:1.1rem .9rem;
+  border-top:6px solid var(--accent);border-bottom:1px solid var(--divider)
+}
+:root[data-product="cpbl"] .eyebrow{color:var(--chart2);font-weight:800;letter-spacing:.13em}
+:root[data-product="cpbl"] h1{font-weight:800;letter-spacing:-.025em}
+:root[data-product="cpbl"] #main{
+  display:grid;grid-template-columns:minmax(0,1fr);row-gap:1rem;
+  padding-top:1.25rem
+}
+:root[data-product="cpbl"] #main>.provenance,
+:root[data-product="cpbl"] #main>.notice,
+:root[data-product="cpbl"] #main>#views,
+:root[data-product="cpbl"] #main>.panel[aria-label="篩選條件"],
+:root[data-product="cpbl"] #main>#status,
+:root[data-product="cpbl"] #main>#metrics,
+:root[data-product="cpbl"] #main>#chart-panel,
+:root[data-product="cpbl"] #main>.panel[aria-labelledby="table-title"],
+:root[data-product="cpbl"] #main>.panel[aria-labelledby="compare-title"],
+:root[data-product="cpbl"] #main>#detail-panel,
+:root[data-product="cpbl"] #main>#snapshot-panel,
+:root[data-product="cpbl"] #main>details.panel,
+:root[data-product="cpbl"] #main>#fatal{grid-column:1/-1;margin-block:0}
+:root[data-product="cpbl"] #views{display:flex;flex-wrap:wrap;gap:.35rem}
+:root[data-product="cpbl"] #views a{
+  display:inline-flex;align-items:center;min-height:44px;padding:.55rem .85rem;
+  border:1px solid var(--border);border-radius:.25rem;background:var(--raised);
+  color:var(--text);text-decoration:none
+}
+:root[data-product="cpbl"] #views a[aria-current="page"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:700}
+:root[data-product="cpbl"] #main>.panel[aria-label="篩選條件"]{
+  background:var(--raised);border:1px solid var(--divider);border-top:3px solid var(--accent);
+  border-radius:.3rem;padding:1rem 1.15rem
+}
+:root[data-product="cpbl"] #metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:.65rem}
+:root[data-product="cpbl"] #metrics>.metric{
+  border:1px solid var(--divider);border-bottom:4px solid var(--chart3);border-radius:.25rem;
+  background:var(--surface);padding:1rem;box-shadow:none
+}
+:root[data-product="cpbl"] #metrics>.metric p{font-size:.9rem;font-weight:600}
+:root[data-product="cpbl"] #metrics>.metric strong{font-size:clamp(1.65rem,2.6vw,2.35rem);font-weight:800;font-variant-numeric:tabular-nums}
+:root[data-product="cpbl"] .panel{
+  border:1px solid var(--divider);border-top:3px solid var(--accent);border-radius:.3rem;
+  background:var(--surface);box-shadow:none;padding:clamp(1rem,2vw,1.5rem);margin-block:0
+}
+:root[data-product="cpbl"] .chart .grid{stroke:var(--divider);opacity:1}
+:root[data-product="cpbl"] .chart .line{stroke-width:2.75}
+:root[data-product="cpbl"] .table-wrap table{font-variant-numeric:tabular-nums}
+:root[data-product="cpbl"] .table-wrap thead th{background:var(--accent);color:var(--on-accent);border-bottom:2px solid var(--chart2)}
+:root[data-product="cpbl"] .table-wrap tbody tr:nth-child(even){background:var(--raised)}
+:root[data-product="cpbl"] .table-wrap th,
+:root[data-product="cpbl"] .table-wrap td{border-bottom:1px solid var(--divider)}
+:root[data-product="cpbl"] .comparison article{border:1px solid var(--divider);border-left:4px solid var(--chart2);border-radius:.25rem;background:var(--raised)}
+:root[data-product="cpbl"] .badge{border-radius:.25rem;background:var(--tint);border-color:var(--divider)}
+:root[data-product="cpbl"] button,
+:root[data-product="cpbl"] input,
+:root[data-product="cpbl"] select{border-radius:.25rem}
+@media(min-width:980px){
+  :root[data-product="cpbl"] #metrics{grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem}
+  :root[data-product="cpbl"] .sort{display:grid;grid-template-columns:minmax(220px,1fr) auto auto;align-items:end}
+}
+@media(max-width:760px){
+  :root[data-product="cpbl"] .header{align-items:flex-start;flex-direction:column;gap:.75rem}
+  :root[data-product="cpbl"] .header-actions{width:100%;justify-content:space-between}
+  :root[data-product="cpbl"] #metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
