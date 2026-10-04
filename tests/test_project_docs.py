@@ -29,10 +29,13 @@ def test_readme_summarizes_product_boundaries_and_links_deep_docs() -> None:
         "run_project.bat --offline-check",
         "python -m pytest -q",
         "python -m src.verify_public_release reports/metrics/public_release_manifest.json",
-        "docs/screenshots/ui-pages.jpg",
+        "docs/screenshots/pages-desktop.png",
+        "docs/screenshots/pages-mobile.png",
     ]
     for term in required:
         assert term in readme
+    for screenshot in ["docs/screenshots/pages-desktop.png", "docs/screenshots/pages-mobile.png"]:
+        assert Path(screenshot).is_file()
     assert readme.count("player_value_score") == 1
 
     policy = readme.partition("## 公開儲存庫政策")[2]
