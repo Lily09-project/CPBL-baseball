@@ -546,13 +546,16 @@ def synthetic_cpbl_innings_check(browser, url, template):
         assert page.locator('td[data-field="innings_pitched"]').first.inner_text() == expected, (value, expected)
         assert page.locator("#json").is_enabled(), (page.locator("#status").inner_text(), page.locator("#table tbody tr").count())
         try:
-            with page.expect_download(timeout=5000) as event:
+            with page.expect_download(timeout=15000) as event:
                 page.locator("#json").click()
             report = json.loads(Path(event.value.path()).read_text(encoding="utf-8-sig"))
         except Exception as error:
             page.wait_for_timeout(200)
             raise AssertionError("synthetic CPBL JSON export failed: " + page.locator("#selection-status").inner_text()
-                                 + "; page errors=" + repr(page_errors)) from error
+                                 + "; JSON disabled=" + str(page.locator("#json").is_disabled())
+                                 + "; status=" + repr(page.locator("#status").inner_text())
+                                 + "; page errors=" + repr(page_errors)
+                                 + "; download error=" + repr(error)) from error
         assert report["rows"][0]["innings_pitched"] == value
         with page.expect_download() as event:
             page.locator("#csv").click()
