@@ -76,12 +76,6 @@ const rowId = row => JSON.stringify(dataset.identity.map(key => row[key]));
 const rowName = row => [...new Set([dataset.name, ...dataset.identity].filter(Boolean))]
   .map(key => formatField(dataset.fields.find(field => field.key === key) || {key}, row[key])).join(" · ");
 const selectedRows = () => [...selected].map(id => dataset.rows.find(row => rowId(row) === id)).filter(Boolean);
-function setTheme(theme) {
-  document.documentElement.dataset.theme = theme;
-  $("theme").textContent = theme === "dark" ? "淺色模式" : "深色模式";
-  $("theme").setAttribute("aria-pressed", String(theme === "dark"));
-  try {localStorage.setItem("pages-theme", theme);} catch { /* Storage may be disabled. */ }
-}
 function readState() {
   const query = new URLSearchParams(location.search);
   const view = bundle.datasets.find(item => item.id === query.get("view")) || bundle.datasets[0];
@@ -331,19 +325,19 @@ function renderTable() {
   for (const field of dataset.fields) columns.append(el("col", undefined, {class: field.key === "player_id" ? "identifier-column" : field.kind === "date" ? (field.key === "date" ? "date-column" : "timestamp-column") : field.key === "volume" ? "volume-column" : ""}));
   columns.append(el("col", undefined, {class: "action-column"}));
   table.append(columns);
-  const head = el("thead"), hrow = el("tr");
+  const head = el("thead", undefined, {role: "rowgroup"}), hrow = el("tr", undefined, {role: "row"});
   const compact = compactFields();
-  hrow.append(el("th", "比較", {scope: "col"}));
+  hrow.append(el("th", "比較", {role: "columnheader", scope: "col"}));
   for (const field of dataset.fields) {
-    const th = el("th", field.label, {scope: "col", "data-kind": field.kind, class: compact.has(field.key) ? "" : "secondary-field"});
+    const th = el("th", field.label, {role: "columnheader", scope: "col", "data-kind": field.kind, class: compact.has(field.key) ? "" : "secondary-field"});
     if (field.key === state.sort) th.setAttribute("aria-sort", state.descending ? "descending" : "ascending");
     hrow.append(th);
   }
-  hrow.append(el("th", "詳情", {scope: "col"}));
+  hrow.append(el("th", "詳情", {role: "columnheader", scope: "col"}));
   head.append(hrow); table.append(head);
-  const body = el("tbody");
+  const body = el("tbody", undefined, {role: "rowgroup"});
   for (const row of displayed.slice(currentPage * pageSize, (currentPage + 1) * pageSize)) {
-    const id = rowId(row), tr = el("tr", undefined, {"data-row-id": id}), pick = el("td", undefined, {"data-label": "比較"});
+    const id = rowId(row), tr = el("tr", undefined, {"data-row-id": id, role: "row"}), pick = el("td", undefined, {"data-label": "比較", role: "cell"});
     const label = el("label", undefined, {class: "pick"});
     const check = el("input", undefined, {type: "checkbox", "aria-label": "比較 " + rowName(row)});
     check.checked = selected.has(id);
@@ -355,9 +349,9 @@ function renderTable() {
     });
     label.append(check, el("span", "選取")); pick.append(label); tr.append(pick);
     for (const field of dataset.fields) tr.append(el("td", formatField(field, row[field.key]), {
-      "data-label": field.label, "data-field": field.key, "data-kind": field.kind, class: compact.has(field.key) ? "" : "secondary-field"
+      role: "cell", "data-label": field.label, "data-field": field.key, "data-kind": field.kind, class: compact.has(field.key) ? "" : "secondary-field"
     }));
-    const cell = el("td", undefined, {"data-label": "詳情"});
+    const cell = el("td", undefined, {"data-label": "詳情", role: "cell"});
     const button = el("button", "查看", {type: "button", "aria-label": "查看 " + rowName(row)});
     button.addEventListener("click", () => {lastDetailButton = button; state.detail = id; saveState(true); renderDetail(true);});
     cell.append(button); tr.append(cell); body.append(tr);
@@ -386,7 +380,7 @@ function renderComparison() {
     });
     card.append(remove); return card;
   }));
-  $("selection-status").textContent = rows.length ? "已選取 " + rows.length + " / 3 筆資料。" : "勾選表格的比較欄，最多可比較 3 筆資料。";
+  $("selection-status").textContent = rows.length ? "已選取 " + rows.length + " / 3 筆資料。" : "勾選名片的比較欄，最多可比較 3 筆資料。";
   $("clear-selection").disabled = !rows.length; $("selection-download").disabled = !rows.length;
 }
 function renderDetail(focus = false) {
@@ -580,11 +574,6 @@ async function initialize() {
   $("close-detail").addEventListener("click", () => {state.detail = ""; saveState(); renderDetail(); if (lastDetailButton?.isConnected) lastDetailButton.focus(); else $("reset").focus();});
   addEventListener("popstate", event => {readState(); fillControls(); render(); if (state.detail) renderDetail(true); else { $("main").focus({preventScroll: true}); scrollTo({top: event.state?.scrollY ?? 0, behavior: "auto"}); }});
 }
-let initialTheme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  try { initialTheme = localStorage.getItem("pages-theme") || initialTheme; } catch { /* No persistence needed. */ }
-  setTheme(initialTheme === "dark" ? "dark" : "light");
-
-$("theme").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
 $("retry").addEventListener("click", () => location.reload());
 initialize().catch(() => {
   $("mode").textContent = "載入失敗"; $("status").textContent = "未顯示未驗證資料。";
