@@ -187,3 +187,7 @@ button:not(:disabled):active{transform:translateY(1px)}
 @media(hover:hover){.results-panel tbody tr{transition:border-color .18s ease,box-shadow .18s ease}.results-panel tbody tr:hover{border-color:var(--accent);box-shadow:0 3px 0 var(--divider)}}
 
 @container(max-width:12rem){.results-panel td[data-label="比較"],.results-panel td[data-label="詳情"]{display:flex;flex-direction:column;align-items:stretch}}
+
+/* Native checkboxes have a margin above the 24px minimum, including animated subpixels. */
+input[type="checkbox"]{flex:0 0 28px;width:28px;min-height:28px;height:28px}
+.toggle input[type="checkbox"]{flex:0 0 28px}
