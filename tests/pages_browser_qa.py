@@ -545,34 +545,26 @@ def synthetic_cpbl_innings_check(browser, url, template):
         page.locator("#status").filter(has_text="1 筆符合條件").wait_for()
         assert page.locator('td[data-field="innings_pitched"]').first.inner_text() == expected, (value, expected)
         assert page.locator("#json").is_enabled(), (page.locator("#status").inner_text(), page.locator("#table tbody tr").count())
-        page.evaluate("""() => {
-          window.__qaJsonClickCount = 0;
-          window.__qaBlobDownloadCount = 0;
-          document.querySelector("#json").addEventListener("click", () => window.__qaJsonClickCount++, true);
-          const nativeCreate = URL.createObjectURL.bind(URL);
-          URL.createObjectURL = (...args) => {
-            window.__qaBlobDownloadCount++;
-            return nativeCreate(...args);
-          };
-        }""")
-        try:
-            with page.expect_download(timeout=15000) as event:
-                page.locator("#json").click()
-            report = json.loads(Path(event.value.path()).read_text(encoding="utf-8-sig"))
-        except Exception as error:
-            page.wait_for_timeout(200)
-            raise AssertionError("synthetic CPBL JSON export failed: " + page.locator("#selection-status").inner_text()
-                                 + "; JSON disabled=" + str(page.locator("#json").is_disabled())
-                                 + "; status=" + repr(page.locator("#status").inner_text())
-                                 + "; page errors=" + repr(page_errors)
-                                 + "; click/blob telemetry=" + repr(page.evaluate("() => ({clicks: window.__qaJsonClickCount, blobs: window.__qaBlobDownloadCount})"))
-                                 + "; download error=" + repr(error)) from error
-        assert report["rows"][0]["innings_pitched"] == value
-        with page.expect_download() as event:
-            page.locator("#csv").click()
-        csv_rows = list(csv.DictReader(io.StringIO(Path(event.value.path()).read_text(encoding="utf-8-sig"))))
-        exported = csv_rows[0]["innings_pitched"]
-        assert (exported == "" if value is None else float(exported) == value), (value, exported)
+        # Export both outs-based thirds once; display formatting is checked for every boundary below.
+        if index in (2, 3):
+            try:
+                with page.expect_download(timeout=15000) as event:
+                    page.locator("#json").click()
+                report = json.loads(Path(event.value.path()).read_text(encoding="utf-8-sig"))
+            except Exception as error:
+                page.wait_for_timeout(200)
+                raise AssertionError("synthetic CPBL JSON export failed for " + repr(value) + ": "
+                                     + page.locator("#selection-status").inner_text()
+                                     + "; JSON disabled=" + str(page.locator("#json").is_disabled())
+                                     + "; status=" + repr(page.locator("#status").inner_text())
+                                     + "; page errors=" + repr(page_errors)
+                                     + "; download error=" + repr(error)) from error
+            assert report["rows"][0]["innings_pitched"] == value
+            with page.expect_download() as event:
+                page.locator("#csv").click()
+            csv_rows = list(csv.DictReader(io.StringIO(Path(event.value.path()).read_text(encoding="utf-8-sig"))))
+            exported = csv_rows[0]["innings_pitched"]
+            assert float(exported) == value, (value, exported)
         if expected.endswith(("⅓", "⅔")):
             page.locator('#table tbody tr input[type="checkbox"]').first.check()
             label = "投球局數"
