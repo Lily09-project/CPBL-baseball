@@ -21,8 +21,8 @@ python -m src.verify_public_release reports/metrics/public_release_manifest.json
 python -m pytest -q tests/test_pages_export.py
 python scripts/build_pages.py
 python -m http.server 8874 --bind 127.0.0.1
-# 另開終端機；先安裝 Playwright Chromium
-python -m playwright install chromium
+# 另開終端機；安裝此驗收腳本使用的 Chromium、Firefox 與 WebKit
+python -m playwright install chromium firefox webkit
 python tests/pages_browser_qa.py --url http://127.0.0.1:8874/pages-dist/
 ```
 
