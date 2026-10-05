@@ -1,6 +1,7 @@
 import requests
 import pytest
 
+from src.source_contract import OFFICIAL_SOURCE_URLS
 from src.source_failure import TemporaryOfficialSourceError, is_temporary_transport_error
 from src.verified_pipeline import run_verified_pipeline
 
@@ -12,7 +13,30 @@ from src.verified_pipeline import run_verified_pipeline
 def test_http_status_classification(status, expected):
     response = requests.Response()
     response.status_code = status
-    assert is_temporary_transport_error(requests.HTTPError("timeout", response=response)) is expected
+    response.url = "https://example.invalid/unrelated"
+    assert is_temporary_transport_error(requests.HTTPError("upstream failure", response=response)) is expected
+
+
+@pytest.mark.parametrize("url", OFFICIAL_SOURCE_URLS)
+def test_404_on_exact_contracted_official_source_url_is_temporary(url):
+    response = requests.Response()
+    response.status_code = 404
+    response.url = url
+    error = requests.HTTPError("404 from official source", response=response)
+    assert is_temporary_transport_error(error) is True
+
+
+@pytest.mark.parametrize("url", [
+    "https://www.cpbl.com.tw/not-a-contracted-page",
+    "https://evil.example/player",
+    "http://www.cpbl.com.tw/player",
+])
+def test_404_outside_exact_official_https_contract_remains_permanent(url):
+    response = requests.Response()
+    response.status_code = 404
+    response.url = url
+    error = requests.HTTPError("404", response=response)
+    assert is_temporary_transport_error(error) is False
 
 
 @pytest.mark.parametrize("error,expected", [
@@ -65,5 +89,5 @@ def test_workflows_defer_only_explicit_temporary_exit_code():
         source = Path(path).read_text(encoding="utf-8")
         assert "grep -Eiq" not in source
         assert "python -m src.verified_pipeline --mode api" in source
-        assert 'event_name }}" = "schedule"' in source
-        assert '-eq 75' in source
+        assert 'event_name }}\" = \"schedule\"' in source
+        assert "-eq 75" in source
