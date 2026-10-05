@@ -5,6 +5,7 @@ import pytest
 
 from src.fetch_cpbl_data import (
     CPBL_BASE_URL,
+    CPBL_FETCH_BASE_URL,
     CURRENT_SEASON,
     PIPELINE_FETCH_ATTEMPTS,
     add_player_ids,
@@ -18,6 +19,7 @@ from src.fetch_cpbl_data import (
 
 def test_official_data_uses_canonical_cpbl_host():
     assert CPBL_BASE_URL == "https://cpbl.com.tw"
+    assert CPBL_FETCH_BASE_URL == CPBL_BASE_URL
 
 
 def test_clean_player_name_removes_cpbl_status_markers():

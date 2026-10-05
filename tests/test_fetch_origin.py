@@ -2,7 +2,7 @@ from src.fetch_cpbl_data import fetch_roster
 from src.source_contract import CPBL_FETCH_BASE_URL
 
 
-def test_roster_goes_directly_to_www_without_allowing_redirects(monkeypatch, tmp_path):
+def test_roster_uses_canonical_host_without_allowing_redirects(monkeypatch, tmp_path):
     calls = []
     class Response:
         url = CPBL_FETCH_BASE_URL + "/player"
@@ -21,6 +21,6 @@ def test_roster_goes_directly_to_www_without_allowing_redirects(monkeypatch, tmp
     (tmp_path / "data/raw").mkdir(parents=True)
     roster = fetch_roster(Session())
     assert len(roster) == 1
-    assert calls[0][0] == "https://www.cpbl.com.tw/player"
+    assert calls[0][0] == f"{CPBL_FETCH_BASE_URL}/player"
     assert calls[0][1]["allow_redirects"] is False
     assert calls[-1] == "closed"
