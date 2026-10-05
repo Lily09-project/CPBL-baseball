@@ -35,7 +35,7 @@ pillow==12.3.0
 plotly==6.9.0
 platformdirs==4.11.0
 pluggy==1.6.0
-protobuf==7.35.1
+protobuf==7.36.2
 pyarrow==24.0.0
 pydeck==0.9.2
 Pygments==2.20.0
