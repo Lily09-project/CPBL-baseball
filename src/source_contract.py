@@ -4,9 +4,9 @@ from __future__ import annotations
 
 
 CPBL_BASE_URL = "https://cpbl.com.tw"
-# The official site now serves its public roster, standings, and statistics
-# pages on the canonical host. Avoid the retired www host, which returns 404.
-CPBL_FETCH_BASE_URL = CPBL_BASE_URL
+# CPBL's public pages currently redirect the bare domain to www.
+# Start at the browser-confirmed official host so ingestion needs no redirects.
+CPBL_FETCH_BASE_URL = "https://www.cpbl.com.tw"
 
 # The action endpoint is included because the official statistics page uses it
 # for its server-rendered pagination form. It is not an API claim.
