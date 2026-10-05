@@ -15,7 +15,7 @@ def test_source_contract_matches_the_real_official_fetch_surface():
     assert OFFICIAL_SOURCE_PATHS["standings"] == "/standings/season"
     assert OFFICIAL_SOURCE_PATHS["statistics"] == "/stats/recordall"
     assert OFFICIAL_SOURCE_PATHS["statistics_action"] == "/stats/recordallaction"
-    assert CPBL_FETCH_BASE_URL == CPBL_BASE_URL
+    assert CPBL_FETCH_BASE_URL == "https://www.cpbl.com.tw"
     assert all(url.startswith(f"{CPBL_FETCH_BASE_URL}/") for url in OFFICIAL_SOURCE_URLS)
 
 
