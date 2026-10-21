@@ -22,7 +22,8 @@ def test_source_candidate_is_immutable_complete_and_not_published() -> None:
     assert "--ignore-vuln" not in workflow
     assert "continue-on-error:" not in workflow
     assert "streamlit/static/index.html" in verifier
-    assert "streamlit/static/assets/" in verifier
+    assert "streamlit/static/static/js/" in verifier
+    assert "streamlit/static/static/css/" in verifier
     assert "_pb2.py" in verifier
     assert '"release_approved": False' in verifier
     assert '"official_pypi_release": False' in verifier

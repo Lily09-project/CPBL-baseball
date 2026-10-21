@@ -45,8 +45,11 @@ def verify(wheel_dir: Path, source: Path, output: Path, expected_commit: str) ->
         index = "streamlit/static/index.html"
         if index not in names or len(archive.read(index)) < 100:
             raise ValueError("Frontend was not included in the wheel")
-        if not any(name.startswith("streamlit/static/assets/") for name in names):
-            raise ValueError("Compiled frontend assets were not included")
+        for suffix, prefix in ((".js", "streamlit/static/static/js/"),
+                               (".css", "streamlit/static/static/css/")):
+            if not any(name.startswith(prefix) and name.endswith(suffix)
+                       and len(archive.read(name)) > 0 for name in names):
+                raise ValueError(f"Compiled frontend {suffix} assets were not included")
         if not any(name.endswith("_pb2.py") for name in names):
             raise ValueError("Generated protobuf bindings were not included")
         if not any("LICENSE" in name.upper() for name in names):
