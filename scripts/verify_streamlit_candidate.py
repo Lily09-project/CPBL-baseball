@@ -7,6 +7,7 @@ import importlib.metadata
 import json
 from pathlib import Path
 import platform
+import re
 import subprocess
 import zipfile
 from email.parser import BytesParser
@@ -14,10 +15,7 @@ from email.parser import BytesParser
 from packaging.requirements import Requirement
 from packaging.version import Version
 
-SOURCE_SHA = "81bdb8a8a207691f17ec94df9eabc96b6b50ea7a"
-
-
-def verify(wheel_dir: Path, source: Path, output: Path) -> dict:
+def verify(wheel_dir: Path, source: Path, output: Path, expected_commit: str) -> dict:
     wheels = list(wheel_dir.glob("streamlit-*.whl"))
     if len(wheels) != 1:
         raise ValueError("Expected exactly one complete Streamlit wheel")
@@ -25,7 +23,7 @@ def verify(wheel_dir: Path, source: Path, output: Path) -> dict:
     actual = subprocess.check_output(
         ["git", "-C", str(source), "rev-parse", "HEAD"], text=True
     ).strip()
-    if actual != SOURCE_SHA:
+    if not re.fullmatch(r"[0-9a-f]{40}", expected_commit) or actual != expected_commit:
         raise ValueError("Unexpected upstream source commit")
     subprocess.run(
         ["git", "-C", str(source), "diff", "--exit-code", "--",
@@ -62,7 +60,7 @@ def verify(wheel_dir: Path, source: Path, output: Path) -> dict:
     record = {
         "schema_version": 1,
         "upstream_repository": "https://github.com/streamlit/streamlit",
-        "upstream_commit": SOURCE_SHA,
+        "upstream_commit": actual,
         "upstream_pr": 17589,
         "package": "streamlit",
         "version": "1.66.0",
@@ -93,8 +91,9 @@ def main() -> None:
     parser.add_argument("--wheel-dir", type=Path, required=True)
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--expected-commit", required=True)
     args = parser.parse_args()
-    print(json.dumps(verify(args.wheel_dir, args.source, args.output), indent=2))
+    print(json.dumps(verify(args.wheel_dir, args.source, args.output, args.expected_commit), indent=2))
 
 
 if __name__ == "__main__":

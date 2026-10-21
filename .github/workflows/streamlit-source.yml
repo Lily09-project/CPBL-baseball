@@ -20,7 +20,6 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     env:
-      STREAMLIT_SOURCE_SHA: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a
       UV_LOCKED: "1"
       INSTALL_PLAYWRIGHT: "false"
       MPLBACKEND: Agg
@@ -31,6 +30,7 @@ jobs:
           path: verifier
           persist-credentials: false
       - name: Check out immutable official Streamlit source
+        id: upstream
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: streamlit/streamlit
@@ -46,11 +46,8 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: upstream/.nvmrc
-      - name: Set up pinned uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
-        with:
-          version: "0.11.8"
-          enable-cache: false
+      - name: Install fixed Python build tool
+        run: python -m pip install "uv==0.11.8"
       - name: Install fixed build prerequisites
         shell: bash
         run: |
@@ -65,11 +62,13 @@ jobs:
           unzip -q "$archive" -d "$RUNNER_TEMP/protoc-26.1"
           echo "$RUNNER_TEMP/protoc-26.1/bin" >> "$GITHUB_PATH"
       - name: Build complete official wheel without dependency metadata edits
+        env:
+          EXPECTED_SOURCE_SHA: ${{ steps.upstream.outputs.commit }}
         working-directory: upstream
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$STREAMLIT_SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
           uv lock --check
           make package
           git diff --exit-code -- lib/pyproject.toml lib/streamlit
@@ -87,6 +86,8 @@ jobs:
             lib/tests/streamlit/write_test.py \
             lib/tests/streamlit/commands/logo_test.py
       - name: Audit clean wheel installation and verify packaged frontend
+        env:
+          EXPECTED_SOURCE_SHA: ${{ steps.upstream.outputs.commit }}
         shell: bash
         run: |
           set -euo pipefail
@@ -96,7 +97,7 @@ jobs:
           "$audit_python" -m pip install upstream/lib/dist/*.whl "Pillow==13.0.0"
           "$audit_python" -m pip check
           "$audit_python" -m pip_audit --local --strict --progress-spinner off
-          "$audit_python" verifier/scripts/verify_streamlit_candidate.py --wheel-dir upstream/lib/dist --source upstream --output candidate
+          "$audit_python" verifier/scripts/verify_streamlit_candidate.py --wheel-dir upstream/lib/dist --source upstream --expected-commit "$EXPECTED_SOURCE_SHA" --output candidate
       - name: Upload verified candidate and provenance only
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

@@ -9,6 +9,9 @@ def test_source_candidate_is_immutable_complete_and_not_published() -> None:
     verifier = (ROOT / "scripts/verify_streamlit_candidate.py").read_text(encoding="utf-8")
     assert "repository: streamlit/streamlit" in workflow
     assert "ref: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a" in workflow
+    assert "id: upstream" in workflow
+    assert "steps.upstream.outputs.commit" in workflow
+    assert "--expected-commit" in workflow
     assert "persist-credentials: false" in workflow
     assert "contents: read" in workflow
     assert "contents: write" not in workflow
