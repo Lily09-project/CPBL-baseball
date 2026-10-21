@@ -162,3 +162,55 @@ jobs:
             integration-result/installed.txt
             integration-result/result.json
           if-no-files-found: error
+
+  distribute-dependency:
+    name: Distribute verified dependency prerelease
+    needs: [build-and-audit, integration]
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.actor == github.repository_owner
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified wheel from this run
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: streamlit-source-81bdb8a8-pillow13
+          path: candidate
+      - name: Publish immutable self-built dependency prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("candidate")
+          manifests = list(root.rglob("provenance.json"))
+          wheels = list(root.rglob("streamlit-*.whl"))
+          if len(manifests) != 1 or len(wheels) != 1:
+              raise SystemExit("Ambiguous candidate")
+          manifest = json.loads(manifests[0].read_text())
+          wheel = wheels[0]
+          if hashlib.sha256(wheel.read_bytes()).hexdigest() != manifest["sha256"]:
+              raise SystemExit("Candidate checksum mismatch")
+          if manifest["distribution"] != "self-built-unreleased-official-source":
+              raise SystemExit("Unexpected distribution identity")
+          manifest["integration_run"] = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          manifest["six_platform_integrations"] = "passed"
+          manifest["product_release_approved"] = False
+          Path("dependency-provenance.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          Path("SHA256SUMS.txt").write_text(manifest["sha256"] + "  " + wheel.name + "\n")
+          PY
+          mapfile -t wheels < <(find candidate -type f -name 'streamlit-*.whl')
+          test "${#wheels[@]}" -eq 1
+          tag="dependency-streamlit-1.66.0-pillow13-${{ github.run_id }}"
+          gh release create "$tag" --repo "$GH_REPO" --target "$SOURCE_HEAD" --prerelease --latest=false \
+            --title "Self-built Streamlit Pillow 13 dependency candidate" \
+            --notes "Built from an immutable official upstream commit with original dependency metadata. Includes upstream notices. Not an official PyPI release. Upstream Pillow suites, pip check, strict dependency audits and all six Linux/Windows project integrations passed. This dependency prerelease is for traceable downstream integration; no application release or GUI acceptance is claimed." \
+            "${wheels[0]}" dependency-provenance.json SHA256SUMS.txt
