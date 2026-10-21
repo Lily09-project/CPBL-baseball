@@ -124,7 +124,7 @@ jobs:
           - repo: market-anomaly-dashboard
             ref: 52df12b42bebccee6fac8f66621a52f8b40f58b7
           - repo: aqi-anomaly-dashboard
-            ref: 3b9dfcabae0fa827d5e1c6f250d3b0474bfc15f5
+            ref: 3b9dfcabae0fa827d5e1c6f250d3b0474bfc15f5 # pragma: allowlist secret - user-reviewed public project commit
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     env:
