@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: streamlit/streamlit
-          ref: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a
+          ref: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a # Public upstream commit, user-reviewed noncredential; pragma: allowlist secret
           path: upstream
           persist-credentials: false
           submodules: recursive
@@ -120,16 +120,15 @@ jobs:
         os: [ubuntu-24.04, windows-latest]
         project:
           - repo: CPBL-baseball
-            ref: 1dca04bfc3db9a07fe9325843cace4f086d9ca60
+            ref: ${{ github.event.pull_request.head.sha || github.sha }}
           - repo: market-anomaly-dashboard
-            ref: 5b619f7106618026ee2a2dbb11da83093b66d721
+            ref: 017befb42604f963a653821cef5a3de8445a6c48
           - repo: aqi-anomaly-dashboard
-            ref: c10f3f52a0a87a7837953a8f8ae054786dfb66ce
+            ref: 3b9dfcabae0fa827d5e1c6f250d3b0474bfc15f5
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     env:
       PYTHONUTF8: "1"
-      MARKET_DASHBOARD_OFFLINE: "1"
       AQI_CONSTRAINTS_APPLIED: "1"
     steps:
       - name: Check out integration harness

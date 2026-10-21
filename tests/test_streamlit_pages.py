@@ -170,8 +170,8 @@ def test_player_deep_link_restores_page_and_player() -> None:
 
     assert app.sidebar.radio[0].value == "球員個人頁"
     assert str(target["player_name"]) in visible_text(app)
-    assert app.query_params["page"] == ["球員個人頁"]
-    assert app.query_params["player"] == [str(target["player_id"])]
+    assert _query_values(app, "page") == ["球員個人頁"]
+    assert _query_values(app, "player") == [str(target["player_id"])]
 
 
 def test_rendered_frontend_text_is_readable_traditional_chinese():
@@ -438,8 +438,8 @@ def test_scouting_report_deep_link_restores_watchlist_conditions() -> None:
 
     next(button for button in app.button if button.label == "建立可分享連結").click()
     app.run(timeout=20)
-    assert app.query_params["page"] == ["球探報告"]
-    assert app.query_params["watchlist"] == [",".join(selected_ids)]
+    assert _query_values(app, "page") == ["球探報告"]
+    assert _query_values(app, "watchlist") == [",".join(selected_ids)]
 
 
 def test_external_page_query_change_updates_navigation_after_session_started() -> None:
@@ -451,7 +451,7 @@ def test_external_page_query_change_updates_navigation_after_session_started() -
 
     app.sidebar.radio[0].set_value(league_page)
     app.run(timeout=20)
-    assert app.query_params["page"] == [league_page]
+    assert _query_values(app, "page") == [league_page]
 
     app.query_params["page"] = rankings_page
     app.run(timeout=20)
@@ -759,3 +759,13 @@ def test_analysis_entry_cards_use_real_streamlit_actions() -> None:
     assert "key=f\"route_card_{target}\"" in source
     assert "on_click=switch_page" in source
     assert "a:focus-visible" in css
+
+
+def _query_values(app: AppTest, key: str) -> list[str]:
+    """Preserve exact multivalue assertions across AppTest query APIs."""
+    params = app.query_params
+    if hasattr(params, "get_all"):
+        return params.get_all(key)
+    value = params[key]
+    assert isinstance(value, list), "Legacy AppTest must expose query values as a list"
+    return value
