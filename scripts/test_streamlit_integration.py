@@ -39,7 +39,7 @@ def main() -> None:
     if manifest["distribution"] != "self-built-unreleased-official-source":
         raise ValueError("Candidate provenance does not identify the build")
     args.output.mkdir(parents=True, exist_ok=True)
-    environment = args.output.resolve() / "venv"
+    environment = args.output.resolve().parent / ".candidate-integration-venv"
     venv.EnvBuilder(with_pip=True).create(environment)
     python = str(environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python"))
     lines = (project / LOCKS[args.repo]).read_text(encoding="utf-8-sig").splitlines()
