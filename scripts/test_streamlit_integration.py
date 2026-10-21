@@ -6,7 +6,8 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
-import sys
+import os
+import venv
 
 LOCKS = {
     "CPBL-baseball": "requirements.lock.txt",
@@ -38,6 +39,9 @@ def main() -> None:
     if manifest["distribution"] != "self-built-unreleased-official-source":
         raise ValueError("Candidate provenance does not identify the build")
     args.output.mkdir(parents=True, exist_ok=True)
+    environment = args.output.resolve() / "venv"
+    venv.EnvBuilder(with_pip=True).create(environment)
+    python = str(environment / ("Scripts/python.exe" if os.name == "nt" else "bin/python"))
     lines = (project / LOCKS[args.repo]).read_text(encoding="utf-8-sig").splitlines()
     candidate_lines = [
         line for line in lines
@@ -46,14 +50,14 @@ def main() -> None:
     candidate_lines += [str(wheel), "Pillow==13.0.0"]
     requirements = args.output.resolve() / "integration-requirements.txt"
     requirements.write_text("\n".join(candidate_lines) + "\n", encoding="utf-8")
-    run([sys.executable, "-m", "pip", "install", "pip==26.2.1", "pip-audit==2.10.1"], project)
-    run([sys.executable, "-m", "pip", "install", "-r", str(requirements)], project)
-    run([sys.executable, "-m", "pip", "check"], project)
+    run([python, "-m", "pip", "install", "pip==26.2.1", "pip-audit==2.10.1"], project)
+    run([python, "-m", "pip", "install", "-r", str(requirements)], project)
+    run([python, "-m", "pip", "check"], project)
     if args.repo != "CPBL-baseball":
-        run([sys.executable, "run_all.py", "--mode", "sample"], project)
-    run([sys.executable, "-W", "error", "-m", "pytest", "-q", "-p", "no:cacheprovider"], project)
-    run([sys.executable, "-m", "pip_audit", "--local", "--strict", "--progress-spinner", "off"], project)
-    installed = subprocess.check_output([sys.executable, "-m", "pip", "freeze"], text=True)
+        run([python, "run_all.py", "--mode", "sample"], project)
+    run([python, "-W", "error", "-m", "pytest", "-q", "-p", "no:cacheprovider"], project)
+    run([python, "-m", "pip_audit", "--local", "--strict", "--progress-spinner", "off"], project)
+    installed = subprocess.check_output([python, "-m", "pip", "freeze"], text=True)
     (args.output / "installed.txt").write_text(installed, encoding="utf-8")
     (args.output / "result.json").write_text(json.dumps({
         "repository": args.repo,

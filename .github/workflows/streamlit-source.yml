@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: streamlit/streamlit
-          ref: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a # Public upstream commit, user-reviewed noncredential; pragma: allowlist secret
+          ref: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a # pragma: allowlist secret - user-reviewed public upstream commit
           path: upstream
           persist-credentials: false
           submodules: recursive
@@ -122,7 +122,7 @@ jobs:
           - repo: CPBL-baseball
             ref: ${{ github.event.pull_request.head.sha || github.sha }}
           - repo: market-anomaly-dashboard
-            ref: 017befb42604f963a653821cef5a3de8445a6c48
+            ref: 52df12b42bebccee6fac8f66621a52f8b40f58b7
           - repo: aqi-anomaly-dashboard
             ref: 3b9dfcabae0fa827d5e1c6f250d3b0474bfc15f5
     runs-on: ${{ matrix.os }}
