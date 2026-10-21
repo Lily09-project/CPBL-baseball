@@ -21,6 +21,7 @@ def test_source_candidate_is_immutable_complete_and_dependency_only() -> None:
     assert "github.actor == github.repository_owner" in workflow
     assert "make package" in workflow
     assert "uv lock --check" in workflow
+    assert "yarn npm audit --all --recursive --environment production --json" in workflow
     assert "Pillow==13.0.0" in workflow
     assert "pip_audit --local --strict" in workflow
     assert "--ignore-vuln" not in workflow
