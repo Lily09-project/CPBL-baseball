@@ -6,6 +6,7 @@ on:
       - ".github/workflows/streamlit-source.yml"
       - "scripts/verify_streamlit_candidate.py"
       - "tests/test_streamlit_source_contract.py"
+      - "scripts/test_streamlit_integration.py"
   workflow_dispatch:
 
 permissions:
@@ -70,6 +71,8 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
           uv lock --check
+          cp LICENSE lib/LICENSE
+          cp NOTICES lib/NOTICES
           make package
           git diff --exit-code -- lib/pyproject.toml lib/streamlit
       - name: Run upstream Pillow compatibility suites
@@ -107,3 +110,54 @@ jobs:
             candidate/
           if-no-files-found: error
           retention-days: 30
+
+  integration:
+    name: Candidate integration (${{ matrix.project.repo }}, ${{ matrix.os }})
+    needs: build-and-audit
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+        project:
+          - repo: CPBL-baseball
+            ref: 1dca04bfc3db9a07fe9325843cace4f086d9ca60
+          - repo: market-anomaly-dashboard
+            ref: 5b619f7106618026ee2a2dbb11da83093b66d721
+          - repo: aqi-anomaly-dashboard
+            ref: c10f3f52a0a87a7837953a8f8ae054786dfb66ce
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    env:
+      PYTHONUTF8: "1"
+      MARKET_DASHBOARD_OFFLINE: "1"
+      AQI_CONSTRAINTS_APPLIED: "1"
+    steps:
+      - name: Check out integration harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: verifier
+          persist-credentials: false
+      - name: Check out exact project candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Lily09-project/${{ matrix.project.repo }}
+          ref: ${{ matrix.project.ref }}
+          path: project
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Download this run's verified wheel
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: streamlit-source-81bdb8a8-pillow13
+          path: candidate-wheel
+      - name: Run locked candidate install, complete tests and strict audit
+        run: python verifier/scripts/test_streamlit_integration.py --repo "${{ matrix.project.repo }}" --project project --candidate candidate-wheel --output integration-result
+      - name: Retain successful integration evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: integration-${{ matrix.project.repo }}-${{ matrix.os }}
+          path: integration-result
+          if-no-files-found: error
