@@ -1,0 +1,108 @@
+name: Verified Streamlit source candidate
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/streamlit-source.yml"
+      - "scripts/verify_streamlit_candidate.py"
+      - "tests/test_streamlit_source_contract.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: streamlit-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      STREAMLIT_SOURCE_SHA: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a
+      UV_LOCKED: "1"
+      INSTALL_PLAYWRIGHT: "false"
+      MPLBACKEND: Agg
+    steps:
+      - name: Check out verification scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: verifier
+          persist-credentials: false
+      - name: Check out immutable official Streamlit source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: streamlit/streamlit
+          ref: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a
+          path: upstream
+          persist-credentials: false
+          submodules: recursive
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Set up Node from official toolchain
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: upstream/.nvmrc
+      - name: Set up pinned uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.8"
+          enable-cache: false
+      - name: Install fixed build prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends rsync
+          npm install --global corepack@0.36.0
+          archive="$RUNNER_TEMP/protoc-26.1.zip"
+          curl --fail --location --retry 3 --output "$archive" https://github.com/protocolbuffers/protobuf/releases/download/v26.1/protoc-26.1-linux-x86_64.zip
+          echo "a7be2928c0454f132c599e25b79b7ad1b57663f2337d7f7e468a1d59b98ec1b0  $archive" | sha256sum --check -
+          mkdir -p "$RUNNER_TEMP/protoc-26.1"
+          unzip -q "$archive" -d "$RUNNER_TEMP/protoc-26.1"
+          echo "$RUNNER_TEMP/protoc-26.1/bin" >> "$GITHUB_PATH"
+      - name: Build complete official wheel without dependency metadata edits
+        working-directory: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$STREAMLIT_SOURCE_SHA"
+          uv lock --check
+          make package
+          git diff --exit-code -- lib/pyproject.toml lib/streamlit
+      - name: Run upstream Pillow compatibility suites
+        working-directory: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv run --no-sync python -c "import PIL; assert PIL.__version__ == '13.0.0', PIL.__version__"
+          uv run --no-sync pytest -c lib/pyproject.toml -q \
+            lib/tests/streamlit/elements/image_test.py \
+            lib/tests/streamlit/elements/lib/image_utils_test.py \
+            lib/tests/streamlit/elements/pyplot_test.py \
+            lib/tests/streamlit/runtime/caching/hashing_test.py \
+            lib/tests/streamlit/write_test.py \
+            lib/tests/streamlit/commands/logo_test.py
+      - name: Audit clean wheel installation and verify packaged frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m venv "$RUNNER_TEMP/streamlit-runtime-audit"
+          audit_python="$RUNNER_TEMP/streamlit-runtime-audit/bin/python"
+          "$audit_python" -m pip install "pip==26.2.1" "pip-audit==2.10.1"
+          "$audit_python" -m pip install upstream/lib/dist/*.whl "Pillow==13.0.0"
+          "$audit_python" -m pip check
+          "$audit_python" -m pip_audit --local --strict --progress-spinner off
+          "$audit_python" verifier/scripts/verify_streamlit_candidate.py --wheel-dir upstream/lib/dist --source upstream --output candidate
+      - name: Upload verified candidate and provenance only
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: streamlit-source-81bdb8a8-pillow13
+          path: |
+            upstream/lib/dist/*.whl
+            candidate/
+          if-no-files-found: error
+          retention-days: 30
