@@ -76,7 +76,7 @@ jobs:
           make package
           git diff --exit-code -- lib/pyproject.toml lib/streamlit
       - name: Audit shipped frontend dependency graph
-        working-directory: upstream
+        working-directory: upstream/frontend
         shell: bash
         run: |
           set -euo pipefail
