@@ -503,14 +503,17 @@ def show_table(container, df: pd.DataFrame, columns: list[str] | None = None) ->
         # Streamlit's Glide canvas receives its palette from the server-level
         # theme. Render an escaped HTML table in light mode so the visual
         # theme switch is immediate and every cell follows the light palette.
+        wide_table = len(display.columns) > 8
+        table_class = "dashboard-table dashboard-table-wide" if wide_table else "dashboard-table"
+        shell_class = "table-shell table-shell-wide" if wide_table else "table-shell"
         html_table = display.to_html(
             index=False,
             escape=True,
-            classes="dashboard-table",
+            classes=table_class,
             border=0,
         )
         container.markdown(
-            f'<div class="table-shell" role="region" aria-label="資料表" tabindex="0">{html_table}</div>',
+            f'<div class="{shell_class}" role="region" aria-label="資料表" tabindex="0">{html_table}</div>',
             unsafe_allow_html=True,
         )
     else:

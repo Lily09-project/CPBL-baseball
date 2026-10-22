@@ -94,6 +94,19 @@ def layout_issues(page) -> list[str]:
                     break;
                 }
             }
+            for (const shell of document.querySelectorAll('.table-shell-wide')) {
+                if (!visible(shell)) continue;
+                const style = getComputedStyle(shell);
+                if (style.overflowY !== 'auto' || shell.clientHeight > parseFloat(getComputedStyle(document.documentElement).fontSize) * 36 + 3) {
+                    issues.push('wide evidence table is not height bounded');
+                }
+                for (const row of shell.querySelectorAll('tbody tr')) {
+                    if (row.getBoundingClientRect().height > parseFloat(getComputedStyle(row).fontSize) * 18) {
+                        issues.push('wide evidence table row is excessively tall');
+                        break;
+                    }
+                }
+            }
             return issues;
         }"""
     )

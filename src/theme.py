@@ -1456,6 +1456,23 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+/* Wide evidence tables keep readable columns in a bounded keyboard-scrollable region. */
+.table-shell-wide {
+  max-height: 36rem;
+  overflow-y: auto;
+}
+.dashboard-table-wide {
+  min-width: 110rem;
+}
+.dashboard-table-wide th,
+.dashboard-table-wide td {
+  min-width: 7rem;
+  vertical-align: top;
+}
+.dashboard-table-wide th:nth-last-child(-n+3),
+.dashboard-table-wide td:nth-last-child(-n+3) {
+  min-width: 20rem;
+}
 .dashboard-table tr:last-child td { border-bottom: 0; }
 .dashboard-table tbody tr:hover td { background: var(--surface-raised); }
 

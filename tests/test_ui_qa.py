@@ -204,3 +204,16 @@ def test_scroll_evidence_restores_scrollport_when_screenshot_fails(tmp_path: Pat
     assert page.top == 170
     assert page.behavior == "smooth"
     assert json.loads((tmp_path / "failure-scroll.json").read_text())["complete"] is False
+
+
+def test_wide_evidence_tables_preserve_all_rows_without_expanding_the_page() -> None:
+    app = (ROOT / "app.py").read_text(encoding="utf-8")
+    styles = (ROOT / "src/theme.py").read_text(encoding="utf-8")
+    qa = (ROOT / "tools/ui_qa.py").read_text(encoding="utf-8")
+    assert "wide_table = len(display.columns) > 8" in app
+    assert 'classes=table_class' in app
+    assert 'aria-label="資料表" tabindex="0"' in app
+    assert ".table-shell-wide {" in styles
+    assert "max-height: 36rem;" in styles
+    assert "min-width: 110rem;" in styles
+    assert "wide evidence table row is excessively tall" in qa
