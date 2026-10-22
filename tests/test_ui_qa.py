@@ -94,7 +94,7 @@ def test_focus_audit_validates_radio_proxy_and_mobile_controls() -> None:
     assert 'data-testid="stExpandSidebarButton"' in theme
     assert 'data-testid="stSidebarCollapseButton"' in theme
     assert 'visibility: hidden !important;' in theme
-    assert '[data-testid="stSidebar"][aria-expanded="false"] *' in theme
+    assert '[data-testid="stSidebar"][data-collapsed="true"] *' in theme
 
     app_source = Path("app.py").read_text(encoding="utf-8")
     assert app_source.index("st.markdown(STREAMLIT_LIGHT_CSS") < app_source.index(
@@ -106,7 +106,7 @@ def test_interaction_smoke_opens_collapsed_sidebar_with_user_control() -> None:
     source = Path("tools/ui_qa.py").read_text(encoding="utf-8")
 
     assert 'data-testid="stExpandSidebarButton"' in source
-    assert 'get_attribute("aria-expanded")' in source
+    assert 'get_attribute("data-collapsed")' in source
 
 
 def test_browser_failure_evidence_is_structured_and_atomic(tmp_path: Path) -> None:

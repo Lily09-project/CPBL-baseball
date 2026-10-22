@@ -304,7 +304,7 @@ def interaction_smoke(page, base_url: str) -> list[str]:
     page.get_by_role("heading", name="球探工作台", exact=True).wait_for(timeout=60_000)
     sidebar = page.locator('[data-testid="stSidebar"]')
     try:
-        if sidebar.get_attribute("aria-expanded") != "true":
+        if sidebar.get_attribute("data-collapsed") != "false":
             expand_control = page.locator('[data-testid="stExpandSidebarButton"]')
             expand_button = expand_control.locator("button")
             if expand_button.count():
@@ -312,7 +312,7 @@ def interaction_smoke(page, base_url: str) -> list[str]:
             else:
                 expand_control.click(timeout=15_000)
             page.wait_for_function(
-                "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('aria-expanded') === 'true'",
+                "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('data-collapsed') === 'false'",
                 timeout=30_000,
             )
     except PlaywrightError:
@@ -411,7 +411,7 @@ def apply_theme_mode(
     )
     if selector_label is not None and current_theme != theme_mode:
         sidebar = page.locator('[data-testid="stSidebar"]')
-        if sidebar.get_attribute("aria-expanded") != "true":
+        if sidebar.get_attribute("data-collapsed") != "false":
             expand_control = page.locator('[data-testid="stExpandSidebarButton"]')
             expand_button = expand_control.locator("button")
             if expand_button.count():
@@ -434,7 +434,7 @@ def apply_theme_mode(
             page.keyboard.press("ArrowDown")
         page.keyboard.press("Enter")
         collapse_button = page.locator('[data-testid="stSidebarCollapseButton"] button')
-        if sidebar.get_attribute("aria-expanded") == "true" and collapse_button.count():
+        if sidebar.get_attribute("data-collapsed") == "false" and collapse_button.count():
             collapse_button.click(timeout=15_000)
     page.wait_for_function(
         "expected => getComputedStyle(document.documentElement).colorScheme === expected",
@@ -463,12 +463,12 @@ def download_payload(page, label: str, suffix: str) -> bytes:
 
 def open_sidebar(page) -> None:
     sidebar = page.locator('[data-testid="stSidebar"]')
-    if sidebar.get_attribute("aria-expanded") != "true":
+    if sidebar.get_attribute("data-collapsed") != "false":
         control = page.locator('[data-testid="stExpandSidebarButton"]')
         button = control.locator("button")
         (button if button.count() else control).click(timeout=15_000)
     page.wait_for_function(
-        "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('aria-expanded') === 'true'",
+        "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('data-collapsed') === 'false'",
         timeout=15_000,
     )
 
