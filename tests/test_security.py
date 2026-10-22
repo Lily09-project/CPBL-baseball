@@ -76,7 +76,7 @@ def test_launcher_enforces_secure_dependency_floors_and_loopback_binding():
     launcher = Path("run_project.bat").read_text(encoding="utf-8-sig").lower()
 
     for requirement in [
-        "streamlit>=1.63.0",
+        "streamlit>=1.66.1,<2",
         "pandas>=3.0.5",
         "numpy>=2.5.2",
         "plotly>=6.9.0",
@@ -84,7 +84,7 @@ def test_launcher_enforces_secure_dependency_floors_and_loopback_binding():
         "pytest>=9.1.1",
         "lxml>=6.1.3",
         "gitpython>=3.1.61",
-        "pillow>=12.3.0",
+        "pillow>=13.0.0,<14",
     ]:
         assert requirement in requirements
     assert "pip>=26.1.2" in launcher

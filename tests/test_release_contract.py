@@ -8,7 +8,7 @@ def test_locked_environment_and_quality_gate_are_declared() -> None:
     lock = (ROOT / "requirements.lock.txt").read_text(encoding="utf-8-sig")
     workflow = (ROOT / ".github/workflows/release-quality.yml").read_text(encoding="utf-8-sig")
 
-    assert "streamlit==1.63.0" in lock
+    assert "streamlit==1.66.1" in lock
     assert "pandas==3.0.5" in lock
     assert "requirements.lock.txt" in workflow
     assert "python -m pip check" in workflow
