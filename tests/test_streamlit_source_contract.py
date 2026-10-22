@@ -8,7 +8,7 @@ def test_source_candidate_is_immutable_complete_and_dependency_only() -> None:
     workflow = (ROOT / ".github/workflows/streamlit-source.yml").read_text(encoding="utf-8")
     verifier = (ROOT / "scripts/verify_streamlit_candidate.py").read_text(encoding="utf-8")
     assert "repository: streamlit/streamlit" in workflow
-    assert "ref: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a" in workflow
+    assert "ref: ca6718b7d3d788c31c97d1bc9144fd8388168f57" in workflow
     assert "id: upstream" in workflow
     assert "steps.upstream.outputs.commit" in workflow
     assert "--expected-commit" in workflow
@@ -47,3 +47,14 @@ def test_frontend_audit_uses_the_canonical_registry_before_expensive_builds() ->
     assert workflow.index("yarn npm audit") < workflow.index("make package")
     assert "npmAuditIgnoreAdvisories" not in workflow
     assert "npmAuditExcludePackages" not in workflow
+
+
+def test_candidate_uses_the_current_stable_floor_and_integration_heads() -> None:
+    workflow = (ROOT / ".github/workflows/streamlit-source.yml").read_text(encoding="utf-8")
+    verifier = (ROOT / "scripts/verify_streamlit_candidate.py").read_text(encoding="utf-8")
+    assert '"version": "1.66.1"' in verifier
+    assert '"upstream_tag": "1.66.1"' in verifier
+    assert "dependency-streamlit-1.66.1-pillow13" in workflow
+    assert "38d52bb01225b869f9907736f6ecf5af9250a2c7" in workflow
+    assert "e820895b43e62358bb1c42e3cdc752823da30406" in workflow
+    assert "pragma: allowlist secret" not in workflow

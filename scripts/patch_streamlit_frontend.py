@@ -12,6 +12,8 @@ OVERRIDES = {
     "katex": "0.18.10",
     "markdown-it": "14.3.3",
     "@ungap/structured-clone": "1.3.1",
+    "http-cache-semantics": "4.3.0",
+    "vite": "8.3.5",
 }
 ALLOWED_FILES = (
     "frontend/package.json",
