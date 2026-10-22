@@ -55,6 +55,6 @@ def test_candidate_uses_the_current_stable_floor_and_integration_heads() -> None
     assert '"version": "1.66.1"' in verifier
     assert '"upstream_tag": "1.66.1"' in verifier
     assert "dependency-streamlit-1.66.1-pillow13" in workflow
-    assert "38d52bb01225b869f9907736f6ecf5af9250a2c7" in workflow
-    assert "e820895b43e62358bb1c42e3cdc752823da30406" in workflow
+    assert "2e8a12d2ed9cddcd9cad2c279b0f7e9b09c6f324" in workflow
+    assert "fb0e13237072c115097bc3e60099be4bacdef028" in workflow
     assert "pragma: allowlist secret" not in workflow

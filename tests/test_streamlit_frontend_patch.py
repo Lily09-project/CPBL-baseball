@@ -47,7 +47,7 @@ def test_patch_refuses_unreviewed_toolchain(tmp_path: Path) -> None:
 
 def test_security_overrides_use_published_compatible_maintenance_releases() -> None:
     assert OVERRIDES["http-cache-semantics"] == "4.3.0"
-    assert OVERRIDES["vite"] == "8.3.5"
+    assert "vite" not in OVERRIDES
     # Do not force the ~4.4.x glTF consumers onto a different loaders minor.
     assert not any(name.startswith("@loaders.gl/") for name in OVERRIDES)
     assert "braces" not in OVERRIDES
