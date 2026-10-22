@@ -36,7 +36,7 @@ def main() -> None:
     manifest = json.loads(manifests[0].read_text(encoding="utf-8"))
     if hashlib.sha256(wheel.read_bytes()).hexdigest() != manifest["sha256"]:
         raise ValueError("Candidate wheel checksum mismatch")
-    if manifest["distribution"] != "self-built-unreleased-official-source":
+    if manifest["distribution"] != "self-built-official-source-with-frontend-security-patches":
         raise ValueError("Candidate provenance does not identify the build")
     args.output.mkdir(parents=True, exist_ok=True)
     environment = args.output.resolve().parent / ".candidate-integration-venv"

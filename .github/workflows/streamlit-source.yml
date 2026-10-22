@@ -7,6 +7,8 @@ on:
       - "scripts/verify_streamlit_candidate.py"
       - "tests/test_streamlit_source_contract.py"
       - "scripts/test_streamlit_integration.py"
+      - "scripts/patch_streamlit_frontend.py"
+      - "tests/test_streamlit_frontend_patch.py"
   workflow_dispatch:
 
 permissions:
@@ -62,7 +64,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/protoc-26.1"
           unzip -q "$archive" -d "$RUNNER_TEMP/protoc-26.1"
           echo "$RUNNER_TEMP/protoc-26.1/bin" >> "$GITHUB_PATH"
-      - name: Build complete official wheel without dependency metadata edits
+      - name: Apply reviewed frontend security dependency patch
+        run: python verifier/scripts/patch_streamlit_frontend.py --source upstream --output frontend-evidence/frontend-patch.json
+      - name: Build complete wheel with original Python dependency metadata
         env:
           EXPECTED_SOURCE_SHA: ${{ steps.upstream.outputs.commit }}
         working-directory: upstream
@@ -75,12 +79,18 @@ jobs:
           cp NOTICES lib/NOTICES
           make package
           git diff --exit-code -- lib/pyproject.toml lib/streamlit
+      - name: Run complete upstream frontend test suite
+        working-directory: upstream/frontend
+        run: yarn test --maxWorkers=2
       - name: Audit shipped frontend dependency graph
         working-directory: upstream/frontend
         shell: bash
         run: |
           set -euo pipefail
-          yarn npm audit --all --recursive --environment production --json
+          for package in katex markdown-it braces http-cache-semantics sprintf-js; do
+            yarn why --recursive "$package"
+          done
+          yarn npm audit --all --recursive --environment production --json | tee ../../frontend-evidence/audit.ndjson
       - name: Run upstream Pillow compatibility suites
         working-directory: upstream
         shell: bash
@@ -106,7 +116,19 @@ jobs:
           "$audit_python" -m pip install upstream/lib/dist/*.whl "Pillow==13.0.0"
           "$audit_python" -m pip check
           "$audit_python" -m pip_audit --local --strict --progress-spinner off
-          "$audit_python" verifier/scripts/verify_streamlit_candidate.py --wheel-dir upstream/lib/dist --source upstream --expected-commit "$EXPECTED_SOURCE_SHA" --output candidate
+          "$audit_python" verifier/scripts/verify_streamlit_candidate.py --wheel-dir upstream/lib/dist --source upstream --expected-commit "$EXPECTED_SOURCE_SHA" --frontend-patch frontend-evidence/frontend-patch.json --output candidate
+      - name: Retain exact frontend patch and lock evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: streamlit-frontend-security-evidence
+          path: |
+            frontend-evidence/
+            upstream/frontend/package.json
+            upstream/frontend/lib/package.json
+            upstream/frontend/yarn.lock
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload verified candidate and provenance only
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -205,7 +227,7 @@ jobs:
           wheel = wheels[0]
           if hashlib.sha256(wheel.read_bytes()).hexdigest() != manifest["sha256"]:
               raise SystemExit("Candidate checksum mismatch")
-          if manifest["distribution"] != "self-built-unreleased-official-source":
+          if manifest["distribution"] != "self-built-official-source-with-frontend-security-patches":
               raise SystemExit("Unexpected distribution identity")
           manifest["integration_run"] = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           manifest["six_platform_integrations"] = "passed"
@@ -218,5 +240,5 @@ jobs:
           tag="dependency-streamlit-1.66.0-pillow13-${{ github.run_id }}"
           gh release create "$tag" --repo "$GH_REPO" --target "$SOURCE_HEAD" --prerelease --latest=false \
             --title "Self-built Streamlit Pillow 13 dependency candidate" \
-            --notes "Built from an immutable official upstream commit with original dependency metadata. Includes upstream notices. Not an official PyPI release. Upstream Pillow suites, pip check, strict dependency audits and all six Linux/Windows project integrations passed. This dependency prerelease is for traceable downstream integration; no application release or GUI acceptance is claimed." \
+            --notes "Built from an immutable official upstream commit with reviewed frontend dependency patches and original Python dependency metadata. Includes upstream notices. Not an official PyPI release. Upstream frontend and Pillow suites, pip check, strict dependency audits and all six Linux/Windows project integrations passed. This dependency prerelease is for traceable downstream integration; no application release or GUI acceptance is claimed." \
             "${wheels[0]}" dependency-provenance.json SHA256SUMS.txt

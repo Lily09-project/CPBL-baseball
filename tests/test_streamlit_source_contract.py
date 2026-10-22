@@ -20,6 +20,11 @@ def test_source_candidate_is_immutable_complete_and_dependency_only() -> None:
     assert "--prerelease --latest=false" in workflow
     assert "github.actor == github.repository_owner" in workflow
     assert "make package" in workflow
+    assert "patch_streamlit_frontend.py --source upstream" in workflow
+    assert "yarn test --maxWorkers=2" in workflow
+    assert "self-built-official-source-with-frontend-security-patches" in verifier
+    assert "Unexpected frontend patch scope" in verifier
+    assert "--frontend-patch" in workflow
     assert "uv lock --check" in workflow
     assert "yarn npm audit --all --recursive --environment production --json" in workflow
     assert "Pillow==13.0.0" in workflow

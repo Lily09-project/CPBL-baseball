@@ -1,4 +1,4 @@
-"""Verify an unmodified official Streamlit build before integration or distribution."""
+"""Verify a traceable official-source build with reviewed frontend patches before integration or distribution."""
 from __future__ import annotations
 
 import argparse
@@ -15,7 +15,8 @@ from email.parser import BytesParser
 from packaging.requirements import Requirement
 from packaging.version import Version
 
-def verify(wheel_dir: Path, source: Path, output: Path, expected_commit: str) -> dict:
+def verify(wheel_dir: Path, source: Path, output: Path, expected_commit: str,
+           frontend_patch: Path) -> dict:
     wheels = list(wheel_dir.glob("streamlit-*.whl"))
     if len(wheels) != 1:
         raise ValueError("Expected exactly one complete Streamlit wheel")
@@ -30,6 +31,19 @@ def verify(wheel_dir: Path, source: Path, output: Path, expected_commit: str) ->
          "lib/pyproject.toml", "lib/streamlit"],
         check=True,
     )
+    patch = json.loads(frontend_patch.read_text(encoding="utf-8"))
+    allowed = {"frontend/package.json", "frontend/lib/package.json", "frontend/yarn.lock"}
+    changed = set(subprocess.check_output(
+        ["git", "-C", str(source), "diff", "--name-only"], text=True,
+    ).splitlines())
+    if changed != allowed or set(patch["files"]) != allowed:
+        raise ValueError("Unexpected frontend patch scope")
+    for name, hashes in patch["files"].items():
+        original = subprocess.check_output(["git", "-C", str(source), "show", f"HEAD:{name}"])
+        if hashlib.sha256(original).hexdigest() != hashes["before_sha256"]:
+            raise ValueError("Incorrect original frontend provenance")
+        if hashlib.sha256((source / name).read_bytes()).hexdigest() != hashes["sha256"]:
+            raise ValueError("Frontend changed after recorded patch")
     with zipfile.ZipFile(wheel) as archive:
         names = archive.namelist()
         metadata_paths = [name for name in names if name.endswith(".dist-info/METADATA")]
@@ -67,7 +81,9 @@ def verify(wheel_dir: Path, source: Path, output: Path, expected_commit: str) ->
         "upstream_pr": 17589,
         "package": "streamlit",
         "version": "1.66.0",
-        "distribution": "self-built-unreleased-official-source",
+        "distribution": "self-built-official-source-with-frontend-security-patches",
+        "frontend_patch": patch,
+        "frontend_security_audit": "passed",
         "official_pypi_release": False,
         "wheel": wheel.name,
         "sha256": hashlib.sha256(wheel.read_bytes()).hexdigest(),
@@ -94,9 +110,10 @@ def main() -> None:
     parser.add_argument("--wheel-dir", type=Path, required=True)
     parser.add_argument("--source", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--frontend-patch", type=Path, required=True)
     parser.add_argument("--expected-commit", required=True)
     args = parser.parse_args()
-    print(json.dumps(verify(args.wheel_dir, args.source, args.output, args.expected_commit), indent=2))
+    print(json.dumps(verify(args.wheel_dir, args.source, args.output, args.expected_commit, args.frontend_patch), indent=2))
 
 
 if __name__ == "__main__":
