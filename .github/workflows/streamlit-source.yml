@@ -66,6 +66,18 @@ jobs:
           echo "$RUNNER_TEMP/protoc-26.1/bin" >> "$GITHUB_PATH"
       - name: Apply reviewed frontend security dependency patch
         run: python verifier/scripts/patch_streamlit_frontend.py --source upstream --output frontend-evidence/frontend-patch.json
+      - name: Audit shipped frontend dependency graph
+        working-directory: upstream/frontend
+        env:
+          YARN_NPM_AUDIT_REGISTRY: https://registry.npmjs.org
+        shell: bash
+        run: |
+          set -euo pipefail
+          yarn config get npmAuditRegistry
+          for package in katex markdown-it braces http-cache-semantics sprintf-js; do
+            yarn why --recursive "$package"
+          done
+          yarn npm audit --all --recursive --environment production --json | tee ../../frontend-evidence/audit.ndjson
       - name: Build complete wheel with original Python dependency metadata
         env:
           EXPECTED_SOURCE_SHA: ${{ steps.upstream.outputs.commit }}
@@ -82,15 +94,6 @@ jobs:
       - name: Run complete upstream frontend test suite
         working-directory: upstream/frontend
         run: yarn test --maxWorkers=2
-      - name: Audit shipped frontend dependency graph
-        working-directory: upstream/frontend
-        shell: bash
-        run: |
-          set -euo pipefail
-          for package in katex markdown-it braces http-cache-semantics sprintf-js; do
-            yarn why --recursive "$package"
-          done
-          yarn npm audit --all --recursive --environment production --json | tee ../../frontend-evidence/audit.ndjson
       - name: Run upstream Pillow compatibility suites
         working-directory: upstream
         shell: bash

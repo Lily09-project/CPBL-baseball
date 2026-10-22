@@ -38,3 +38,12 @@ def test_source_candidate_is_immutable_complete_and_dependency_only() -> None:
     assert '"release_approved": False' in verifier
     assert '"official_pypi_release": False' in verifier
     assert "product_release_approved" in workflow
+
+
+def test_frontend_audit_uses_the_canonical_registry_before_expensive_builds() -> None:
+    workflow = (ROOT / ".github/workflows/streamlit-source.yml").read_text(encoding="utf-8")
+    assert "YARN_NPM_AUDIT_REGISTRY: https://registry.npmjs.org" in workflow
+    assert "yarn config get npmAuditRegistry" in workflow
+    assert workflow.index("yarn npm audit") < workflow.index("make package")
+    assert "npmAuditIgnoreAdvisories" not in workflow
+    assert "npmAuditExcludePackages" not in workflow
