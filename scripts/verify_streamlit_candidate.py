@@ -50,7 +50,7 @@ def verify(wheel_dir: Path, source: Path, output: Path, expected_commit: str,
         if len(metadata_paths) != 1:
             raise ValueError("Wheel metadata is ambiguous")
         metadata = BytesParser().parsebytes(archive.read(metadata_paths[0]))
-        if metadata["Name"] != "streamlit" or metadata["Version"] != "1.66.1":
+        if metadata["Name"] != "streamlit" or metadata["Version"] != "1.66.0":
             raise ValueError("Unexpected official source package identity")
         requirements = [Requirement(item) for item in metadata.get_all("Requires-Dist", [])]
         pillow = [item for item in requirements if item.name.lower() == "pillow"]
@@ -71,16 +71,16 @@ def verify(wheel_dir: Path, source: Path, output: Path, expected_commit: str,
     import PIL
     import streamlit
 
-    if PIL.__version__ != "13.0.0" or streamlit.__version__ != "1.66.1":
+    if PIL.__version__ != "13.0.0" or streamlit.__version__ != "1.66.0":
         raise ValueError("Installed candidate identity is inconsistent")
     output.mkdir(parents=True, exist_ok=True)
     record = {
         "schema_version": 1,
         "upstream_repository": "https://github.com/streamlit/streamlit",
         "upstream_commit": actual,
-        "upstream_tag": "1.66.1",
+        "upstream_pr": 17589,
         "package": "streamlit",
-        "version": "1.66.1",
+        "version": "1.66.0",
         "distribution": "self-built-official-source-with-frontend-security-patches",
         "frontend_patch": patch,
         "frontend_security_audit": "passed",

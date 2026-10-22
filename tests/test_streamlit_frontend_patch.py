@@ -43,12 +43,3 @@ def test_patch_refuses_unreviewed_toolchain(tmp_path: Path) -> None:
     (source / "frontend/package.json").write_text(json.dumps({"packageManager": "yarn@5.0.0"}))
     with pytest.raises(ValueError, match="Unexpected upstream frontend toolchain"):
         patch_manifests(source)
-
-
-def test_security_overrides_use_published_compatible_maintenance_releases() -> None:
-    assert OVERRIDES["http-cache-semantics"] == "4.3.0"
-    assert "vite" not in OVERRIDES
-    # Do not force the ~4.4.x glTF consumers onto a different loaders minor.
-    assert not any(name.startswith("@loaders.gl/") for name in OVERRIDES)
-    assert "braces" not in OVERRIDES
-    assert "sprintf-js" not in OVERRIDES

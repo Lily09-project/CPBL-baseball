@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: streamlit/streamlit
-          ref: ca6718b7d3d788c31c97d1bc9144fd8388168f57
+          ref: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a # pragma: allowlist secret - user-reviewed public upstream commit
           path: upstream
           persist-credentials: false
           submodules: recursive
@@ -135,7 +135,7 @@ jobs:
       - name: Upload verified candidate and provenance only
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: streamlit-source-1.66.1-pillow13
+          name: streamlit-source-81bdb8a8-pillow13
           path: |
             upstream/lib/dist/*.whl
             candidate/
@@ -153,9 +153,9 @@ jobs:
           - repo: CPBL-baseball
             ref: ${{ github.event.pull_request.head.sha || github.sha }}
           - repo: market-anomaly-dashboard
-            ref: 2e8a12d2ed9cddcd9cad2c279b0f7e9b09c6f324
+            ref: 52df12b42bebccee6fac8f66621a52f8b40f58b7 # pragma: allowlist secret - user-reviewed public project commit
           - repo: aqi-anomaly-dashboard
-            ref: fb0e13237072c115097bc3e60099be4bacdef028
+            ref: 3b9dfcabae0fa827d5e1c6f250d3b0474bfc15f5 # pragma: allowlist secret - user-reviewed public project commit
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
     env:
@@ -181,7 +181,7 @@ jobs:
       - name: Download this run's verified wheel
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: streamlit-source-1.66.1-pillow13
+          name: streamlit-source-81bdb8a8-pillow13
           path: candidate-wheel
       - name: Run locked candidate install, complete tests and strict audit
         run: python verifier/scripts/test_streamlit_integration.py --repo "${{ matrix.project.repo }}" --project project --candidate candidate-wheel --output integration-result
@@ -206,7 +206,7 @@ jobs:
       - name: Download verified wheel from this run
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: streamlit-source-1.66.1-pillow13
+          name: streamlit-source-81bdb8a8-pillow13
           path: candidate
       - name: Publish immutable self-built dependency prerelease
         shell: bash
@@ -240,7 +240,7 @@ jobs:
           PY
           mapfile -t wheels < <(find candidate -type f -name 'streamlit-*.whl')
           test "${#wheels[@]}" -eq 1
-          tag="dependency-streamlit-1.66.1-pillow13-${{ github.run_id }}"
+          tag="dependency-streamlit-1.66.0-pillow13-${{ github.run_id }}"
           gh release create "$tag" --repo "$GH_REPO" --target "$SOURCE_HEAD" --prerelease --latest=false \
             --title "Self-built Streamlit Pillow 13 dependency candidate" \
             --notes "Built from an immutable official upstream commit with reviewed frontend dependency patches and original Python dependency metadata. Includes upstream notices. Not an official PyPI release. Upstream frontend and Pillow suites, pip check, strict dependency audits and all six Linux/Windows project integrations passed. This dependency prerelease is for traceable downstream integration; no application release or GUI acceptance is claimed." \
