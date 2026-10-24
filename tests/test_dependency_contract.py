@@ -34,7 +34,7 @@ def test_runtime_requirements_match_the_reproducible_lock(lock_path):
 @pytest.mark.parametrize("lock_path", LOCK_FILES)
 @pytest.mark.parametrize(
     ("name", "floor", "unsafe_version"),
-    [("streamlit", "1.66.1", "1.66.0"), ("pillow", "13.0.0", "12.3.0")],
+    [("urllib3", "2.8.0", "2.7.0"), ("certifi", "2026.10.19", "2026.6.17")],
 )
 def test_security_floors_cannot_regress(lock_path, name, floor, unsafe_version):
     direct = {
@@ -49,3 +49,14 @@ def test_security_floors_cannot_regress(lock_path, name, floor, unsafe_version):
     pins = list(locked[name].specifier)
     assert len(pins) == 1 and pins[0].operator == "=="
     assert Requirement(f"{name}>={floor}").specifier.contains(pins[0].version)
+
+
+def test_web_dependencies_are_pinned_exactly_and_locked():
+    import json
+
+    package = json.loads(Path("web/package.json").read_text(encoding="utf-8"))
+    lock = json.loads(Path("web/package-lock.json").read_text(encoding="utf-8"))
+    for section in ("dependencies", "devDependencies"):
+        for name, version in package[section].items():
+            assert version[0].isdigit(), f"{name} must be pinned exactly, got {version}"
+            assert lock["packages"][f"node_modules/{name}"]["version"] == version

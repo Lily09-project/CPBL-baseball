@@ -1,26 +1,22 @@
 # GitHub Pages
 
-[開啟展示網站](https://lily09-project.github.io/CPBL-baseball/)
+[開啟線上實驗室](https://lily09-project.github.io/CPBL-baseball/)
 
-非 CPBL 官方服務，也不是即時戰績。球員成績以發布快照呈現，不推定跨球季資料；分析分數非官方評分。Python／Streamlit 的球探工作台功能另見文件。
+## 發布流程
 
-## 操作
+`.github/workflows/pages.yml` 在合併到 `main` 時執行：
 
-- 閱讀球隊快照戰績、OPS 與 ERA 榜單，依球隊及最低樣本篩選。
-- 查看球員完整欄位、保留官方 ID 與局數分數；支援完整球員名單。
-- 最多三筆紀錄比較與 CSV／JSON 匯出；保留來源時間、更新歷程與過期提醒。
+1. 以鎖定的 Python 環境驗證公開發布清單（`src.verify_public_release`）。
+2. `python -m src.export_web` 由已驗證快照產生確定性 JSON 與 manifest。
+3. `npm ci && npm run build && npm run size` 建置靜態網站並檢查效能預算。
+4. 只上傳 `web/dist/`，不發布儲存庫根目錄。
+5. 部署後的冒煙測試確認首頁與 `data/manifest.json` 可讀取。
 
-完整資料入口保留搜尋、分類、日期或最低樣本、排序、分頁、原始欄位及下載。既有 `?view=` 分享網址繼續提供紀錄視圖；新版主要頁面使用獨立的 `screen` 參數，不占用原本的分頁 `page`。
+PR 階段由 `release-quality.yml` 跑完整的型別、lint、單元、E2E 與無障礙檢查。
 
-## 發布
+## 網站邊界
 
-Pages 只部署 `scripts/build_pages.py` 產生的 `pages-dist/`，不發布儲存庫根目錄。公開資產清單、欄位 allowlist、CSP、完整性檢查及 CSV 公式注入防護均保留。上傳快照僅在本地瀏覽器處理，不傳送到伺服器。
-
-PR 先通過建置、安全與瀏覽器檢查；合併至 `main` 後，由 Static Pages 工作流程部署。GitHub Pages 提供靜態網站，作者電腦或手機不必保持執行，但它不會執行 Python／Streamlit 後端。
-
-## 邊界
-
-- 網站各自採固定配色，沒有深淺主題切換。
-- 圖示保留文字標籤；動畫短暫、可中斷，不使用持續閃動或自動播放。
-- 目前不依作業系統的 reduced-motion 偏好停用動畫，因此不宣稱完整動態無障礙合規。
-- 自動化瀏覽器與字級放大測試不等同真人使用者、實機或螢幕閱讀器驗收。
+- 純靜態，作者的電腦不必開機；不執行任何後端程式。
+- 所有資料檔在瀏覽器端以 SHA-256 驗證；不符時停止顯示。
+- 執行期不呼叫任何第三方網址；外部連結只有 CPBL 官方頁面。
+- 非 CPBL 官方服務，也不是即時戰績；資料停在快照時間。
