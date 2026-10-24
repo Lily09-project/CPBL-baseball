@@ -17,9 +17,9 @@ def test_official_streamlit_wheel_is_verified_without_a_local_fork() -> None:
     assert "official-pypi-wheel" in verifier
     assert "pillow_13_compatible" in verifier
     assert "Official wheel does not declare its Apache-2.0 license" in verifier
-    assert "refs/pull/20/head" in workflow
-    assert "refs/pull/18/head" in workflow
-    assert "Pillow==13.0.0" in integration
+    assert "refs/pull/21/head" in workflow
+    assert "refs/pull/19/head" in workflow
+    assert 'PILLOW_VERSION = "13.0.0"' in integration
     assert "pip_audit" in integration
     assert "--strict" in integration
     assert "product_release_approved" in integration
@@ -38,4 +38,4 @@ def test_integration_cannot_silently_use_a_different_project_lock() -> None:
     assert "lock_version(lines, \"pillow\")" in integration
     assert "Project lock does not pin the verified official Streamlit release" in integration
     assert "Project lock does not pin the audited Pillow release" in integration
-    assert '["python", "-m", "pip_audit", "--local", "--strict"' in integration
+    assert 'run([python, "-m", "pip_audit", "--local", "--strict"' in integration

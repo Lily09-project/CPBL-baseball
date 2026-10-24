@@ -69,9 +69,9 @@ jobs:
           - repo: CPBL-baseball
             ref: ${{ github.event.pull_request.head.sha || github.sha }}
           - repo: market-anomaly-dashboard
-            ref: refs/pull/20/head
+            ref: refs/pull/21/head
           - repo: aqi-anomaly-dashboard
-            ref: refs/pull/18/head
+            ref: refs/pull/19/head
     runs-on: ${{ matrix.os }}
     timeout-minutes: 35
     env:
