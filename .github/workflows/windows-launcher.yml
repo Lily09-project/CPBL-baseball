@@ -42,6 +42,9 @@ jobs:
       - name: Surface the launcher failure as an annotation
         if: failure()
         shell: python
+        env:
+          PYTHONUTF8: "1"
+          PYTHONIOENCODING: utf-8
         run: |
           from pathlib import Path
           tail = Path("launcher.log").read_text(encoding="utf-8", errors="replace").splitlines()[-80:]

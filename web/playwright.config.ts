@@ -23,7 +23,7 @@ export default defineConfig({
     { name: "mobile", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, colorScheme: "dark" } },
   ],
   webServer: {
-    command: `npm run preview -- --port ${port}`,
+    command: `npm run preview -- --host 127.0.0.1 --port ${port}`,
     url: `http://127.0.0.1:${port}/`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
