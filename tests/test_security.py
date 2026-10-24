@@ -83,7 +83,7 @@ def test_launcher_enforces_secure_dependency_floors_and_loopback_binding():
         "requests>=2.34.2",
         "pytest>=9.1.1",
         "lxml>=6.1.3",
-        "gitpython>=3.1.61",
+        "gitpython>=3.2.1,<4",
         "pillow>=13.0.0,<14",
     ]:
         assert requirement in requirements

@@ -22,7 +22,7 @@ def test_official_streamlit_wheel_is_verified_without_a_local_fork() -> None:
     assert 'PILLOW_VERSION = "13.0.0"' in integration
     assert "pip_audit" in integration
     assert "--strict" in integration
-    assert "product_release_approved" in integration
+    assert "project_release_approved" in integration
     assert "contents: read" in workflow
     assert "contents: write" not in workflow
     assert "npm audit" not in workflow
