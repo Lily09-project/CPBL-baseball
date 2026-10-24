@@ -1484,6 +1484,39 @@ textarea {
 [data-testid="stExpander"] summary {
   color: var(--ink) !important;
 }
+
+/* Streamlit paints radio, tab and alert copy with the dark base theme text
+   colour, so the light palette must restate it to stay readable. */
+[data-testid="stRadio"] [data-testid="stWidgetLabel"] p,
+[data-testid="stRadio"] label p,
+[data-testid="stRadio"] label span {
+  color: var(--ink) !important;
+}
+
+[data-testid="stTabs"] [role="tab"] p,
+[data-testid="stTabs"] [data-baseweb="tab"] p {
+  color: var(--muted) !important;
+}
+
+[data-testid="stTabs"] [role="tab"][aria-selected="true"] p,
+[data-testid="stTabs"] [data-baseweb="tab"][aria-selected="true"] p {
+  color: var(--ink) !important;
+}
+
+[data-testid="stAlert"] p,
+[data-testid="stAlert"] li {
+  color: var(--ink-soft) !important;
+}
+
+[data-testid^="stBaseLinkButton"] {
+  background: var(--surface) !important;
+  border-color: var(--line-strong) !important;
+  color: var(--accent) !important;
+}
+
+[data-testid^="stBaseLinkButton"]:hover {
+  background: var(--surface-soft) !important;
+}
 </style>
 """
 

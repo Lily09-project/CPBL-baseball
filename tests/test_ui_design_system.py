@@ -20,3 +20,17 @@ def test_ui_pro_max_layout_contract_is_shared_by_dark_and_light_modes() -> None:
     assert "color-scheme: dark" in STREAMLIT_CSS
     assert "color-scheme: light" in STREAMLIT_LIGHT_CSS
     assert "--ui-content-gutter" in layout
+
+
+def test_light_mode_restates_text_colour_for_native_streamlit_widgets() -> None:
+    # Streamlit paints these widgets with the dark base theme text colour from
+    # .streamlit/config.toml, which is unreadable on the light palette.
+    for selector in (
+        '[data-testid="stRadio"] [data-testid="stWidgetLabel"] p',
+        '[data-testid="stRadio"] label p',
+        '[data-testid="stTabs"] [role="tab"] p',
+        '[data-testid="stTabs"] [role="tab"][aria-selected="true"] p',
+        '[data-testid="stAlert"] p',
+        '[data-testid^="stBaseLinkButton"]',
+    ):
+        assert selector in STREAMLIT_LIGHT_CSS
