@@ -94,6 +94,19 @@ def layout_issues(page) -> list[str]:
                     break;
                 }
             }
+            for (const shell of document.querySelectorAll('.table-shell-wide')) {
+                if (!visible(shell)) continue;
+                const style = getComputedStyle(shell);
+                if (style.overflowY !== 'auto' || shell.clientHeight > parseFloat(getComputedStyle(document.documentElement).fontSize) * 36 + 3) {
+                    issues.push('wide evidence table is not height bounded');
+                }
+                for (const row of shell.querySelectorAll('tbody tr')) {
+                    if (row.getBoundingClientRect().height > parseFloat(getComputedStyle(row).fontSize) * 18) {
+                        issues.push('wide evidence table row is excessively tall');
+                        break;
+                    }
+                }
+            }
             return issues;
         }"""
     )
@@ -304,7 +317,7 @@ def interaction_smoke(page, base_url: str) -> list[str]:
     page.get_by_role("heading", name="球探工作台", exact=True).wait_for(timeout=60_000)
     sidebar = page.locator('[data-testid="stSidebar"]')
     try:
-        if sidebar.get_attribute("aria-expanded") != "true":
+        if sidebar.get_attribute("data-collapsed") != "false":
             expand_control = page.locator('[data-testid="stExpandSidebarButton"]')
             expand_button = expand_control.locator("button")
             if expand_button.count():
@@ -312,7 +325,7 @@ def interaction_smoke(page, base_url: str) -> list[str]:
             else:
                 expand_control.click(timeout=15_000)
             page.wait_for_function(
-                "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('aria-expanded') === 'true'",
+                "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('data-collapsed') === 'false'",
                 timeout=30_000,
             )
     except PlaywrightError:
@@ -411,7 +424,7 @@ def apply_theme_mode(
     )
     if selector_label is not None and current_theme != theme_mode:
         sidebar = page.locator('[data-testid="stSidebar"]')
-        if sidebar.get_attribute("aria-expanded") != "true":
+        if sidebar.get_attribute("data-collapsed") != "false":
             expand_control = page.locator('[data-testid="stExpandSidebarButton"]')
             expand_button = expand_control.locator("button")
             if expand_button.count():
@@ -434,7 +447,7 @@ def apply_theme_mode(
             page.keyboard.press("ArrowDown")
         page.keyboard.press("Enter")
         collapse_button = page.locator('[data-testid="stSidebarCollapseButton"] button')
-        if sidebar.get_attribute("aria-expanded") == "true" and collapse_button.count():
+        if sidebar.get_attribute("data-collapsed") == "false" and collapse_button.count():
             collapse_button.click(timeout=15_000)
     page.wait_for_function(
         "expected => getComputedStyle(document.documentElement).colorScheme === expected",
@@ -463,12 +476,12 @@ def download_payload(page, label: str, suffix: str) -> bytes:
 
 def open_sidebar(page) -> None:
     sidebar = page.locator('[data-testid="stSidebar"]')
-    if sidebar.get_attribute("aria-expanded") != "true":
+    if sidebar.get_attribute("data-collapsed") != "false":
         control = page.locator('[data-testid="stExpandSidebarButton"]')
         button = control.locator("button")
         (button if button.count() else control).click(timeout=15_000)
     page.wait_for_function(
-        "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('aria-expanded') === 'true'",
+        "() => document.querySelector('[data-testid=stSidebar]')?.getAttribute('data-collapsed') === 'false'",
         timeout=15_000,
     )
 
@@ -546,6 +559,58 @@ def functional_download_smoke(page, base_url: str, theme_mode: str | None) -> No
     if page.get_by_role("button", name="下載稽核 Manifest JSON").count():
         raise RuntimeError("cleared watchlist still offers a stale report download")
 
+
+
+
+SCROLL_EVIDENCE_VIEWPORTS = {"desktop", "small-mobile"}
+SCROLL_EVIDENCE_MAX_SEGMENTS = 80
+
+
+def capture_scroll_evidence(page, screenshot_dir: Path, stem: str) -> list[str]:
+    """Capture the actual Streamlit scrollport, not just the document viewport."""
+    script = """({action, top, behavior}) => {
+        const root = document.querySelector('[data-testid="stMain"]')
+            || document.scrollingElement;
+        if (!root || root.clientHeight <= 0) throw new Error('Missing visible scrollport');
+        const previousBehavior = root.style.scrollBehavior;
+        if (action === 'start') root.style.scrollBehavior = 'auto';
+        if (action === 'move' || action === 'restore') root.scrollTop = top;
+        if (action === 'restore') root.style.scrollBehavior = behavior;
+        return {top: root.scrollTop, height: root.clientHeight,
+            total: root.scrollHeight, behavior: previousBehavior};
+    }"""
+    original = page.evaluate(script, {"action": "start", "top": 0, "behavior": ""})
+    screenshots = []
+    issues = []
+    complete = False
+    target = 0
+    try:
+        for index in range(SCROLL_EVIDENCE_MAX_SEGMENTS):
+            page.evaluate(script, {"action": "move", "top": target, "behavior": ""})
+            page.wait_for_timeout(150)
+            state = page.evaluate(script, {"action": "read", "top": 0, "behavior": ""})
+            filename = f"{stem}-scroll-{index:02d}.png"
+            page.screenshot(path=str(screenshot_dir / filename), full_page=False)
+            screenshots.append({"file": filename, "top": state["top"],
+                                "height": state["height"], "total": state["total"]})
+            if abs(state["top"] - target) > 3 and target < state["total"] - state["height"]:
+                issues.append("scrollport did not reach the requested evidence position")
+                break
+            if state["top"] + state["height"] >= state["total"] - 2:
+                complete = True
+                break
+            target = min(state["total"] - state["height"],
+                         state["top"] + max(1, int(state["height"] * 0.8)))
+        if not complete and not issues:
+            issues.append("scroll evidence limit reached before the page bottom")
+    finally:
+        page.evaluate(script, {"action": "restore", "top": original["top"],
+                               "behavior": original["behavior"]})
+        (screenshot_dir / f"{stem}-scroll.json").write_text(json.dumps({
+            "schema_version": 1, "complete": complete, "segments": screenshots,
+            "manual_visual_acceptance": "pending",
+        }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return issues
 
 
 def run_browser_checks(
@@ -629,6 +694,11 @@ def run_browser_checks(
                             path=str(screenshot_dir / f"{page_name}-{viewport_name}{suffix}.png"),
                             full_page=True,
                         )
+                        if viewport_name in SCROLL_EVIDENCE_VIEWPORTS:
+                            for issue in capture_scroll_evidence(
+                                page, screenshot_dir, f"{page_name}-{viewport_name}{suffix}"
+                            ):
+                                failures.append(f"{viewport_name}/{page_name}: {issue}")
                     except PlaywrightError as exc:
                         failures.append(f"{viewport_name}/{page_name}: browser error {exc}")
                         try:

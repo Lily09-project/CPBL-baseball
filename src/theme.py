@@ -168,7 +168,7 @@ div {
   border-right: 1px solid var(--line);
 }
 
-[data-testid="stSidebar"][aria-expanded="false"] {
+[data-testid="stSidebar"][data-collapsed="true"] {
   visibility: hidden !important;
 }
 
@@ -903,7 +903,7 @@ html {
 @media (max-width: 720px) {
   html { scroll-padding-top: 4.5rem; }
 
-  [data-testid="stSidebar"][aria-expanded="true"] {
+  [data-testid="stSidebar"][data-collapsed="false"] {
     left: 0 !important;
     width: min(21rem, 100vw) !important;
     max-width: 100vw !important;
@@ -1456,6 +1456,23 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+/* Wide evidence tables keep readable columns in a bounded keyboard-scrollable region. */
+.table-shell-wide {
+  max-height: 36rem;
+  overflow-y: auto;
+}
+.dashboard-table-wide {
+  min-width: 110rem;
+}
+.dashboard-table-wide th,
+.dashboard-table-wide td {
+  min-width: 7rem;
+  vertical-align: top;
+}
+.dashboard-table-wide th:nth-last-child(-n+3),
+.dashboard-table-wide td:nth-last-child(-n+3) {
+  min-width: 20rem;
+}
 .dashboard-table tr:last-child td { border-bottom: 0; }
 .dashboard-table tbody tr:hover td { background: var(--surface-raised); }
 
@@ -2166,20 +2183,20 @@ h3 {
             border-radius: .6rem !important;
         }
         /* Do not leave invisible sidebar controls in the keyboard sequence. */
-        [data-testid="stSidebar"][aria-expanded="false"] {
+        [data-testid="stSidebar"][data-collapsed="true"] {
             visibility: hidden !important;
             pointer-events: none !important;
         }
-        [data-testid="stSidebar"][aria-expanded="true"] {
+        [data-testid="stSidebar"][data-collapsed="false"] {
             visibility: visible !important;
             pointer-events: auto !important;
         }
-        body:has([data-testid="stSidebar"][aria-expanded="false"]) [data-testid="stSidebarCollapseButton"] {
+        body:has([data-testid="stSidebar"][data-collapsed="true"]) [data-testid="stSidebarCollapseButton"] {
             display: none !important;
             visibility: hidden !important;
             pointer-events: none !important;
         }
-        body:has([data-testid="stSidebar"][aria-expanded="true"]) [data-testid="stExpandSidebarButton"] {
+        body:has([data-testid="stSidebar"][data-collapsed="false"]) [data-testid="stExpandSidebarButton"] {
             display: none !important;
             visibility: hidden !important;
             pointer-events: none !important;
@@ -2204,7 +2221,7 @@ h3 {
                 min-height: 44px !important;
                 height: 44px !important;
             }
-            body:has([data-testid="stSidebar"][aria-expanded="true"]) [data-testid="stSidebarCollapseButton"] {
+            body:has([data-testid="stSidebar"][data-collapsed="false"]) [data-testid="stSidebarCollapseButton"] {
                 position: fixed !important;
                 top: 0 !important;
                 left: 0 !important;
@@ -2217,7 +2234,7 @@ h3 {
                 z-index: 1000002 !important;
                 pointer-events: auto !important;
             }
-            body:has([data-testid="stSidebar"][aria-expanded="true"]) [data-testid="stSidebarCollapseButton"] [data-testid="stBaseButton-headerNoPadding"] {
+            body:has([data-testid="stSidebar"][data-collapsed="false"]) [data-testid="stSidebarCollapseButton"] [data-testid="stBaseButton-headerNoPadding"] {
                 position: fixed !important;
                 top: max(.75rem, env(safe-area-inset-top, 0px)) !important;
                 left: max(0px, min(17.25rem, calc(100vw - 44px))) !important;
@@ -2230,7 +2247,7 @@ h3 {
             }
         }
         /* Keep hidden sidebar descendants out of the keyboard sequence. */
-        [data-testid="stSidebar"][aria-expanded="false"] * {
+        [data-testid="stSidebar"][data-collapsed="true"] * {
             visibility: hidden !important;
             pointer-events: none !important;
         }
