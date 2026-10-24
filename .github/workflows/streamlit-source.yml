@@ -1,150 +1,66 @@
-name: Verified Streamlit source candidate
+name: Verified official Streamlit runtime compatibility
 
 on:
   pull_request:
     paths:
       - ".github/workflows/streamlit-source.yml"
       - "scripts/verify_streamlit_candidate.py"
-      - "tests/test_streamlit_source_contract.py"
       - "scripts/test_streamlit_integration.py"
-      - "scripts/patch_streamlit_frontend.py"
-      - "tests/test_streamlit_frontend_patch.py"
+      - "tests/test_streamlit_source_contract.py"
+      - "requirements*.txt"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: streamlit-source-${{ github.ref }}
+  group: streamlit-runtime-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-and-audit:
+  verify-official-wheel:
+    name: Verify official PyPI release
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    env:
-      UV_LOCKED: "1"
-      INSTALL_PLAYWRIGHT: "false"
-      MPLBACKEND: Agg
+    timeout-minutes: 15
     steps:
       - name: Check out verification scripts
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: verifier
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Check out immutable official Streamlit source
-        id: upstream
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          repository: streamlit/streamlit
-          ref: 81bdb8a8a207691f17ec94df9eabc96b6b50ea7a # pragma: allowlist secret - user-reviewed public upstream commit
-          path: upstream
-          persist-credentials: false
-          submodules: recursive
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - name: Set up Node from official toolchain
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: upstream/.nvmrc
-      - name: Install fixed Python build tool
-        run: python -m pip install "uv==0.11.8"
-      - name: Install fixed build prerequisites
-        shell: bash
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends rsync
-          npm install --global corepack@0.36.0
-          archive="$RUNNER_TEMP/protoc-26.1.zip"
-          curl --fail --location --retry 3 --output "$archive" https://github.com/protocolbuffers/protobuf/releases/download/v26.1/protoc-26.1-linux-x86_64.zip
-          echo "a7be2928c0454f132c599e25b79b7ad1b57663f2337d7f7e468a1d59b98ec1b0  $archive" | sha256sum --check -
-          mkdir -p "$RUNNER_TEMP/protoc-26.1"
-          unzip -q "$archive" -d "$RUNNER_TEMP/protoc-26.1"
-          echo "$RUNNER_TEMP/protoc-26.1/bin" >> "$GITHUB_PATH"
-      - name: Apply reviewed frontend security dependency patch
-        run: python verifier/scripts/patch_streamlit_frontend.py --source upstream --output frontend-evidence/frontend-patch.json
-      - name: Audit shipped frontend dependency graph
-        working-directory: upstream/frontend
-        env:
-          YARN_NPM_AUDIT_REGISTRY: https://registry.npmjs.org
-        shell: bash
-        run: |
-          set -euo pipefail
-          yarn config get npmAuditRegistry
-          for package in katex markdown-it braces http-cache-semantics sprintf-js; do
-            yarn why --recursive "$package"
-          done
-          yarn npm audit --all --recursive --environment production --json | tee ../../frontend-evidence/audit.ndjson
-      - name: Build complete wheel with original Python dependency metadata
-        env:
-          EXPECTED_SOURCE_SHA: ${{ steps.upstream.outputs.commit }}
-        working-directory: upstream
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
-          uv lock --check
-          cp LICENSE lib/LICENSE
-          cp NOTICES lib/NOTICES
-          make package
-          git diff --exit-code -- lib/pyproject.toml lib/streamlit
-      - name: Run complete upstream frontend test suite
-        working-directory: upstream/frontend
-        run: yarn test --maxWorkers=2
-      - name: Run upstream Pillow compatibility suites
-        working-directory: upstream
-        shell: bash
-        run: |
-          set -euo pipefail
-          uv run --no-sync python -c "import PIL; assert PIL.__version__ == '13.0.0', PIL.__version__"
-          uv run --no-sync pytest -c lib/pyproject.toml -q \
-            lib/tests/streamlit/elements/image_test.py \
-            lib/tests/streamlit/elements/lib/image_utils_test.py \
-            lib/tests/streamlit/elements/pyplot_test.py \
-            lib/tests/streamlit/runtime/caching/hashing_test.py \
-            lib/tests/streamlit/write_test.py \
-            lib/tests/streamlit/commands/logo_test.py
-      - name: Audit clean wheel installation and verify packaged frontend
-        env:
-          EXPECTED_SOURCE_SHA: ${{ steps.upstream.outputs.commit }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m venv "$RUNNER_TEMP/streamlit-runtime-audit"
-          audit_python="$RUNNER_TEMP/streamlit-runtime-audit/bin/python"
-          "$audit_python" -m pip install "pip==26.2.1" "pip-audit==2.10.1"
-          "$audit_python" -m pip install upstream/lib/dist/*.whl "Pillow==13.0.0"
-          "$audit_python" -m pip check
-          "$audit_python" -m pip_audit --local --strict --progress-spinner off
-          "$audit_python" verifier/scripts/verify_streamlit_candidate.py --wheel-dir upstream/lib/dist --source upstream --expected-commit "$EXPECTED_SOURCE_SHA" --frontend-patch frontend-evidence/frontend-patch.json --output candidate
-      - name: Retain exact frontend patch and lock evidence
-        if: always()
+      - name: Install fixed metadata parser
+        run: python -m pip install "packaging==26.2"
+      - name: Download official wheel from PyPI
+        run: >-
+          python -m pip download
+          --index-url https://pypi.org/simple
+          --only-binary=:all:
+          --no-deps
+          --dest candidate-wheel
+          streamlit==1.66.1
+      - name: Verify official release digest, metadata, and packaged UI
+        run: >-
+          python scripts/verify_streamlit_candidate.py
+          --wheel-dir candidate-wheel
+          --output candidate-wheel
+      - name: Retain verified official wheel and provenance
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: streamlit-frontend-security-evidence
+          name: streamlit-1.66.1-official
           path: |
-            frontend-evidence/
-            upstream/frontend/package.json
-            upstream/frontend/lib/package.json
-            upstream/frontend/yarn.lock
-          if-no-files-found: error
-          retention-days: 30
-      - name: Upload verified candidate and provenance only
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: streamlit-source-81bdb8a8-pillow13
-          path: |
-            upstream/lib/dist/*.whl
-            candidate/
+            candidate-wheel/streamlit-1.66.1-py3-none-any.whl
+            candidate-wheel/provenance.json
+            candidate-wheel/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 30
 
   integration:
     name: Candidate integration (${{ matrix.project.repo }}, ${{ matrix.os }})
-    needs: build-and-audit
+    needs: verify-official-wheel
     strategy:
       fail-fast: false
       matrix:
@@ -153,11 +69,11 @@ jobs:
           - repo: CPBL-baseball
             ref: ${{ github.event.pull_request.head.sha || github.sha }}
           - repo: market-anomaly-dashboard
-            ref: 52df12b42bebccee6fac8f66621a52f8b40f58b7 # pragma: allowlist secret - user-reviewed public project commit
+            ref: refs/pull/20/head
           - repo: aqi-anomaly-dashboard
-            ref: 3b9dfcabae0fa827d5e1c6f250d3b0474bfc15f5 # pragma: allowlist secret - user-reviewed public project commit
+            ref: refs/pull/18/head
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       PYTHONUTF8: "1"
       AQI_CONSTRAINTS_APPLIED: "1"
@@ -165,7 +81,7 @@ jobs:
       - name: Check out integration harness
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          path: verifier
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Check out exact project candidate
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -178,70 +94,24 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - name: Download this run's verified wheel
+      - name: Download this run's official wheel
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: streamlit-source-81bdb8a8-pillow13
+          name: streamlit-1.66.1-official
           path: candidate-wheel
-      - name: Run locked candidate install, complete tests and strict audit
-        run: python verifier/scripts/test_streamlit_integration.py --repo "${{ matrix.project.repo }}" --project project --candidate candidate-wheel --output integration-result
-      - name: Retain successful integration evidence
+      - name: Run locked install, complete tests, and strict runtime audit
+        run: >-
+          python scripts/test_streamlit_integration.py
+          --repo "${{ matrix.project.repo }}"
+          --project project
+          --candidate candidate-wheel
+          --output integration-result
+      - name: Retain integration evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: integration-${{ matrix.project.repo }}-${{ matrix.os }}
           path: |
             integration-result/installed.txt
             integration-result/result.json
+            integration-result/integration-requirements.txt
           if-no-files-found: error
-
-  distribute-dependency:
-    name: Distribute verified dependency prerelease
-    needs: [build-and-audit, integration]
-    if: github.event.pull_request.head.repo.full_name == github.repository && github.actor == github.repository_owner
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - name: Download verified wheel from this run
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: streamlit-source-81bdb8a8-pillow13
-          path: candidate
-      - name: Publish immutable self-built dependency prerelease
-        shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          SOURCE_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import hashlib
-          import json
-          from pathlib import Path
-
-          root = Path("candidate")
-          manifests = list(root.rglob("provenance.json"))
-          wheels = list(root.rglob("streamlit-*.whl"))
-          if len(manifests) != 1 or len(wheels) != 1:
-              raise SystemExit("Ambiguous candidate")
-          manifest = json.loads(manifests[0].read_text())
-          wheel = wheels[0]
-          if hashlib.sha256(wheel.read_bytes()).hexdigest() != manifest["sha256"]:
-              raise SystemExit("Candidate checksum mismatch")
-          if manifest["distribution"] != "self-built-official-source-with-frontend-security-patches":
-              raise SystemExit("Unexpected distribution identity")
-          manifest["integration_run"] = "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          manifest["six_platform_integrations"] = "passed"
-          manifest["product_release_approved"] = False
-          Path("dependency-provenance.json").write_text(json.dumps(manifest, indent=2) + "\n")
-          Path("SHA256SUMS.txt").write_text(manifest["sha256"] + "  " + wheel.name + "\n")
-          PY
-          mapfile -t wheels < <(find candidate -type f -name 'streamlit-*.whl')
-          test "${#wheels[@]}" -eq 1
-          tag="dependency-streamlit-1.66.0-pillow13-${{ github.run_id }}"
-          gh release create "$tag" --repo "$GH_REPO" --target "$SOURCE_HEAD" --prerelease --latest=false \
-            --title "Self-built Streamlit Pillow 13 dependency candidate" \
-            --notes "Built from an immutable official upstream commit with reviewed frontend dependency patches and original Python dependency metadata. Includes upstream notices. Not an official PyPI release. Upstream frontend and Pillow suites, pip check, strict dependency audits and all six Linux/Windows project integrations passed. This dependency prerelease is for traceable downstream integration; no application release or GUI acceptance is claimed." \
-            "${wheels[0]}" dependency-provenance.json SHA256SUMS.txt
