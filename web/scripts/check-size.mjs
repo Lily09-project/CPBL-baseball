@@ -2,9 +2,10 @@
 //   initial JavaScript ≤ 200 KB gzip, first-screen data ≤ 800 KB.
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
 
-const dist = new URL("../dist/", import.meta.url).pathname;
+const dist = fileURLToPath(new URL("../dist/", import.meta.url));
 const html = readFileSync(join(dist, "index.html"), "utf8");
 const scripts = [...html.matchAll(/<script[^>]+src="\.\/([^"]+)"/g)].map((m) => m[1]);
 const preloads = [...html.matchAll(/<link[^>]+rel="modulepreload"[^>]+href="\.\/([^"]+)"/g)].map((m) => m[1]);
