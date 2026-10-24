@@ -16,6 +16,7 @@ def test_official_streamlit_wheel_is_verified_without_a_local_fork() -> None:
     assert "https://pypi.org/pypi/streamlit/1.66.1/json" in verifier
     assert "official-pypi-wheel" in verifier
     assert "pillow_13_compatible" in verifier
+    assert "Official wheel does not declare its Apache-2.0 license" in verifier
     assert "refs/pull/20/head" in workflow
     assert "refs/pull/18/head" in workflow
     assert "Pillow==13.0.0" in integration

@@ -96,8 +96,13 @@ def verify(wheel_dir: Path, output: Path, release: dict | None = None) -> dict:
                 raise ValueError(f"Packaged Streamlit UI {suffix} assets are missing")
         if not any(name.endswith("_pb2.py") for name in names):
             raise ValueError("Generated protobuf bindings are missing")
-        if not any(name.endswith("LICENSE") or name.endswith("LICENSE.txt") for name in names):
-            raise ValueError("Package license notice is missing")
+        license_expression = (
+            metadata.get("License-Expression")
+            or metadata.get("License")
+            or ""
+        ).strip()
+        if "apache" not in license_expression.lower():
+            raise ValueError("Official wheel does not declare its Apache-2.0 license")
 
     output.mkdir(parents=True, exist_ok=True)
     record = {
@@ -113,6 +118,7 @@ def verify(wheel_dir: Path, output: Path, release: dict | None = None) -> dict:
         "sha256": actual_sha256,
         "python_version_tested": "3.12",
         "pillow_13_compatible": True,
+        "license": license_expression,
         "official_pypi_release": True,
         "integrity_check": "Downloaded wheel SHA256 matches the official PyPI release JSON",
         "custom_source_build": False,
