@@ -1,0 +1,179 @@
+.chart-frame {
+  margin: 0;
+  min-width: 0;
+}
+
+.chart-title {
+  font-weight: 700;
+  margin-bottom: var(--space-2);
+}
+
+.pbar {
+  display: grid;
+  gap: 4px;
+}
+
+.pbar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: var(--step--1);
+}
+
+.pbar-track {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.pbar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+  background: var(--line-strong);
+  transition: width var(--duration) var(--ease);
+}
+
+.pbar[data-tone="high"] .pbar-fill {
+  background: var(--teal);
+}
+
+.pbar[data-tone="low"] .pbar-fill {
+  background: var(--accent);
+}
+
+.pbar-mid {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--bg-raised);
+}
+
+.interval-plot .ci {
+  stroke: var(--teal);
+  stroke-width: 6;
+  stroke-linecap: round;
+  opacity: 0.45;
+}
+
+.interval-plot .post {
+  fill: var(--teal);
+  stroke: var(--bg-raised);
+  stroke-width: 2;
+}
+
+.interval-plot .raw {
+  fill: var(--accent);
+}
+
+.interval-plot .ref-line,
+.diverging .zero {
+  stroke: var(--line-strong);
+  stroke-dasharray: 4 4;
+}
+
+.chart .row-label {
+  fill: var(--ink-soft);
+  font-size: 14px;
+}
+
+.chart .row-emphasis .row-label {
+  fill: var(--ink);
+  font-weight: 700;
+}
+
+.histogram .bar {
+  fill: var(--line-strong);
+}
+
+.histogram .bar-hi {
+  fill: var(--chart-1);
+}
+
+.trend .trend-line {
+  fill: none;
+  stroke: var(--chart-1);
+  stroke-width: 2.5;
+}
+
+.trend .trend-dot {
+  fill: var(--bg-raised);
+  stroke: var(--chart-1);
+  stroke-width: 2;
+}
+
+.range-bars .range {
+  fill: var(--teal-soft);
+  stroke: var(--teal);
+}
+
+.range-bars .mid {
+  fill: var(--teal);
+}
+
+.range-bars .current {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.diverging .pos {
+  fill: var(--chart-2);
+}
+
+.diverging .neg {
+  fill: var(--chart-1);
+}
+
+.chart .value-label {
+  fill: var(--ink);
+  font-weight: 700;
+}
+
+.contrib {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.contrib li {
+  display: grid;
+  grid-template-columns: minmax(6em, 1fr) 2fr auto;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--step--1);
+}
+
+.contrib-track {
+  position: relative;
+  height: 8px;
+  background: var(--bg-sunken);
+  border-radius: 999px;
+}
+
+.contrib-pos,
+.contrib-neg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+}
+
+.contrib-pos {
+  background: var(--teal);
+}
+
+.contrib-neg {
+  background: var(--accent);
+}
+
+.contrib-value {
+  font-variant-numeric: tabular-nums;
+  min-width: 3.5em;
+  text-align: right;
+}

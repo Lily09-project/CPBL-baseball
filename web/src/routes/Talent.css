@@ -1,0 +1,48 @@
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--space-4);
+  align-items: end;
+}
+
+.traps {
+  margin: 0;
+  padding-left: 1.4em;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.traps li {
+  display: grid;
+  gap: 2px;
+}
+
+.traps a {
+  font-weight: 700;
+}
+
+.trap-up {
+  color: var(--bad);
+  font-weight: 650;
+}
+
+.trap-down {
+  color: var(--good);
+  font-weight: 650;
+}
+
+.spread {
+  justify-content: space-between;
+}
+
+.strong {
+  font-weight: 750;
+}
+
+.show-more {
+  margin-top: var(--space-4);
+}
+
+th .badge {
+  margin-left: var(--space-2);
+}
