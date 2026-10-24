@@ -44,7 +44,7 @@ def _num(value: Any, digits: int = 4) -> float | None:
 
 def _write_json(path: Path, payload: Any) -> str:
     text = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    path.write_text(text + "\n", encoding="utf-8")
+    path.write_text(text + "\n", encoding="utf-8", newline="\n")
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 

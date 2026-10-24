@@ -34,4 +34,16 @@ jobs:
           node-version: "22"
       - name: Run actual Windows launcher acceptance
         shell: cmd
-        run: call run_project.bat --validate
+        run: |
+          call run_project.bat --validate > launcher.log 2>&1
+          set "LAUNCHER_EXIT=%ERRORLEVEL%"
+          type launcher.log
+          exit /b %LAUNCHER_EXIT%
+      - name: Surface the launcher failure as an annotation
+        if: failure()
+        shell: python
+        run: |
+          from pathlib import Path
+          tail = Path("launcher.log").read_text(encoding="utf-8", errors="replace").splitlines()[-80:]
+          body = "%0A".join(line.replace("%", "%25").replace("\r", "") for line in tail)
+          print(f"::error title=run_project.bat --validate failed::{body}")
