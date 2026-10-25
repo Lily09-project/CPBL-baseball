@@ -1,6 +1,14 @@
 import { expect, expectAccessible, openRoute, test } from "./fixtures";
 
-const ROUTES = ["/","/talent","/lineup","/season","/player/batter/0000005549","/compare?type=batter&ids=0000005549","/data"];
+const ROUTES = [
+  "/",
+  "/talent",
+  "/lineup",
+  "/season",
+  "/player/batter/0000005549",
+  "/compare?type=batter&ids=0000005549",
+  "/data",
+];
 const FIXED_BACKGROUND = "#f6f3ec";
 const LEGACY_THEME_KEY = "cpbl-lab-theme";
 
