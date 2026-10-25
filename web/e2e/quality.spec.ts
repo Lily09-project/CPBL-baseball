@@ -1,5 +1,9 @@
 import { expect, expectAccessible, openRoute, test } from "./fixtures";
 
+const ROUTES = ["/","/talent","/lineup","/season","/player/batter/0000005549","/compare?type=batter&ids=0000005549","/data"];
+const FIXED_BACKGROUND = "#f6f3ec";
+const LEGACY_THEME_KEY = "cpbl-lab-theme";
+
 test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
   test("the whole site can be driven by keyboard: skip link, nav, palette search", async ({ page }) => {
     await openRoute(page, "/");
@@ -33,17 +37,34 @@ test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
     await expect(page).toHaveTitle(/季末戰績模擬/);
   });
 
-  test("theme choice is applied and remembered", async ({ page }) => {
-    await openRoute(page, "/");
-    const picker = page.getByLabel("介面主題");
-    await picker.selectOption("dark");
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await page.reload();
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await expectAccessible(page);
-    await picker.selectOption("light");
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expectAccessible(page);
+  test("every page keeps one palette under both system color preferences", async ({ page }) => {
+    await page.addInitScript((key) => {
+      try {
+        window.localStorage.setItem(key, "dark");
+      } catch {
+        // Storage restrictions must not change the fixed site palette.
+      }
+    }, LEGACY_THEME_KEY);
+
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme });
+      for (const route of ROUTES) {
+        await openRoute(page, route);
+        await page.locator(".state-loading").waitFor({ state: "detached" });
+        await expect(page.getByLabel("介面主題")).toHaveCount(0);
+        const appearance = await page.locator("html").evaluate((root) => ({
+          dataTheme: root.getAttribute("data-theme"),
+          colorScheme: getComputedStyle(root).colorScheme,
+          background: getComputedStyle(root).getPropertyValue("--bg").trim(),
+        }));
+        expect(appearance).toEqual({
+          dataTheme: null,
+          colorScheme: "light",
+          background: FIXED_BACKGROUND,
+        });
+        await expectAccessible(page);
+      }
+    }
   });
 
   test("unknown routes render a helpful not-found page", async ({ page }) => {

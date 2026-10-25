@@ -1,5 +1,4 @@
-/* Design tokens. Light is the default; dark follows the OS unless the
-   viewer picks a theme explicitly (stored on <html data-theme>). */
+/* Design tokens for CPBL Scouting Lab: one fixed light palette. */
 :root {
   color-scheme: light;
   --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -48,62 +47,6 @@
   --content: 1180px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --duration: 220ms;
-}
-
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #11120f;
-  --bg-raised: #1a1b17;
-  --bg-sunken: #0b0c0a;
-  --ink: #f2efe7;
-  --ink-soft: #d9d4c7;
-  --muted: #a9a394;
-  --line: #34352e;
-  --line-strong: #4d4e45;
-  --accent: #ff7a6b;
-  --accent-ink: #1b0a07;
-  --accent-soft: #3a1c18;
-  --teal: #5fd3c8;
-  --teal-soft: #12302d;
-  --gold: #e9b44c;
-  --good: #6ad08f;
-  --bad: #ff8a7a;
-  --chart-1: #ff7a6b;
-  --chart-2: #5fd3c8;
-  --chart-3: #e9b44c;
-  --chart-4: #a5a9ff;
-  --chart-grid: #2a2b25;
-  --focus: #8ab4ff;
-  --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px rgb(0 0 0 / 35%);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #11120f;
-    --bg-raised: #1a1b17;
-    --bg-sunken: #0b0c0a;
-    --ink: #f2efe7;
-    --ink-soft: #d9d4c7;
-    --muted: #a9a394;
-    --line: #34352e;
-    --line-strong: #4d4e45;
-    --accent: #ff7a6b;
-    --accent-ink: #1b0a07;
-    --accent-soft: #3a1c18;
-    --teal: #5fd3c8;
-    --teal-soft: #12302d;
-    --gold: #e9b44c;
-    --good: #6ad08f;
-    --bad: #ff8a7a;
-    --chart-1: #ff7a6b;
-    --chart-2: #5fd3c8;
-    --chart-3: #e9b44c;
-    --chart-4: #a5a9ff;
-    --chart-grid: #2a2b25;
-    --focus: #8ab4ff;
-    --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px rgb(0 0 0 / 35%);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
