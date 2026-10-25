@@ -42,11 +42,7 @@
 <table>
   <tr>
     <td><img src="docs/screenshots/talent.png" alt="真實實力估計：森林圖與小樣本陷阱" /></td>
-    <td><img src="docs/screenshots/player-profile.png" alt="球員檔案：證據連動的球探摘要（深色主題）" /></td>
-  </tr>
-  <tr>
     <td><img src="docs/screenshots/season.png" alt="季末戰績模擬" /></td>
-    <td><img src="docs/screenshots/pages-mobile.png" alt="手機版首頁（深色主題）" width="260" /></td>
   </tr>
 </table>
 
@@ -66,7 +62,7 @@ flowchart LR
 
 - **資料工程**：官方頁面 → 品質檢查 → 版本化快照 → 公開清單。匯出是確定性的（排序、固定位數、以快照時間取代系統時間），CI 連跑兩次並比對位元組。
 - **統計與模擬**：所有演算法在 `src/analytics/` 與 `web/src/lib/` 自行實作（包含不完全 Beta 函數與模擬引擎），沒有黑盒套件；模擬器以聯盟平均打線校準，誤差 2.6%。
-- **前端**：React 19 + TypeScript + Vite、手寫 SVG 圖表（d3-scale）、Hash 路由讓每個畫面狀態都能分享、`⌘K` 快速搜尋、淺色／深色主題、頁面延遲載入；首屏 JS 85 KB（gzip）。
+- **前端**：React 19 + TypeScript + Vite、手寫 SVG 圖表（d3-scale）、Hash 路由讓每個畫面狀態都能分享、`⌘K` 快速搜尋、固定淺色配色，不隨系統外觀偏好切換、頁面延遲載入；首屏 JS 85 KB（gzip）。
 - **可及性與安全**：每張圖都有等價的資料表、純鍵盤可操作、axe-core 零 serious/critical；嚴格 CSP、無 inline script、執行期不呼叫第三方、CSV 匯出防公式注入。
 
 ## 本機啟動
@@ -97,7 +93,7 @@ cd web && npm ci && npm run build && npm run preview
 | --- | --- | --- |
 | Python 分析 | `python -m pytest -q --cov=src.analytics --cov-fail-under=90` | 全數通過；分析模組覆蓋率 ≥ 90%（目前 99%） |
 | 前端邏輯 | `npm run typecheck && npm run lint && npm run coverage` | 0 錯誤；`web/src/lib` 覆蓋率 ≥ 85%（目前 99%） |
-| 端對端 | `npm run e2e` | 4 種組合（1440 淺色／深色、768、390）× 每個使用者旅程，含 axe 無障礙、鍵盤、無 console error |
+| 端對端 | `npm run e2e` | 4 種視窗／系統色彩組合（1440 淺色與深色偏好、768 平板、390 手機）× 每個使用者旅程；檢查固定品牌配色、axe 無障礙、鍵盤及無 console error |
 | 效能 | `npm run size` | 首屏 JS ≤ 200 KB、首屏資料 ≤ 800 KB |
 | 發布 | `python -m src.release_gate`、`python -m src.verify_public_release reports/metrics/public_release_manifest.json` | 資料完整性與公開清單一致 |
 

@@ -99,10 +99,6 @@
   color: var(--muted);
 }
 
-.theme-picker select {
-  width: auto;
-}
-
 main:focus {
   outline: none;
 }
