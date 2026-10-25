@@ -37,10 +37,33 @@ export async function openRoute(page: Page, hash: string) {
 export async function expectAccessible(page: Page) {
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
-  expect(
-    serious.map((v) => `${v.id}: ${v.help} → ${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")}`),
-    "axe serious/critical violations",
-  ).toEqual([]);
+  const diagnostics = await Promise.all(
+    serious.flatMap((violation) =>
+      violation.nodes.slice(0, 3).map(async (node) => {
+        const selector = node.target.join(" ");
+        const measurement =
+          violation.id === "target-size"
+            ? await page
+                .locator(selector)
+                .first()
+                .evaluate((element) => {
+                  const rect = element.getBoundingClientRect();
+                  const style = getComputedStyle(element);
+                  const center = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                  return {
+                    rect: [rect.x, rect.y, rect.width, rect.height],
+                    css: { width: style.width, height: style.height, minWidth: style.minWidth, minHeight: style.minHeight, transform: style.transform },
+                    centerCoveredBy: center ? { tag: center.tagName, id: center.id, className: String(center.className) } : null,
+                    viewport: { width: innerWidth, height: innerHeight },
+                  };
+                })
+                .catch(() => null)
+            : null;
+        return `${violation.id}: ${violation.help} → ${selector}${measurement ? ` ${JSON.stringify(measurement)}` : ""}`;
+      }),
+    ),
+  );
+  expect(diagnostics, "axe serious/critical violations").toEqual([]);
 }
 
 export async function fetchJson<T>(page: Page, name: string): Promise<T> {
