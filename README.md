@@ -3,7 +3,7 @@
 [![Release quality](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/release-quality.yml/badge.svg?branch=main)](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/release-quality.yml)
 [![Security](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/Lily09-project/CPBL-baseball/actions/workflows/security.yml)
 
-以中華職棒公開資料建置的互動式棒球分析網站，結合統計估計、球員比較與情境模擬。
+以中華職棒公開資料建置的互動式棒球分析網站，結合球員評估、打線模擬與賽季情境分析。
 
 **[開啟線上展示](https://lily09-project.github.io/CPBL-baseball/)**
 
@@ -11,18 +11,18 @@
 
 ## 功能
 
-- 球員能力估計、趨勢與可解釋的相似度比較
-- 打線模擬與賽季情境分析
-- 可篩選、比較並下載的球員資料
-- 資料快照、來源與 SHA-256 完整性驗證
+- 球員能力估計、趨勢、相似度與比較
+- Empirical Bayes 小樣本修正、log5 對戰估計與 Monte Carlo 模擬
+- 可篩選、比較及下載的球員資料
+- 資料快照與 SHA-256 完整性驗證
 
-## 資料與限制
+## 資料與評估邊界
 
-資料來自 [CPBL 球員資料](https://www.cpbl.com.tw/player)、[戰績](https://www.cpbl.com.tw/standings/season)及[成績統計](https://www.cpbl.com.tw/stats/recordall)等官方公開頁面，經檢查後保存為版本化快照。網站使用靜態資料，不是即時服務，也不是 CPBL 官方產品；資料日期會顯示在網站中。統計估計與模擬供探索使用，不代表官方預測。
+官方 CPBL 資料來源包含[球員](https://www.cpbl.com.tw/player)、[戰績](https://www.cpbl.com.tw/standings/season)及[成績統計](https://www.cpbl.com.tw/stats/recordall)等公開頁面。資料經過資料品質與可稽核性檢查後保存為版本化快照；網站使用靜態資料，不是即時服務。這是非 CPBL 官方服務，估計與模擬僅供研究和情境比較，不代表官方預測。
 
-## 技術
+## 技術與畫面
 
-Python 資料處理與分析、React、TypeScript、Vite、Web Worker；以 GitHub Pages 提供靜態網站。
+Python 資料處理與分析、React、TypeScript、Vite、Web Worker；GitHub Pages 提供靜態網站。
 
 ![打線實驗室](docs/screenshots/lineup-lab.png)
 
@@ -33,8 +33,15 @@ Python 資料處理與分析、React、TypeScript、Vite、Web Worker；以 GitH
 ```powershell
 .\run_project.bat
 .\run_project.bat --validate
+.\run_project.bat --check
+.\run_project.bat --offline-check
 ```
 
-驗收標準與技術細節見 [驗收文件](docs/ACCEPTANCE.md)、[模型卡](docs/MODEL_CARD.md)、[架構](docs/ARCHITECTURE.md)及[安全政策](SECURITY.md)。
+```bash
+python -m pytest -q
+python -m src.verify_public_release reports/metrics/public_release_manifest.json
+```
 
-公開儲存庫只保留程式碼、測試、驗證過的發布資料、文件與截圖；不提交金鑰、原始暫存資料或本機建置產物。
+細節：[驗收](docs/ACCEPTANCE.md) · [模型卡](docs/MODEL_CARD.md) · [架構](docs/ARCHITECTURE.md) · [部署](docs/DEPLOYMENT.md) · [發布清單](docs/RELEASE_CHECKLIST.md) · [審查指南](docs/REVIEW_GUIDE.md) · [GitHub Pages](docs/GITHUB_PAGES.md) · [安全政策](SECURITY.md)
+
+公開儲存庫保留程式碼、測試、驗證過的資料、必要文件與截圖；不提交金鑰、原始暫存資料或本機建置產物。
