@@ -44,4 +44,7 @@ python -m src.verify_public_release reports/metrics/public_release_manifest.json
 
 細節：[驗收](docs/ACCEPTANCE.md) · [模型卡](docs/MODEL_CARD.md) · [架構](docs/ARCHITECTURE.md) · [部署](docs/DEPLOYMENT.md) · [發布清單](docs/RELEASE_CHECKLIST.md) · [審查指南](docs/REVIEW_GUIDE.md) · [GitHub Pages](docs/GITHUB_PAGES.md) · [安全政策](SECURITY.md)
 
-公開儲存庫保留程式碼、測試、驗證過的資料、必要文件與截圖；不提交金鑰、原始暫存資料或本機建置產物。
+## 公開儲存庫政策
+
+可公開追蹤：程式碼、測試、驗證過的發布資料、必要文件與介面截圖。
+永不追蹤：金鑰、憑證、原始暫存資料、本機建置產物與使用者資料。
