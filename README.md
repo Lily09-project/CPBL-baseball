@@ -46,5 +46,5 @@ python -m src.verify_public_release reports/metrics/public_release_manifest.json
 
 ## 公開儲存庫政策
 
-可公開追蹤：程式碼、測試、驗證過的發布資料、必要文件與介面截圖。
-永不追蹤：金鑰、憑證、原始暫存資料、本機建置產物與使用者資料。
+可公開追蹤：程式碼、測試、`data/processed/`、`reports/metrics/`、必要文件與介面截圖。
+永不追蹤：`data/raw/`、`.env`、金鑰、憑證、`web/node_modules/`、本機建置產物與使用者資料。
