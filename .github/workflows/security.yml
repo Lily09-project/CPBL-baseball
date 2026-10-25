@@ -65,10 +65,10 @@ jobs:
           PY
 
       - name: Run static security analysis
-        run: python -m bandit -r app.py src run_all.py -ll
+        run: python -m bandit -r src run_all.py -ll
 
       - name: Run Ruff correctness gate
-        run: python -m ruff check app.py src tests
+        run: python -m ruff check src tests run_all.py
 
       - name: Run test suite
         run: python -m pytest -q --basetemp "${RUNNER_TEMP}/cpbl-security-pytest"
@@ -103,3 +103,23 @@ jobs:
 
       - name: Audit Python dependencies
         run: python -m pip_audit --local --strict
+
+  web-dependency-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+
+      - name: Audit locked web dependencies
+        run: npm audit --audit-level=low

@@ -21,7 +21,7 @@ set "VENV_DIR=%~dp0.venv"
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
 
 if exist "%VENV_PY%" (
-    "%VENV_PY%" -c "from importlib.metadata import version; [version(name) for name in ('lxml', 'numpy', 'pandas', 'plotly', 'pytest', 'requests', 'streamlit')]" >nul 2>nul
+    "%VENV_PY%" -c "from importlib.metadata import version; [version(name) for name in ('lxml', 'numpy', 'pandas', 'pytest', 'requests')]" >nul 2>nul
     if not errorlevel 1 (
         "%VENV_PY%" -c "from importlib.metadata import version; from pathlib import Path; from packaging.requirements import Requirement; reqs=[Requirement(line) for line in Path('requirements.lock.txt').read_text(encoding='utf-8').splitlines() if line.strip() and not line.lstrip().startswith('#')]; raise SystemExit(0 if all(req.specifier.contains(version(req.name), prereleases=True) for req in reqs) else 1)" >nul 2>nul
         if not errorlevel 1 (
@@ -46,7 +46,6 @@ if not errorlevel 1 (
     )
 )
 
-:prepare_runtime
 if not exist "%VENV_PY%" (
     echo Creating project environment: %VENV_DIR%
     %BOOTSTRAP_CMD% -m venv "%VENV_DIR%"
@@ -61,14 +60,14 @@ echo Installing locked project requirements...
 "%VENV_PY%" -m pip install --disable-pip-version-check --upgrade -r requirements.lock.txt
 if errorlevel 1 goto dependency_fail
 
-"%VENV_PY%" -c "import lxml, numpy, pandas, plotly, pytest, requests, streamlit" >nul 2>nul
+"%VENV_PY%" -c "import lxml, numpy, pandas, pytest, requests" >nul 2>nul
 if errorlevel 1 goto dependency_fail
 set "PYTHON_CMD="%VENV_PY%""
 
 :runtime_ready
 echo Using Python: %PYTHON_CMD%
 if /I "%~1"=="--runtime-check" (
-    %PYTHON_CMD% -c "import streamlit; print('runtime check passed')"
+    %PYTHON_CMD% -c "import pandas, numpy; print('runtime check passed')"
     if errorlevel 1 goto fail
     exit /b 0
 )
@@ -81,33 +80,25 @@ if /I "%~1"=="--validate" (
 %PYTHON_CMD% -m pip check
 if errorlevel 1 goto fail
 
-if /I "%~1"=="--check" goto verify_project
-if /I "%~1"=="--offline-check" goto verify_project
-if /I "%~1"=="--validate" goto verify_project
-
 if /I "%~1"=="--refresh-check" goto refresh_project
-
-%PYTHON_CMD% run_all.py --mode api
-if errorlevel 1 goto fail
 goto verify_project
 
 :refresh_project
 echo Refreshing official CPBL data before verification...
 %PYTHON_CMD% run_all.py --mode api
 if errorlevel 1 goto fail
-goto verify_project
 
 :verify_project
-set "PYTEST_PARENT=%TEMP%\cpbl-analytics-dashboard_pytest_tmp"
+set "PYTEST_PARENT=%TEMP%\cpbl-scouting-lab_pytest_tmp"
 if not exist "%PYTEST_PARENT%" mkdir "%PYTEST_PARENT%"
 set "PYTEST_TMP=%PYTEST_PARENT%\run_%RANDOM%_%RANDOM%"
 %PYTHON_CMD% -W error -m pytest -p no:cacheprovider --basetemp "%PYTEST_TMP%"
 if errorlevel 1 goto fail
 if exist "%PYTEST_TMP%" rmdir /s /q "%PYTEST_TMP%" >nul 2>nul
 
-set "COMPILE_CACHE=%TEMP%\cpbl-analytics-dashboard_compile_%RANDOM%_%RANDOM%"
+set "COMPILE_CACHE=%TEMP%\cpbl-scouting-lab_compile_%RANDOM%_%RANDOM%"
 set "PYTHONPYCACHEPREFIX=%COMPILE_CACHE%"
-%PYTHON_CMD% -m compileall -q app.py src run_all.py tests
+%PYTHON_CMD% -m compileall -q src run_all.py tests
 set "COMPILE_EXIT=%ERRORLEVEL%"
 set "PYTHONPYCACHEPREFIX="
 if exist "%COMPILE_CACHE%" rmdir /s /q "%COMPILE_CACHE%" >nul 2>nul
@@ -117,29 +108,64 @@ if errorlevel 1 goto fail
 %PYTHON_CMD% -m src.verify_public_release reports\metrics\public_release_manifest.json
 if errorlevel 1 goto fail
 
-if /I "%~1"=="--check" goto smoke_check
-if /I "%~1"=="--offline-check" goto smoke_check
-if /I "%~1"=="--refresh-check" goto smoke_check
-if /I "%~1"=="--validate" goto smoke_check
-
-echo Starting CPBL dashboard at http://127.0.0.1:8501
-echo Press Ctrl+C to stop the dashboard. This window must stay open.
-%PYTHON_CMD% -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501 --server.headless true
+echo Exporting verified data for the web app...
+%PYTHON_CMD% -m src.export_web
 if errorlevel 1 goto fail
+
+if /I "%~1"=="--validate" (
+    %PYTHON_CMD% -m bandit -q -r src run_all.py -ll
+    if errorlevel 1 goto fail
+    %PYTHON_CMD% -m pip_audit --local --strict --progress-spinner off
+    if errorlevel 1 goto fail
+)
+
+if /I "%~1"=="--check" goto done
+if /I "%~1"=="--offline-check" goto done
+if /I "%~1"=="--refresh-check" goto done
+
+where node >nul 2>nul
+if errorlevel 1 (
+    echo ERROR: Node.js 22 or newer was not found.
+    echo Install Node.js from https://nodejs.org/, then run this file again.
+    goto fail
+)
+
+pushd web
+echo Installing locked web dependencies...
+call npm ci --no-audit --no-fund
+if errorlevel 1 goto web_fail
+if /I "%~1"=="--validate" (
+    call npm run typecheck
+    if errorlevel 1 goto web_fail
+    call npm run lint
+    if errorlevel 1 goto web_fail
+    call npm run coverage
+    if errorlevel 1 goto web_fail
+)
+call npm run build
+if errorlevel 1 goto web_fail
+if /I "%~1"=="--validate" (
+    call npm run size
+    if errorlevel 1 goto web_fail
+    popd
+    goto done
+)
+
+echo Starting CPBL Scouting Lab at http://127.0.0.1:4173
+echo Press Ctrl+C to stop the site. This window must stay open.
+call npm run preview -- --host 127.0.0.1
+popd
+exit /b 0
+
+:done
 echo done
 exit /b 0
 
-:smoke_check
-    %PYTHON_CMD% -B src\smoke_test.py
-    if errorlevel 1 goto fail
-    if /I "%~1"=="--validate" (
-        %PYTHON_CMD% -m bandit -q -r app.py src run_all.py -ll
-        if errorlevel 1 goto fail
-        %PYTHON_CMD% -m pip_audit --local --strict --progress-spinner off
-        if errorlevel 1 goto fail
-    )
-    echo done
-    exit /b 0
+:web_fail
+popd
+echo.
+echo ERROR: The web app could not be installed, checked or built.
+goto fail
 
 :runtime_fail
 echo.
@@ -160,12 +186,12 @@ exit /b 1
 
 :usage
 echo Usage: run_project.bat [--runtime-check ^| --check ^| --refresh-check ^| --offline-check ^| --validate ^| --help]
-echo   no argument       Refresh official data, verify it, and start Streamlit.
+echo   no argument       Verify the checked-out data, build the web app and open it locally (no network refresh).
 echo   --check           Verify checked-out artifacts without refreshing or writing release data.
 echo   --refresh-check   Refresh official data, then run the full acceptance checks.
 echo   --runtime-check   Verify the project Python runtime only.
 echo   --offline-check   Verify checked-out artifacts without network refresh.
-echo   --validate        Run offline zero-warning, compile, release, smoke, and security checks.
+echo   --validate        Run every offline Python and web quality gate without starting the site.
 exit /b 0
 
 :usage_error

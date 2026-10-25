@@ -1,0 +1,36 @@
+.controls-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  align-items: end;
+}
+
+.compare-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.compare-card header {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.compare-card h2 {
+  margin: 0;
+}
+
+.compare-card .btn {
+  justify-self: start;
+}
+
+@media (max-width: 900px) {
+  .controls-row {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-grid {
+    grid-template-columns: 1fr;
+  }
+}

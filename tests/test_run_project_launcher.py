@@ -22,25 +22,24 @@ def test_launcher_enforces_utf8_console_output() -> None:
 def test_offline_check_skips_refresh_and_runs_existing_release_verification() -> None:
     launcher = (ROOT / "run_project.bat").read_text(encoding="utf-8")
 
-    offline_branch = 'if /I "%~1"=="--offline-check" goto verify_project'
-    assert offline_branch in launcher
-    assert launcher.index(offline_branch) < launcher.index("run_all.py --mode api")
+    refresh_branch = 'if /I "%~1"=="--refresh-check" goto refresh_project'
+    assert refresh_branch in launcher
+    assert launcher.index(refresh_branch) < launcher.index("goto verify_project")
     assert "%PYTHON_CMD% -m src.verify_public_release reports\\metrics\\public_release_manifest.json" in launcher
-    assert 'if /I "%~1"=="--offline-check" goto smoke_check' in launcher
+    assert 'if /I "%~1"=="--offline-check" goto done' in launcher
 
 
 def test_check_is_read_only_and_refresh_check_is_explicit() -> None:
     launcher = (ROOT / "run_project.bat").read_text(encoding="utf-8")
 
-    check_branch = 'if /I "%~1"=="--check" goto verify_project'
     refresh_branch = 'if /I "%~1"=="--refresh-check" goto refresh_project'
     refresh_command = "%PYTHON_CMD% run_all.py --mode api"
 
-    assert check_branch in launcher
-    assert refresh_branch in launcher
-    assert launcher.index(check_branch) < launcher.index(refresh_command)
-    assert launcher.index(refresh_branch) < launcher.index(":refresh_project")
-    assert 'if /I "%~1"=="--refresh-check" goto smoke_check' in launcher
+    # Only the explicit refresh mode reaches the network-refresh command.
+    assert launcher.count(refresh_command) == 1
+    assert launcher.index(refresh_branch) < launcher.index(":refresh_project") < launcher.index(refresh_command)
+    assert 'if /I "%~1"=="--check" goto done' in launcher
+    assert 'if /I "%~1"=="--refresh-check" goto done' in launcher
     assert "--check           Verify checked-out artifacts without refreshing" in launcher
     assert "--refresh-check   Refresh official data" in launcher
 
@@ -68,13 +67,17 @@ def test_validate_mode_runs_zero_warning_release_smoke_and_security_gates() -> N
     for token in (
         'if /I "%~1"=="--validate" goto arguments_ready',
         '%PYTHON_CMD% -W error -m pytest',
-        '%PYTHON_CMD% -m compileall -q app.py src run_all.py tests',
+        '%PYTHON_CMD% -m compileall -q src run_all.py tests',
         'set "PYTHONPYCACHEPREFIX=%COMPILE_CACHE%"',
         '%PYTHON_CMD% -m src.release_gate',
         '%PYTHON_CMD% -m src.verify_public_release reports\\metrics\\public_release_manifest.json',
-        '%PYTHON_CMD% -B src\\smoke_test.py',
-        '%PYTHON_CMD% -m bandit -q -r app.py src run_all.py -ll',
+        '%PYTHON_CMD% -m src.export_web',
+        '%PYTHON_CMD% -m bandit -q -r src run_all.py -ll',
         '%PYTHON_CMD% -m pip_audit --local --strict --progress-spinner off',
+        'call npm run typecheck',
+        'call npm run lint',
+        'call npm run coverage',
+        'call npm run size',
     ):
         assert token in launcher
     assert "Usage: run_project.bat" in launcher

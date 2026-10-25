@@ -1,39 +1,11 @@
-import csv
-from io import StringIO
-from pathlib import Path
+import re
 import subprocess
-import tomllib
+from pathlib import Path
 
-import pandas as pd
-
-from app import dataframe_to_csv_bytes
 from src.fetch_cpbl_data import absolute_url
 
 
 ROOT = Path(__file__).resolve().parents[1]
-
-
-def test_csv_export_neutralizes_spreadsheet_formulas():
-    source = pd.DataFrame(
-        {
-            "內容": [
-                "=HYPERLINK(\"https://example.invalid\")",
-                "+SUM(1,2)",
-                "-2+3",
-                "@SUM(1,2)",
-                "\t=1+1",
-                "一般文字",
-                "-",
-                7,
-            ]
-        }
-    )
-
-    exported = dataframe_to_csv_bytes(source).decode("utf-8-sig")
-    values = [row["內容"] for row in csv.DictReader(StringIO(exported))]
-
-    assert all(value.startswith("'") for value in values[:5])
-    assert values[5:] == ["一般文字", "-", "7"]
 
 
 def test_cpbl_profile_urls_are_restricted_to_https_official_host():
@@ -48,71 +20,6 @@ def test_cpbl_profile_urls_are_restricted_to_https_official_host():
     assert absolute_url("//example.invalid/team/person?acnt=1") == ""
 
 
-def test_public_quality_report_does_not_expose_local_paths():
-    report = Path("reports/metrics/data_quality_report.json").read_text(encoding="utf-8-sig")
-
-    assert "C:\\\\Users\\\\" not in report
-    assert "output_path" not in report
-
-
-def test_repository_ignores_common_secret_and_internal_artifacts():
-    ignore_text = Path(".gitignore").read_text(encoding="utf-8-sig")
-
-    for entry in [
-        ".env",
-        ".streamlit/secrets.toml",
-        "*.pem",
-        "*.key",
-        "*.p12",
-        "*.pfx",
-        "data/raw/",
-        "notes/",
-    ]:
-        assert entry in ignore_text
-
-
-def test_launcher_enforces_secure_dependency_floors_and_loopback_binding():
-    requirements = Path("requirements.txt").read_text(encoding="utf-8-sig").lower()
-    launcher = Path("run_project.bat").read_text(encoding="utf-8-sig").lower()
-
-    for requirement in [
-        "streamlit>=1.66.1,<2",
-        "pandas>=3.0.5",
-        "numpy>=2.5.2",
-        "plotly>=6.9.0",
-        "requests>=2.34.2",
-        "pytest>=9.1.1",
-        "lxml>=6.1.3",
-        "gitpython>=3.2.1,<4",
-        "pillow>=13.0.0,<14",
-    ]:
-        assert requirement in requirements
-    assert "pip>=26.1.2" in launcher
-    assert "packaging.requirements import requirement" in launcher
-    assert "--server.address 127.0.0.1" in launcher
-
-
-def test_csv_export_neutralizes_headers_and_whitespace_bypasses():
-    source = pd.DataFrame(
-        {
-            "=FORMULA": [
-                " =1+1",
-                "\n@SUM(1,2)",
-                "\v-2+3",
-                "\f+1",
-                " normal text",
-            ]
-        }
-    )
-
-    exported = dataframe_to_csv_bytes(source).decode("utf-8-sig")
-    rows = list(csv.reader(StringIO(exported)))
-
-    assert rows[0] == ["'=FORMULA"]
-    assert all(row[0].startswith("'") for row in rows[1:5])
-    assert rows[5] == [" normal text"]
-
-
 def test_cpbl_profile_url_rejects_path_query_and_markdown_bypasses():
     rejected = [
         "https://cpbl.com.tw/news?acnt=0000000001",
@@ -125,41 +32,75 @@ def test_cpbl_profile_url_rejects_path_query_and_markdown_bypasses():
     assert all(absolute_url(url) == "" for url in rejected)
 
 
+def test_public_quality_report_does_not_expose_local_paths():
+    report = Path("reports/metrics/data_quality_report.json").read_text(encoding="utf-8-sig")
+
+    assert "C:\\\\Users\\\\" not in report
+    assert "output_path" not in report
+
+
+def test_repository_ignores_common_secret_and_internal_artifacts():
+    ignore_text = Path(".gitignore").read_text(encoding="utf-8-sig")
+
+    for entry in [".env", "*.pem", "*.key", "*.p12", "*.pfx", "data/raw/", "notes/", "web/node_modules/", "web/public/data/"]:
+        assert entry in ignore_text
+
+
 def test_secret_artifacts_are_effectively_ignored_by_git():
     candidates = [
         ".env",
-        ".streamlit/secrets.toml",
         "example.pem",
         "example.key",
         "example.p12",
         "example.pfx",
         "data/raw/example.html",
         "notes/private-review.md",
+        "web/node_modules/x/index.js",
+        "web/dist/index.html",
     ]
 
     for candidate in candidates:
         subprocess.run(
-            [
-                "git",
-                "-c",
-                f"safe.directory={ROOT.as_posix()}",
-                "-C",
-                str(ROOT),
-                "check-ignore",
-                "--no-index",
-                "--quiet",
-                "--",
-                candidate,
-            ],
+            ["git", "-c", f"safe.directory={ROOT.as_posix()}", "-C", str(ROOT), "check-ignore", "--no-index", "--quiet", "--", candidate],
             check=True,
         )
 
 
+def test_dependency_floors_and_launcher_binding():
+    requirements = Path("requirements.txt").read_text(encoding="utf-8-sig").lower()
+    launcher = Path("run_project.bat").read_text(encoding="utf-8-sig").lower()
+
+    for requirement in ["pandas>=3.0.5", "numpy>=2.5.2", "requests>=2.34.2", "lxml>=6.1.3", "urllib3>=2.8.0,<3", "certifi>=2026.10.19"]:
+        assert requirement in requirements
+    assert "streamlit" not in requirements
+    assert "pip>=26.1.2" in launcher
+    assert "packaging.requirements import requirement" in launcher
+    assert "--host 127.0.0.1" in launcher
+    assert "npm ci" in launcher
+
+
+def test_web_app_declares_a_strict_content_security_policy():
+    html = Path("web/index.html").read_text(encoding="utf-8")
+    csp = re.search(r'http-equiv="Content-Security-Policy"\s+content="([^"]+)"', html)
+    assert csp, "web/index.html must declare a CSP"
+    policy = csp.group(1)
+    for directive in ["default-src 'self'", "script-src 'self'", "connect-src 'self'", "object-src 'none'", "base-uri 'self'"]:
+        assert directive in policy
+    assert "unsafe-eval" not in policy
+    assert "<script>" not in html  # no inline scripts
+
+
+def test_web_source_never_calls_third_party_hosts():
+    allowed = {"www.cpbl.com.tw", "nodejs.org"}
+    for path in Path("web/src").rglob("*.ts*"):
+        if ".test." in path.name:
+            continue  # tests deliberately contain attack strings such as example.invalid
+        for host in re.findall(r"https?://([\w.-]+)", path.read_text(encoding="utf-8")):
+            assert host in allowed, f"{path} references {host}"
+
 
 def test_scheduled_data_health_check_is_read_only():
-    workflow_path = Path(".github/workflows/data-health.yml")
-    assert workflow_path.exists()
-    workflow = workflow_path.read_text(encoding="utf-8-sig")
+    workflow = Path(".github/workflows/data-health.yml").read_text(encoding="utf-8-sig")
 
     for required in [
         "schedule:",
@@ -175,10 +116,8 @@ def test_scheduled_data_health_check_is_read_only():
     assert "git push" not in workflow
     assert "git add" not in workflow
 
-def test_streamlit_defaults_to_loopback_and_ci_runs_tests():
-    config = tomllib.loads(Path(".streamlit/config.toml").read_text(encoding="utf-8-sig"))
-    assert config["server"]["address"] == "127.0.0.1"
 
+def test_security_workflow_scans_secrets_and_audits_both_ecosystems():
     workflow = Path(".github/workflows/security.yml").read_text(encoding="utf-8-sig")
 
     for required in [
@@ -188,7 +127,8 @@ def test_streamlit_defaults_to_loopback_and_ci_runs_tests():
         "git ls-files -z",
         "snapshot_id|previous_snapshot_id|relative_path",
         "python -m pip_audit --local --strict",
-        "python -m bandit -r app.py src run_all.py -ll",
+        "python -m bandit -r src run_all.py -ll",
+        "npm audit --audit-level=low",
         "python -m pytest -q",
     ]:
         assert required in workflow

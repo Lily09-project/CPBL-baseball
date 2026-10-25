@@ -1,105 +1,59 @@
-# CPBL Analytics Architecture
+# CPBL Scouting Lab 架構
 
-## Product Boundary
+## 產品邊界
 
-這是一個本機可重現的資料分析產品。它把 CPBL 官方公開頁面轉成可驗證的處理後資料、版本化快照、衍生分析與 Streamlit 介面。公開部署不在本階段交付範圍內，因此目前不放入雲端憑證、公開服務設定或部署專用密鑰。
+一個可重現的資料分析產品：把 CPBL 官方公開頁面轉成經驗證的處理後資料、版本化快照與衍生分析，再發布成純靜態的互動網站。網站不需要後端，所有模擬都在瀏覽器裡執行。
 
-## Data Flow
+## 資料流
 
 ```text
-CPBL official public pages
-        |
-        v
-src/fetch_cpbl_data.py
-  source host + HTTP + pagination contract
-        |
-        v
-src/preprocess.py
-  normalize, type conversion, derived metrics
-        |
-        v
-src/data_quality.py
-  schema, primary key, duplicates, ranges, coverage
-        |
-        +--> data/processed/*.csv
-        |
-        +--> src/snapshots.py
-        |      manifest + SHA-256 + adjacent diff
-        |
-        +--> src/movements.py
-        |      player_movements.csv
-        |
-        +--> src/history.py
-               snapshot_history.csv
-               player_metric_history.csv
-                       |
-                       v
-             src/analysis_validation.py
-               stability + drift + sensitivity
-                       |
-                       +--> reports/metrics/analysis_validation.json
-                       |
-                       v
-             src/release_health.py
-               schema + row-count + lineage checks
-                       |
-                       +--> reports/metrics/release_health.json
-                       |
-                       v
-             src/public_release_manifest.py
-               allowlist + SHA-256 + CSV shape + release_id
-                       |
-                       +--> reports/metrics/public_release_manifest.json
-                       |
-                       v
-                 app.py / Streamlit
+CPBL 官方公開頁面
+  └─ src/fetch_cpbl_data.py      來源主機、HTTP 與分頁契約
+      └─ src/preprocess.py       正規化、型別轉換、衍生指標
+          └─ src/data_quality.py schema、主鍵、重複、範圍、涵蓋量
+              ├─ data/processed/*.csv
+              ├─ src/snapshots.py + movements.py + history.py   快照、SHA-256、差異、歷史
+              ├─ src/analysis_validation.py                      穩定性與敏感度
+              ├─ src/release_health.py                           schema 漂移、列數、血緣
+              └─ src/public_release_manifest.py                  公開清單與 release_id
+                  └─ src/analytics/*            Empirical Bayes、事件機率、季末模擬、相似度、敘事
+                      └─ src/export_web.py      確定性 JSON + manifest（SHA-256）
+                          └─ web/               React + TypeScript 靜態網站
+                              ├─ src/lib/       純函式：模擬、log5、路由、CSV、搜尋、資料驗證
+                              ├─ src/workers/   Web Worker（Monte Carlo、棒次搜尋）
+                              └─ src/routes/    頁面（延遲載入）
 ```
 
-## Ownership Boundaries
+## 責任邊界
 
-| Layer | Owns | Does not own |
+| 層 | 負責 | 不負責 |
 | --- | --- | --- |
-| Fetch | official source, pagination, response parsing | business ranking rules |
-| Preprocess | stable columns, types, derived metrics | UI state |
-| Quality | acceptance or rejection of processed data | visual presentation |
-| Snapshot/history | lineage, hashes, version comparisons | source retrieval |
-| Analysis validation | descriptive stability, drift, sensitivity | future prediction |
-| Release health | source regression, schema drift, row-count and lineage checks | changing business metrics |
-| Public release manifest | exact public inventory, content hashes and CSV shape | raw snapshots or secret material |
-| Scouting | qualification, weights, evidence signals | HTTP requests |
-| App | navigation, filters, display, downloads | hidden data mutation |
-| Release gate | artifact consistency before release | deployment |
+| Fetch | 官方來源、分頁、回應解析 | 業務排名規則 |
+| Preprocess／Quality | 穩定欄位、型別、接受或拒絕資料 | 呈現 |
+| Snapshot／History | 血緣、雜湊、版本比較 | 來源擷取 |
+| Release health／Manifest | schema 漂移、列數、公開清單 | 變更業務指標 |
+| Analytics | 統計推論、模擬、相似度、敘事 | HTTP、UI |
+| Export | 只讀已驗證檔案、確定性輸出、manifest | 抓取資料、寫入發布資料 |
+| Web | 導覽、互動、模擬、下載、完整性驗證 | 修改資料 |
 
-## Failure Behavior
+## 確定性與可重現
 
-1. Source or pagination contract fails: the pipeline raises an error and does not silently fall back to sample data.
-2. Required files or quality rules fail: `run_all.py` stops before creating a trusted snapshot.
-3. Processed data cannot be loaded: the Streamlit app stops with an actionable error instead of rendering partial data.
-4. Historical inputs contain duplicate IDs or invalid timestamps: analysis validation raises a clear error.
-5. Release health detects schema drift, a large row-count drop or mismatched artifact lineage: the pipeline records the reason and stops before release.
-6. Release artifacts are inconsistent: `src.release_gate` returns non-zero and CI blocks the change.
-7. A public artifact is missing, added outside the allowlist or has a different hash/shape: the independent Manifest verifier returns non-zero and publication is blocked.
+- `export_web` 不讀系統時間，時間戳取自快照；所有集合排序、浮點數固定位數、JSON 以排序鍵輸出。CI 連跑兩次並 `diff -r`。
+- 季末模擬使用 numpy `default_rng(20261024)`；打線模擬使用 mulberry32 與逐場衍生種子。
+- 網站載入每個資料檔時以 Web Crypto 重算 SHA-256，與 manifest 不符就停止顯示並提示。
 
-## Public Repository Boundary
+## 前端設計
 
-Tracked outputs are limited to source code, tests, documentation, sanitized processed data and public metric summaries. `public_release_manifest.json` records only relative allowlisted paths, SHA-256, byte size and CSV shape. Raw HTML, snapshots, personal paths, local virtual environments, secrets, temporary files and generated caches are excluded by `.gitignore` and workflow checks.
+- **路由**：Hash 路由（GitHub Pages 友善），所有篩選與選擇都寫進網址，可直接分享。
+- **效能**：首頁只載入首頁需要的 JS 與約 10 KB 資料；其他頁面與球員清單延遲載入；模擬在 Worker 執行，不阻塞主執行緒，可取消。
+- **設計系統**：`styles/tokens.css` 定義色彩、字級、間距；淺色預設、跟隨系統深色、或手動選擇（存在 localStorage，失敗時仍可用）。
+- **可及性**：每張 SVG 圖都有 `role="img"` 摘要與可展開的等價資料表；可聚焦的捲動區；跳到主要內容；切頁時焦點移到主內容；觸控目標 ≥ 44px。
+- **安全**：CSP 禁止 inline script 與第三方連線；外部連結 `noopener noreferrer`；CSV 匯出中和公式。
 
-## Operational Workflows
+## 失敗行為
 
-- `security.yml`: secret history scan, dependency audit, Bandit and tests.
-- `data-health.yml`: scheduled official API verification, release Manifest verification and read-only repository permission.
-- `data-refresh.yml`: scheduled official API refresh, quality gate, Manifest verification and reviewable PR for data outputs only.
-- `data-health.yml` 對排程來源暫時不可用採 deferred（不把舊資料標記為最新驗證）；手動執行仍 fail-closed。
-- `data-refresh.yml` 對排程來源暫時不可用採 deferred（不發布舊資料、不建立 PR）；手動執行仍 fail-closed，避免掩蓋真正的程式或資料品質錯誤。
-- `release-quality.yml`: locked environment, `pip check`, compile, tests, release artifact gate and independent Manifest verifier.
-
-`src/release_health.py` intentionally separates base data quality from release regression checks. A real roster change may produce a warning, while a likely pagination failure or schema drift blocks publication.
-
-## Design Decisions
-
-- **Fail closed** for source, data quality and application startup because showing stale or fabricated data is more harmful than an explicit unavailable state.
-- **String player IDs** throughout the pipeline because CPBL IDs may contain leading zeroes.
-- **Adjacent snapshot comparisons** because they match the operational question: what changed since the last verified refresh?
-- **Description over prediction** because the current source is an official public aggregate, not a labeled future-outcome dataset.
-- **Exact public allowlist** because a release verifier must reject silent additions as well as missing or modified artifacts.
-- **No circular hashes** because the public Manifest is generated after quality reports and is not embedded back into a hashed report.
+1. 來源或分頁契約失敗：管線拋出錯誤，不會悄悄改用樣本資料。
+2. 品質規則失敗：`run_all.py` 在建立可信快照前停止。
+3. Release health 偵測到 schema 漂移、列數驟降或血緣不一致：停止發布。
+4. 網站資料檔雜湊不符：顯示錯誤狀態，不用不完整的資料計算。
+5. 排程刷新遇到官方頁面暫時無法連線：標記為 deferred，保留現有已驗證資料。

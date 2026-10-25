@@ -6,15 +6,9 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-import app as dashboard
 from src.data_quality import load_data_quality_report
 from src.fetch_cpbl_data import MAX_OFFICIAL_RESPONSE_BYTES, _checked_response_text, fetch_recordall, fetch_text
 from src.movements import generate_player_movements
-from src.scouting_report import (
-    build_report_manifest,
-    verify_report_manifest,
-    verify_report_manifest_file,
-)
 
 
 class _FakeResponse:
@@ -35,27 +29,6 @@ class _FakeSession:
 
     def post(self, *args, **kwargs) -> _FakeResponse:
         return _FakeResponse(self.page)
-
-
-def test_source_status_panel_escapes_untrusted_quality_report_fields(monkeypatch):
-    rendered: list[str] = []
-    malicious_report = {
-        "generated_at": "<script>alert(1)</script>",
-        "quality_status": "pass",
-        "available_team_count": 6,
-        "player_summary_count": 1,
-        "official_roster_count": 1,
-        "available_hitter_count": 1,
-        "available_pitcher_count": 1,
-    }
-    monkeypatch.setattr(dashboard, "QUALITY_REPORT", malicious_report)
-    monkeypatch.setattr(dashboard.st, "markdown", lambda body, **kwargs: rendered.append(body))
-
-    dashboard.source_status_panel()
-
-    combined = "\n".join(rendered)
-    assert "<script>" not in combined
-    assert "&lt;script&gt;" in combined
 
 
 def test_recordall_rejects_untrusted_pagination_above_safety_limit(monkeypatch, tmp_path):
@@ -212,14 +185,6 @@ def test_movement_manifest_cannot_escape_snapshot_root(tmp_path):
         generate_player_movements(snapshot_root, current_manifest, tmp_path / "processed" / "movement.csv")
 
 
-def test_manifest_verifier_rejects_oversized_file(tmp_path):
-    path = tmp_path / "oversized.manifest.json"
-    path.write_text("{" + '"x":"' + ("a" * (2 * 1024 * 1024)) + '"}', encoding="utf-8")
-
-    with pytest.raises(ValueError, match="過大"):
-        verify_report_manifest_file(path)
-
-
 def test_quality_report_loader_fails_closed_on_oversized_file(monkeypatch, tmp_path):
     path = tmp_path / "reports" / "metrics" / "data_quality_report.json"
     path.parent.mkdir(parents=True)
@@ -232,68 +197,3 @@ def test_quality_report_loader_fails_closed_on_oversized_file(monkeypatch, tmp_p
     assert "過大" in report["warnings"][0]
 
 
-def test_player_header_escapes_untrusted_report_date(monkeypatch):
-    rendered: list[str] = []
-    monkeypatch.setattr(
-        dashboard,
-        "QUALITY_REPORT",
-        {"generated_at": "<script>alert(1)</script>", "quality_status": "pass"},
-    )
-    monkeypatch.setattr(dashboard, "PLAYERS", pd.DataFrame())
-    monkeypatch.setattr(dashboard, "ROSTER", pd.DataFrame())
-    monkeypatch.setattr(dashboard.st, "markdown", lambda body, **kwargs: rendered.append(body))
-    monkeypatch.setattr(dashboard.st, "link_button", lambda *args, **kwargs: None)
-
-    dashboard.render_player_header(
-        pd.Series(
-            {
-                "player_id": "1",
-                "player_name": "測試球員",
-                "team": "測試隊",
-                "season": 2026,
-                "position": "內野手",
-            }
-        ),
-        "打者",
-    )
-
-    combined = "\n".join(rendered)
-    assert "<script>" not in combined
-    assert "&lt;script&gt;" in combined
-
-
-def test_manifest_verifier_rejects_more_than_four_players():
-    report = pd.DataFrame(
-        [
-            {
-                "player_id": str(index),
-                "player_name": f"球員{index}",
-                "team": "測試隊",
-                "role_or_position": "內野手",
-                "usage_label": "PA",
-                "usage_value": 100,
-                "priority_score": 80.0,
-                "qualified_percentile": 90.0,
-                "evidence_strengths": "強項",
-                "evidence_risks": "風險",
-                "evidence_notes": "註記",
-            }
-            for index in range(5)
-        ]
-    )
-    manifest = build_report_manifest(
-        report,
-        {
-            "player_type": "打者",
-            "team": "全部",
-            "qualification": "PA >= 30",
-            "priority": "綜合價值",
-            "qualified_count": 5,
-            "snapshot_id": "snapshot-test",
-            "quality_status": "通過",
-            "generated_at": "2026-08-19 00:00",
-        },
-    )
-
-    with pytest.raises(ValueError, match="最多 4"):
-        verify_report_manifest(manifest)

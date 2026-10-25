@@ -77,7 +77,7 @@ jobs:
       - name: Run release checks
         if: steps.refresh.outputs.status == 'refreshed'
         run: |
-          python -m compileall -q app.py src run_all.py
+          python -m compileall -q src run_all.py
           python -m pytest -q
           python -m src.release_gate
           python -m src.verify_public_release reports/metrics/public_release_manifest.json

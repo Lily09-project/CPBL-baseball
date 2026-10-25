@@ -18,8 +18,9 @@
 - [ ] `python -m pytest -q`
 - [ ] `python -m src.release_gate`
 - [ ] `python -m pip check`
-- [ ] `python -m bandit -r app.py src run_all.py -ll`
+- [ ] `python -m bandit -r src run_all.py -ll`
 - [ ] `python -m pip_audit --local --strict`
+- [ ] `cd web && npm run typecheck && npm run lint && npm run coverage && npm run build && npm run size && npm run e2e`
 - [ ] `git diff --check`
 
 ## Data Review

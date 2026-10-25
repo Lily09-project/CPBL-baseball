@@ -1,0 +1,45 @@
+.hero {
+  padding: var(--space-5) 0 var(--space-3);
+}
+
+.hero h1 {
+  max-width: 24em;
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: var(--space-4);
+}
+
+.kpi {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.small {
+  font-size: var(--step--1);
+}
+
+.feature {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  color: var(--ink);
+  text-decoration: none;
+  transition: transform var(--duration) var(--ease), border-color var(--duration) var(--ease);
+}
+
+.feature h3 {
+  margin: var(--space-2) 0 0;
+}
+
+.feature:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.feature-cta {
+  color: var(--accent);
+  font-weight: 700;
+}
