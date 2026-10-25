@@ -3,6 +3,10 @@
   color: var(--muted);
 }
 
+.crumbs [aria-current="page"] {
+  color: var(--ink);
+}
+
 .profile-head {
   display: flex;
   flex-wrap: wrap;
