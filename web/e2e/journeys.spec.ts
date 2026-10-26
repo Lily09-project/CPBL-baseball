@@ -179,11 +179,12 @@ test("late search results are discarded after changing a lineup", async ({ page 
     }
     Object.defineProperty(window, "Worker", { value: DelayedWorker });
   });
+  await page.clock.install();
   await openRoute(page, "/lineup");
   await page.getByRole("button", { name: "搜尋更好的棒次" }).click();
   await page.getByLabel("對手投手").selectOption({ index: 1 });
   await expect(page.getByRole("progressbar")).toHaveCount(0);
-  await page.waitForTimeout(1000);
+  await page.clock.fastForward(1000);
   await expect(page.getByTestId("order-search")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "搜尋更好的棒次" })).toBeEnabled();
 });
