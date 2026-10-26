@@ -171,10 +171,22 @@ def _existing_snapshot_for_files(snapshot_root: Path, files: dict[str, dict[str,
     return None
 
 def _latest_snapshot_directory(snapshot_root: Path, exclude: Path) -> Path | None:
-    candidates = [path.parent for path in snapshot_root.rglob("manifest.json") if path.parent != exclude]
+    candidates: list[tuple[datetime, str, Path]] = []
+    for manifest_path in snapshot_root.rglob("manifest.json"):
+        if manifest_path.parent == exclude:
+            continue
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        captured_at = datetime.fromisoformat(str(manifest["captured_at"]))
+        if captured_at.tzinfo is None:
+            captured_at = captured_at.replace(tzinfo=timezone.utc)
+        candidates.append((
+            captured_at.astimezone(timezone.utc),
+            str(manifest["snapshot_id"]),
+            manifest_path.parent,
+        ))
     if not candidates:
         return None
-    return max(candidates, key=lambda path: path.stat().st_mtime)
+    return max(candidates, key=lambda entry: (entry[0], entry[1]))[2]
 
 
 def create_processed_snapshot(
