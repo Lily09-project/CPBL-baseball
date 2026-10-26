@@ -103,7 +103,9 @@ function PaletteDialog({ open, onClose, load }: { open: boolean; onClose: () => 
             </li>
           ))}
         </ul>
-        {query && results.length === 0 && <p className="palette-empty muted">找不到符合「{query}」的球員。</p>}
+        {players.status === "loading" && <p className="palette-empty muted" role="status">正在載入球員資料…</p>}
+        {players.status === "error" && <p className="palette-empty muted" role="alert">無法載入球員資料，請重新整理後再試。</p>}
+        {players.status === "ready" && query && results.length === 0 && <p className="palette-empty muted">找不到符合「{query}」的球員。</p>}
         <p className="palette-hint muted">↑↓ 選擇・Enter 開啟・Esc 關閉</p>
       </div>
     </dialog>
