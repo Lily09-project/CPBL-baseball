@@ -12,6 +12,7 @@ type Job = { kind: "simulate" | "optimise" } | null;
 export function useSimWorker() {
   const worker = useRef<Worker | null>(null);
   const nextId = useRef(1);
+  const pending = useRef<((error: Error) => void) | null>(null);
   const [job, setJob] = useState<Job>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -22,29 +23,38 @@ export function useSimWorker() {
   };
 
   const cancel = useCallback(() => {
+    pending.current?.(new DOMException("Cancelled", "AbortError"));
+    pending.current = null;
     worker.current?.terminate();
     worker.current = null;
     setJob(null);
     setProgress(0);
   }, []);
 
-  useEffect(() => () => worker.current?.terminate(), []);
+  useEffect(() => () => {
+    worker.current?.terminate();
+    pending.current?.(new DOMException("Unmounted", "AbortError"));
+    pending.current = null;
+  }, []);
 
   const run = useCallback(<T extends WorkerRequest["kind"]>(request: Omit<Extract<WorkerRequest, { kind: T }>, "id">) => {
+    pending.current?.(new DOMException("Superseded", "AbortError"));
     const id = nextId.current++;
     const target = ensure();
     setJob({ kind: request.kind });
     setProgress(0);
     setError(null);
     return new Promise<T extends "simulate" ? number[] : OrderSearchResult>((resolve, reject) => {
+      pending.current = reject;
       const onMessage = (event: MessageEvent<WorkerResponse>) => {
         const message = event.data;
-        if (message.id !== id) return;
+        if (message.id !== id || target !== worker.current || id !== nextId.current - 1) return;
         if (message.type === "progress") {
           setProgress(message.fraction);
           return;
         }
         target.removeEventListener("message", onMessage);
+        pending.current = null;
         setJob(null);
         setProgress(1);
         if (message.type === "error") {

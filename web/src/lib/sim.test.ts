@@ -184,3 +184,29 @@ describe("batting order search", () => {
     expect(result.delta).toBe(0);
   });
 });
+
+describe("held-out order evaluation", () => {
+  it("reports metrics from disjoint game streams after selection", () => {
+    const weak = cumulative({ ...LEAGUE, out: 0.62128, single: 0.076022 });
+    const strong = cumulative({ ...LEAGUE, home_run: 0.06, single: 0.22, out: 0.427806 });
+    const lineup = [weak, weak, weak, weak, weak, weak, strong, strong, strong];
+    const games = 200;
+    const result = optimiseOrder(lineup, games, 99, 2);
+    const heldBaseline = simulateMany(lineup, games, 99, undefined, games);
+    const heldBest = simulateMany(result.order.map((i) => lineup[i]!), games, 99, undefined, games);
+    const avg = (x: number[]) => x.reduce((a, b) => a + b, 0) / x.length;
+    expect(result.baselineMean).toBe(avg(heldBaseline));
+    expect(result.bestMean).toBe(avg(heldBest));
+    expect(result.delta).toBeCloseTo(avg(heldBest) - avg(heldBaseline), 10);
+    expect(heldBaseline).not.toEqual(simulateMany(lineup, games, 99));
+  });
+
+  it("does not invent an improvement for exchangeable identical batters", () => {
+    for (let seed = 0; seed < 12; seed += 1) {
+      const result = optimiseOrder(Array(9).fill(cumulative(LEAGUE)), 40, seed, 1);
+      expect(result.delta).toBe(0);
+      expect(result.deltaLow).toBe(0);
+      expect(result.deltaHigh).toBe(0);
+    }
+  });
+});

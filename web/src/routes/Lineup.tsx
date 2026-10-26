@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDataset, useDocumentTitle, useRoute } from "../app/hooks";
 import { ChartFrame, Histogram } from "../components/charts";
 import { Gate } from "../components/States";
@@ -24,6 +24,7 @@ const DEFAULT_SEED = 2026;
 const HIST_CAP = 12;
 
 interface SimResult {
+  inputKey: string;
   runs: number[];
   ids: string[];
   pitcher?: string;
@@ -40,7 +41,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   const seed = params.seed ?? DEFAULT_SEED;
   const [games, setGames] = useState(GAME_OPTIONS[1] as number);
   const [result, setResult] = useState<SimResult | null>(null);
-  const [search, setSearch] = useState<OrderSearchResult | null>(null);
+  const [search, setSearch] = useState<(OrderSearchResult & { inputKey: string; ids: string[] }) | null>(null);
   const { run, cancel, job, progress, error } = useSimWorker();
 
   const byId = useMemo(() => new Map(players.map((p) => [`${p.type}:${p.player_id}`, p])), [players]);
@@ -49,24 +50,43 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   const groupByTeam = (list: PlayerSummary[]) =>
     teams.map((t) => ({ team: t, items: list.filter((p) => p.team === t).sort((a, b) => b.trials - a.trials) })).filter((g) => g.items.length > 0);
 
+  const inputKey = JSON.stringify([ids, pitcher, seed, games]);
+  const currentKey = useRef(inputKey);
+  const generation = useRef(0);
+  useEffect(() => {
+    currentKey.current = inputKey;
+    generation.current += 1;
+    queueMicrotask(cancel);
+  }, [inputKey, cancel]);
+
+  const invalidate = () => { generation.current += 1; cancel(); };
   const update = (patch: Partial<typeof params>) => {
+    invalidate();
     setResult(null);
     setSearch(null);
     navigate({ ...params, team, ids, pitcher, seed: params.seed, ...patch, name: "lineup" }, { replace: true });
   };
 
   const simulate = async () => {
-    const runs = await run<"simulate">({ kind: "simulate", cdfs: lineupCdfs(sim, ids, pitcher), games, seed });
-    setResult({ runs, ids, pitcher, games });
-    setSearch(null);
+    const version = ++generation.current;
+    try {
+      const runs = await run<"simulate">({ kind: "simulate", cdfs: lineupCdfs(sim, ids, pitcher), games, seed });
+      if (version !== generation.current || currentKey.current !== inputKey) return;
+      setResult({ runs, ids, pitcher, games, inputKey });
+      setSearch(null);
+    } catch { /* The worker owns error feedback; cancelled work has no result. */ }
   };
 
   const optimise = async () => {
-    const found = await run<"optimise">({ kind: "optimise", cdfs: lineupCdfs(sim, ids, pitcher), games: 1500, seed, rounds: 3 });
-    setSearch(found);
+    const version = ++generation.current;
+    try {
+      const found = await run<"optimise">({ kind: "optimise", cdfs: lineupCdfs(sim, ids, pitcher), games: 1500, seed, rounds: 3 });
+      if (version !== generation.current || currentKey.current !== inputKey) return;
+      setSearch({ ...found, inputKey, ids: [...ids] });
+    } catch { /* The worker owns error feedback; cancelled work has no result. */ }
   };
 
-  const fresh = result && result.ids.join() === ids.join() && result.pitcher === pitcher;
+  const fresh = result && result.inputKey === inputKey;
   const runsPerGame = result ? mean(result.runs) : null;
   const name = (type: "batter" | "pitcher", id: string) => byId.get(`${type}:${id}`)?.name ?? id;
 
@@ -176,7 +196,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
               搜尋更好的棒次
             </button>
             {job && (
-              <button type="button" className="btn" onClick={cancel}>
+              <button type="button" className="btn" onClick={invalidate}>
                 取消
               </button>
             )}
@@ -240,31 +260,31 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
               </div>
             )}
 
-            {search && (
+            {search && search.inputKey === inputKey && (
               <div className="search-result" data-testid="order-search">
                 <h3>建議棒次</h3>
-                {search.delta > 0 ? (
+                {search.order.some((index, slot) => index !== slot) ? (
                   <>
                     <p>
-                      調整後平均每場 {search.bestMean.toFixed(2)} 分，比原本多 <strong>{search.delta.toFixed(2)}</strong> 分（95% 區間 {formatSigned(search.deltaLow, 2)} 到 {formatSigned(search.deltaHigh, 2)}）。
+                      調整後平均每場 {search.bestMean.toFixed(2)} 分，獨立評估的配對差值 <strong>{formatSigned(search.delta, 2)}</strong> 分（95% 區間 {formatSigned(search.deltaLow, 2)} 到 {formatSigned(search.deltaHigh, 2)}）。
                       {search.deltaLow <= 0 && " 區間包含 0，差異可能只是模擬雜訊。"}
                     </p>
                     <ol className="suggested">
                       {search.order.map((index, slot) => (
                         <li key={slot} className={index !== slot ? "moved" : undefined}>
-                          {name("batter", ids[index] as string)}
+                          {name("batter", search.ids[index] as string)}
                           {index !== slot && <span className="badge badge-accent">原第 {index + 1} 棒</span>}
                         </li>
                       ))}
                     </ol>
-                    <button type="button" className="btn btn-primary" onClick={() => update({ ids: search.order.map((i) => ids[i] as string) })}>
+                    <button type="button" className="btn btn-primary" onClick={() => update({ ids: search.order.map((i) => search.ids[i] as string) })}>
                       套用建議棒次
                     </button>
                   </>
                 ) : (
                   <p>目前的棒次已是局部最佳：任何兩棒對調都沒有讓平均得分提高。</p>
                 )}
-                <p className="muted small">共評估 {search.evaluations} 種棒次，每種 1,500 場，使用相同的亂數序列做配對比較。</p>
+                <p className="muted small">共評估 {search.evaluations} 種棒次，每種搜尋 1,500 場；建議固定後另用 1,500 場未參與搜尋的亂數序列做配對評估。</p>
               </div>
             )}
           </div>

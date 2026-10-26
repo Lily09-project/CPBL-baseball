@@ -160,3 +160,39 @@ test.describe("F7 資料可信度", () => {
     await expectAccessible(page);
   });
 });
+
+for (const change of ["pitcher", "team", "seed", "back"] as const) {
+test(`late search results are discarded after changing ${change}`, async ({ page }) => {
+  await page.addInitScript(() => {
+    class DelayedWorker {
+      callbacks: ((event: MessageEvent) => void)[] = [];
+      addEventListener(_type: string, callback: (event: MessageEvent) => void) { this.callbacks.push(callback); }
+      removeEventListener(_type: string, callback: (event: MessageEvent) => void) { this.callbacks = this.callbacks.filter((x) => x !== callback); }
+      terminate() { /* Deliberately keep a queued message to exercise stale-result guards. */ }
+      postMessage(request: { id: number }) {
+        setTimeout(() => this.callbacks.forEach((callback) => callback({ data: {
+          id: request.id, type: "optimised", search: {
+            order: [1,0,2,3,4,5,6,7,8], baselineMean: 4, bestMean: 5,
+            delta: 1, deltaLow: 0.5, deltaHigh: 1.5, evaluations: 37,
+          },
+        }} as MessageEvent)), 700);
+      }
+    }
+    Object.defineProperty(window, "Worker", { value: DelayedWorker });
+  });
+  await page.clock.install();
+  await openRoute(page, "/lineup");
+  await page.getByRole("button", { name: "搜尋更好的棒次" }).click();
+  if (change === "pitcher") await page.getByLabel("對手投手").selectOption({ index: 1 });
+  else if (change === "team") await page.getByLabel("以球隊預設打線填入").selectOption({ index: 1 });
+  else {
+    await page.evaluate(() => { window.location.hash = "/lineup?seed=2027"; });
+    await expect(page).toHaveURL(/seed=2027/);
+    if (change === "back") await page.goBack();
+  }
+  await expect(page.getByRole("progressbar")).toHaveCount(0);
+  await page.clock.fastForward(1000);
+  await expect(page.getByTestId("order-search")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "搜尋更好的棒次" })).toBeEnabled();
+});
+}
