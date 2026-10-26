@@ -19,6 +19,8 @@ test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
     await expect(page.getByText("跳到主要內容")).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.locator("main")).toBeFocused();
+    await expect(page.locator("main")).toHaveCSS("outline-style", "solid");
+    await expect(page.locator("main")).toHaveCSS("outline-width", "3px");
 
     await page.keyboard.press("Control+k");
     const input = page.getByRole("combobox", { name: "輸入球員或球隊名稱" });
