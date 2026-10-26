@@ -161,7 +161,8 @@ test.describe("F7 資料可信度", () => {
   });
 });
 
-test("late search results are discarded after changing a lineup", async ({ page }) => {
+for (const change of ["pitcher", "team", "seed", "back"] as const) {
+test(`late search results are discarded after changing ${change}`, async ({ page }) => {
   await page.addInitScript(() => {
     class DelayedWorker {
       callbacks: ((event: MessageEvent) => void)[] = [];
@@ -182,9 +183,16 @@ test("late search results are discarded after changing a lineup", async ({ page 
   await page.clock.install();
   await openRoute(page, "/lineup");
   await page.getByRole("button", { name: "搜尋更好的棒次" }).click();
-  await page.getByLabel("對手投手").selectOption({ index: 1 });
+  if (change === "pitcher") await page.getByLabel("對手投手").selectOption({ index: 1 });
+  else if (change === "team") await page.getByLabel("以球隊預設打線填入").selectOption({ index: 1 });
+  else {
+    await page.evaluate(() => { window.location.hash = "/lineup?seed=2027"; });
+    await expect(page).toHaveURL(/seed=2027/);
+    if (change === "back") await page.goBack();
+  }
   await expect(page.getByRole("progressbar")).toHaveCount(0);
   await page.clock.fastForward(1000);
   await expect(page.getByTestId("order-search")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "搜尋更好的棒次" })).toBeEnabled();
 });
+}

@@ -24,6 +24,7 @@ const DEFAULT_SEED = 2026;
 const HIST_CAP = 12;
 
 interface SimResult {
+  inputKey: string;
   runs: number[];
   ids: string[];
   pitcher?: string;
@@ -71,7 +72,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
     try {
       const runs = await run<"simulate">({ kind: "simulate", cdfs: lineupCdfs(sim, ids, pitcher), games, seed });
       if (version !== generation.current || currentKey.current !== inputKey) return;
-      setResult({ runs, ids, pitcher, games });
+      setResult({ runs, ids, pitcher, games, inputKey });
       setSearch(null);
     } catch { /* The worker owns error feedback; cancelled work has no result. */ }
   };
@@ -85,7 +86,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
     } catch { /* The worker owns error feedback; cancelled work has no result. */ }
   };
 
-  const fresh = result && result.ids.join() === ids.join() && result.pitcher === pitcher;
+  const fresh = result && result.inputKey === inputKey;
   const runsPerGame = result ? mean(result.runs) : null;
   const name = (type: "batter" | "pitcher", id: string) => byId.get(`${type}:${id}`)?.name ?? id;
 
