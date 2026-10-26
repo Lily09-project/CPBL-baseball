@@ -158,10 +158,11 @@ export function simulateMany(
   games: number,
   seed: number,
   onProgress?: (done: number) => void,
+  gameOffset = 0,
 ): number[] {
   const results: number[] = new Array(games);
   for (let g = 0; g < games; g += 1) {
-    results[g] = simulateGame(lineup, mulberry32(gameSeed(seed, g))).runs;
+    results[g] = simulateGame(lineup, mulberry32(gameSeed(seed, g + gameOffset))).runs;
     if (onProgress && (g + 1) % 250 === 0) onProgress(g + 1);
   }
   onProgress?.(games);
@@ -214,14 +215,17 @@ export function optimiseOrder(
     order = improved.order;
     best = improved.runs;
   }
-  const diffs = best.map((r, g) => r - (baseline[g] ?? 0));
+  // Selection uses games [0, games); inference uses disjoint held-out streams.
+  const evaluatedBaseline = simulateMany(lineup, games, seed, undefined, games);
+  const evaluatedBest = simulateMany(order.map((i) => lineup[i] as readonly number[]), games, seed, undefined, games);
+  const diffs = evaluatedBest.map((r, g) => r - (evaluatedBaseline[g] ?? 0));
   const delta = mean(diffs);
   const sd = Math.sqrt(diffs.reduce((acc, d) => acc + (d - delta) ** 2, 0) / Math.max(diffs.length - 1, 1));
   const half = (1.96 * sd) / Math.sqrt(diffs.length);
   return {
     order,
-    baselineMean: mean(baseline),
-    bestMean: mean(best),
+    baselineMean: mean(evaluatedBaseline),
+    bestMean: mean(evaluatedBest),
     delta,
     deltaLow: delta - half,
     deltaHigh: delta + half,

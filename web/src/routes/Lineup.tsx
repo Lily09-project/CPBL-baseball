@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDataset, useDocumentTitle, useRoute } from "../app/hooks";
 import { ChartFrame, Histogram } from "../components/charts";
 import { Gate } from "../components/States";
@@ -49,21 +49,42 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   const groupByTeam = (list: PlayerSummary[]) =>
     teams.map((t) => ({ team: t, items: list.filter((p) => p.team === t).sort((a, b) => b.trials - a.trials) })).filter((g) => g.items.length > 0);
 
+  const inputKey = JSON.stringify([ids, pitcher, seed, games]);
+  const currentKey = useRef(inputKey);
+  currentKey.current = inputKey;
+  const generation = useRef(0);
+  useEffect(() => {
+    generation.current += 1;
+    cancel();
+    setResult(null);
+    setSearch(null);
+  }, [inputKey, cancel]);
+
+  const invalidate = () => { generation.current += 1; cancel(); };
   const update = (patch: Partial<typeof params>) => {
+    invalidate();
     setResult(null);
     setSearch(null);
     navigate({ ...params, team, ids, pitcher, seed: params.seed, ...patch, name: "lineup" }, { replace: true });
   };
 
   const simulate = async () => {
-    const runs = await run<"simulate">({ kind: "simulate", cdfs: lineupCdfs(sim, ids, pitcher), games, seed });
-    setResult({ runs, ids, pitcher, games });
-    setSearch(null);
+    const version = ++generation.current;
+    try {
+      const runs = await run<"simulate">({ kind: "simulate", cdfs: lineupCdfs(sim, ids, pitcher), games, seed });
+      if (version !== generation.current || currentKey.current !== inputKey) return;
+      setResult({ runs, ids, pitcher, games });
+      setSearch(null);
+    } catch { /* The worker owns error feedback; cancelled work has no result. */ }
   };
 
   const optimise = async () => {
-    const found = await run<"optimise">({ kind: "optimise", cdfs: lineupCdfs(sim, ids, pitcher), games: 1500, seed, rounds: 3 });
-    setSearch(found);
+    const version = ++generation.current;
+    try {
+      const found = await run<"optimise">({ kind: "optimise", cdfs: lineupCdfs(sim, ids, pitcher), games: 1500, seed, rounds: 3 });
+      if (version !== generation.current || currentKey.current !== inputKey) return;
+      setSearch(found);
+    } catch { /* The worker owns error feedback; cancelled work has no result. */ }
   };
 
   const fresh = result && result.ids.join() === ids.join() && result.pitcher === pitcher;
@@ -176,7 +197,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
               搜尋更好的棒次
             </button>
             {job && (
-              <button type="button" className="btn" onClick={cancel}>
+              <button type="button" className="btn" onClick={invalidate}>
                 取消
               </button>
             )}
@@ -243,10 +264,10 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
             {search && (
               <div className="search-result" data-testid="order-search">
                 <h3>建議棒次</h3>
-                {search.delta > 0 ? (
+                {search.order.some((index, slot) => index !== slot) ? (
                   <>
                     <p>
-                      調整後平均每場 {search.bestMean.toFixed(2)} 分，比原本多 <strong>{search.delta.toFixed(2)}</strong> 分（95% 區間 {formatSigned(search.deltaLow, 2)} 到 {formatSigned(search.deltaHigh, 2)}）。
+                      調整後平均每場 {search.bestMean.toFixed(2)} 分，獨立評估的配對差值 <strong>{formatSigned(search.delta, 2)}</strong> 分（95% 區間 {formatSigned(search.deltaLow, 2)} 到 {formatSigned(search.deltaHigh, 2)}）。
                       {search.deltaLow <= 0 && " 區間包含 0，差異可能只是模擬雜訊。"}
                     </p>
                     <ol className="suggested">
@@ -264,7 +285,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
                 ) : (
                   <p>目前的棒次已是局部最佳：任何兩棒對調都沒有讓平均得分提高。</p>
                 )}
-                <p className="muted small">共評估 {search.evaluations} 種棒次，每種 1,500 場，使用相同的亂數序列做配對比較。</p>
+                <p className="muted small">共評估 {search.evaluations} 種棒次，每種搜尋 1,500 場；建議固定後另用 1,500 場未參與搜尋的亂數序列做配對評估。</p>
               </div>
             )}
           </div>

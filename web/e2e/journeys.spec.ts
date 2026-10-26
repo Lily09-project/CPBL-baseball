@@ -160,3 +160,30 @@ test.describe("F7 資料可信度", () => {
     await expectAccessible(page);
   });
 });
+
+test("late search results are discarded after changing a lineup", async ({ page }) => {
+  await page.addInitScript(() => {
+    class DelayedWorker {
+      callbacks: ((event: MessageEvent) => void)[] = [];
+      addEventListener(_type: string, callback: (event: MessageEvent) => void) { this.callbacks.push(callback); }
+      removeEventListener(_type: string, callback: (event: MessageEvent) => void) { this.callbacks = this.callbacks.filter((x) => x !== callback); }
+      terminate() { /* Deliberately keep a queued message to exercise stale-result guards. */ }
+      postMessage(request: { id: number }) {
+        setTimeout(() => this.callbacks.forEach((callback) => callback({ data: {
+          id: request.id, type: "optimised", search: {
+            order: [1,0,2,3,4,5,6,7,8], baselineMean: 4, bestMean: 5,
+            delta: 1, deltaLow: 0.5, deltaHigh: 1.5, evaluations: 37,
+          },
+        }} as MessageEvent)), 700);
+      }
+    }
+    Object.defineProperty(window, "Worker", { value: DelayedWorker });
+  });
+  await openRoute(page, "/lineup");
+  await page.getByRole("button", { name: "搜尋更好的棒次" }).click();
+  await page.getByLabel("對手投手").selectOption({ index: 1 });
+  await expect(page.getByRole("progressbar")).toHaveCount(0);
+  await page.waitForTimeout(1000);
+  await expect(page.getByTestId("order-search")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "搜尋更好的棒次" })).toBeEnabled();
+});
