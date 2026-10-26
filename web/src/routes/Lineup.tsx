@@ -40,7 +40,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   const seed = params.seed ?? DEFAULT_SEED;
   const [games, setGames] = useState(GAME_OPTIONS[1] as number);
   const [result, setResult] = useState<SimResult | null>(null);
-  const [search, setSearch] = useState<OrderSearchResult | null>(null);
+  const [search, setSearch] = useState<(OrderSearchResult & { inputKey: string; ids: string[] }) | null>(null);
   const { run, cancel, job, progress, error } = useSimWorker();
 
   const byId = useMemo(() => new Map(players.map((p) => [`${p.type}:${p.player_id}`, p])), [players]);
@@ -51,13 +51,11 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
 
   const inputKey = JSON.stringify([ids, pitcher, seed, games]);
   const currentKey = useRef(inputKey);
-  currentKey.current = inputKey;
   const generation = useRef(0);
   useEffect(() => {
+    currentKey.current = inputKey;
     generation.current += 1;
-    cancel();
-    setResult(null);
-    setSearch(null);
+    queueMicrotask(cancel);
   }, [inputKey, cancel]);
 
   const invalidate = () => { generation.current += 1; cancel(); };
@@ -83,7 +81,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
     try {
       const found = await run<"optimise">({ kind: "optimise", cdfs: lineupCdfs(sim, ids, pitcher), games: 1500, seed, rounds: 3 });
       if (version !== generation.current || currentKey.current !== inputKey) return;
-      setSearch(found);
+      setSearch({ ...found, inputKey, ids: [...ids] });
     } catch { /* The worker owns error feedback; cancelled work has no result. */ }
   };
 
@@ -261,7 +259,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
               </div>
             )}
 
-            {search && (
+            {search && search.inputKey === inputKey && (
               <div className="search-result" data-testid="order-search">
                 <h3>建議棒次</h3>
                 {search.order.some((index, slot) => index !== slot) ? (
@@ -273,12 +271,12 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
                     <ol className="suggested">
                       {search.order.map((index, slot) => (
                         <li key={slot} className={index !== slot ? "moved" : undefined}>
-                          {name("batter", ids[index] as string)}
+                          {name("batter", search.ids[index] as string)}
                           {index !== slot && <span className="badge badge-accent">原第 {index + 1} 棒</span>}
                         </li>
                       ))}
                     </ol>
-                    <button type="button" className="btn btn-primary" onClick={() => update({ ids: search.order.map((i) => ids[i] as string) })}>
+                    <button type="button" className="btn btn-primary" onClick={() => update({ ids: search.order.map((i) => search.ids[i] as string) })}>
                       套用建議棒次
                     </button>
                   </>
