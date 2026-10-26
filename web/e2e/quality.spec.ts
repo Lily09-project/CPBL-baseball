@@ -19,6 +19,8 @@ test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
     await expect(page.getByText("跳到主要內容")).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page.locator("main")).toBeFocused();
+    await expect(page.locator("main")).toHaveCSS("outline-style", "solid");
+    await expect(page.locator("main")).toHaveCSS("outline-width", "3px");
 
     await page.keyboard.press("Control+k");
     const input = page.getByRole("combobox", { name: "輸入球員或球隊名稱" });
@@ -43,6 +45,16 @@ test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
     await expect(nav.getByRole("link", { name: "季末模擬" })).toHaveAttribute("aria-current", "page");
     await expect(page.locator("main")).toBeFocused();
     await expect(page).toHaveTitle(/季末戰績模擬/);
+  });
+
+  test("motion duration stays unchanged under reduced-motion system preference", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await openRoute(page, "/");
+    const durationMs = await page.locator(":root").evaluate((root) => {
+      const value = getComputedStyle(root).getPropertyValue("--duration").trim();
+      return value.endsWith("ms") ? Number.parseFloat(value) : Number.parseFloat(value) * 1000;
+    });
+    expect(durationMs).toBe(220);
   });
 
   test("every page keeps one palette under both system color preferences", async ({ page }) => {
