@@ -267,7 +267,8 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
                   <>
                     <p>
                       調整後平均每場 {search.bestMean.toFixed(2)} 分，獨立評估的配對差值 <strong>{formatSigned(search.delta, 2)}</strong> 分（95% 區間 {formatSigned(search.deltaLow, 2)} 到 {formatSigned(search.deltaHigh, 2)}）。
-                      {search.deltaLow <= 0 && " 區間包含 0，差異可能只是模擬雜訊。"}
+                      {search.deltaLow <= 0 && search.deltaHigh >= 0 && " 區間包含 0，差異可能只是模擬雜訊。"}
+                      {search.deltaHigh < 0 && " 獨立評估顯示調整後得分較低，不建議依此結果調整。"}
                     </p>
                     <ol className="suggested">
                       {search.order.map((index, slot) => (
