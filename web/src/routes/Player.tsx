@@ -28,7 +28,7 @@ const BATTER_STATS: [string, string, "int" | "rate3"][] = [
 
 const PITCHER_STATS: [string, string, "int" | "num2"][] = [
   ["innings_pitched", "局數", "num2"],
-  ["batters_faced", "面對打者", "int"],
+  ["batters_faced", "面對打者（估計）", "int"],
   ["strikeouts", "三振", "int"],
   ["walks", "保送", "int"],
   ["home_runs_allowed", "被全壘打", "int"],
@@ -232,8 +232,8 @@ function Profile({ player, league, details }: { player: PlayerDetail; league: Le
       </section>
 
       <section className="card">
-        <h2>官方原始數據</h2>
-        <ScrollRegion label="官方原始數據">
+        <h2>成績與衍生指標</h2>
+        <ScrollRegion label="成績與衍生指標">
           <table data-testid="raw-stats">
             <thead>
               <tr>
