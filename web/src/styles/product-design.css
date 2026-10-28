@@ -1,0 +1,36 @@
+/* Adapted design language; product data, routes and interaction contracts remain authoritative. */
+h1,h2,h3,.brand-text strong{font-family:var(--font-sans)}
+h1{letter-spacing:-.035em;line-height:1.18}
+.btn,.input,.site-nav a{transition:background 160ms ease,border-color 160ms ease,transform 160ms ease}
+button,input,select{touch-action:manipulation}
+.page{min-width:0}
+.card{box-shadow:var(--shadow)}
+.hero .lede{max-width:60ch}
+.site-nav a:focus-visible{outline:3px solid var(--focus);outline-offset:-3px}
+@media(max-width:640px){.hero h1{font-size:clamp(1.9rem,7vw,2.6rem)}.btn{min-height:44px}.input{font-size:1rem}}
+
+.site-header{position:static;background:var(--bg);backdrop-filter:none;border-bottom:2px solid var(--ink)}
+.site-header-inner{grid-template-columns:1fr auto;gap:8px 24px;padding-top:16px}
+.brand{grid-column:1;grid-row:1}.site-tools{grid-column:2;grid-row:1}
+.brand-mark{border-radius:0;background:var(--ink);width:56px;height:44px}
+.brand-text strong{font-size:1.4rem;font-weight:900;letter-spacing:-.04em}
+.site-nav{grid-column:1/-1;grid-row:2;overflow-x:auto}
+.site-nav ul{gap:24px}.site-nav a{border-radius:0;padding:12px 0;min-height:48px}
+.site-nav a[aria-current=page]{background:transparent;box-shadow:inset 0 -3px var(--ink)}
+.page{padding-top:36px}
+.hero{padding:16px 0 36px;border-bottom:1px solid var(--line);margin-bottom:32px}
+.hero h1{max-width:16ch;font-weight:950}
+.hero .lede{font-size:1.05rem;max-width:64ch}
+.eyebrow{letter-spacing:.08em}
+.btn{border-radius:999px;padding-inline:24px}
+.card{border:0;border-top:1px solid var(--line);padding:24px 0;border-radius:0}
+.kpis{gap:0;border-block:2px solid var(--ink);margin-bottom:32px}
+.kpis .kpi{border:0;padding:24px; background:var(--bg-sunken)}
+.kpis .kpi+.kpi{border-left:1px solid var(--line)}
+.stat-value{font-weight:900;letter-spacing:-.05em}
+.feature{padding:24px;background:var(--bg-sunken)}
+.feature:hover{background:#ededed}
+.site-footer{background:var(--ink);color:#fff;margin-top:48px}
+.site-footer a,.site-footer .muted{color:#ddd}
+@media(min-width:1100px){.grid-2:has([data-testid=standings]){grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
+@media(max-width:640px){.site-header-inner{padding-top:8px}.brand-text strong{font-size:1.12rem}.site-nav ul{gap:20px}.kpis .kpi{padding:20px}.kpis .kpi+.kpi{border-left:0;border-top:1px solid var(--line)}.hero{padding-bottom:24px}.page{padding-top:20px}.card{padding:20px 0}.feature{padding:20px}}

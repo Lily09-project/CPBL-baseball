@@ -9,7 +9,7 @@ const ROUTES = [
   "/compare?type=batter&ids=0000005549",
   "/data",
 ];
-const FIXED_BACKGROUND = "#f6f3ec";
+const FIXED_BACKGROUND = "#ffffff";
 const LEGACY_THEME_KEY = "cpbl-lab-theme";
 
 test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
