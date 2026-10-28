@@ -9,7 +9,7 @@ const ROUTES = [
   "/compare?type=batter&ids=0000005549",
   "/data",
 ];
-const FIXED_BACKGROUND = "#ffffff";
+const FIXED_BACKGROUND = "rgb(255, 255, 255)";
 const LEGACY_THEME_KEY = "cpbl-lab-theme";
 
 test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
@@ -75,7 +75,7 @@ test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
         const appearance = await page.locator("html").evaluate((root) => ({
           dataTheme: root.getAttribute("data-theme"),
           colorScheme: getComputedStyle(root).colorScheme,
-          background: getComputedStyle(root).getPropertyValue("--bg").trim(),
+          background: getComputedStyle(document.body).backgroundColor,
         }));
         expect(appearance).toEqual({
           dataTheme: null,
