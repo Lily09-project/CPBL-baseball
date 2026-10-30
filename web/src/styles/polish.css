@@ -1,0 +1,206 @@
+/* Visual polish layer: editorial contrast, rhythm and motion on top of the
+   monochrome sports design. Colours, routes and accessibility contracts stay
+   with the earlier layers. */
+
+/* Route changes move focus to <main>; only keyboard users need the ring. */
+main:focus:not(:focus-visible) {
+  outline: none;
+}
+
+main {
+  min-height: 75vh;
+}
+
+::selection {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* ---- Masthead ---- */
+.site-nav a {
+  color: var(--muted);
+  transition: color var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
+}
+
+.site-nav a:hover {
+  color: var(--ink);
+  box-shadow: inset 0 -3px var(--line-strong);
+}
+
+.site-nav a[aria-current="page"] {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+/* ---- Hero ---- */
+.hero {
+  position: relative;
+  isolation: isolate;
+}
+
+/* A diamond of base paths, purely decorative, anchored to the right edge. */
+.hero::after {
+  content: "";
+  position: absolute;
+  top: 8px;
+  right: 0;
+  z-index: -1;
+  width: min(34vw, 360px);
+  aspect-ratio: 1;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200' fill='none' stroke='%23111' stroke-width='1.5'%3E%3Cpath d='M100 18 182 100 100 182 18 100Z'/%3E%3Cpath d='M100 52 148 100 100 148 52 100Z' stroke-dasharray='4 6'/%3E%3Ccircle cx='100' cy='100' r='6'/%3E%3Crect x='94' y='12' width='12' height='12' transform='rotate(45 100 18)'/%3E%3Crect x='176' y='94' width='12' height='12' transform='rotate(45 182 100)'/%3E%3Crect x='12' y='94' width='12' height='12' transform='rotate(45 18 100)'/%3E%3Cpath d='M92 174h16l-8 10z' fill='%23111'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0.09;
+  pointer-events: none;
+}
+
+.hero h1 {
+  font-size: clamp(2.4rem, 1.4rem + 3.6vw, 4.8rem);
+  line-height: 1.05;
+  letter-spacing: -0.05em;
+}
+
+.hero .btn-primary {
+  transition: transform var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
+}
+
+.hero .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px -12px rgb(17 17 17 / 0.8);
+}
+
+.page header:has(> .eyebrow):not(.hero) {
+  padding-bottom: 24px;
+  border-bottom: 2px solid var(--ink);
+}
+
+.page header:has(> .eyebrow) h1 {
+  text-wrap: balance;
+}
+
+/* ---- Score strip ---- */
+.kpis .kpi {
+  position: relative;
+  transition: background var(--duration) var(--ease);
+}
+
+.kpis .kpi:hover {
+  background: #ededed;
+}
+
+.kpis .stat-value {
+  font-size: clamp(2rem, 1.4rem + 1.8vw, 3.2rem);
+  line-height: 1;
+}
+
+.stat-label {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Feature cards: four across on wide screens, invert on hover ---- */
+.features {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 2px;
+}
+
+@media (min-width: 1100px) {
+  .features {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.feature {
+  border-top: 0;
+  min-height: 240px;
+  transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+
+.feature .badge {
+  justify-self: start;
+}
+
+.feature-cta {
+  margin-top: auto;
+  transition: transform var(--duration) var(--ease);
+}
+
+.feature:hover,
+.feature:focus-visible {
+  background: var(--ink);
+  color: #fff;
+  transform: none;
+}
+
+.feature:hover .feature-cta,
+.feature:focus-visible .feature-cta {
+  color: #fff;
+  transform: translateX(6px);
+}
+
+.feature:hover .badge,
+.feature:focus-visible .badge {
+  background: #fff;
+  color: var(--ink);
+}
+
+.feature:hover p,
+.feature:focus-visible p {
+  color: #e5e5e5;
+}
+
+/* ---- Tables ---- */
+thead th {
+  color: var(--ink);
+  border-bottom: 2px solid var(--ink);
+  letter-spacing: 0.03em;
+}
+
+tbody tr {
+  transition: background 120ms ease;
+}
+
+tbody tr:hover > * {
+  background: var(--bg-sunken);
+}
+
+/* ---- Loading state: a quiet skeleton instead of a dashed box ---- */
+.state {
+  border-style: solid;
+  border-color: var(--line);
+}
+
+.state-loading {
+  position: relative;
+  overflow: hidden;
+  min-height: 160px;
+  align-items: flex-start;
+  color: var(--muted);
+}
+
+.state-loading::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgb(17 17 17 / 0.05) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* ---- Motion preference ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
