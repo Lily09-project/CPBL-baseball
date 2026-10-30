@@ -22,9 +22,13 @@
 
 ## 技術與畫面
 
-Python 資料處理與分析、React、TypeScript、Vite、Web Worker；GitHub Pages 提供靜態網站。
+Python 資料處理與分析、React、TypeScript、Vite、Web Worker；GitHub Pages 提供靜態網站。介面採黑白運動報刊風格，設計原則見 [DESIGN.md](DESIGN.md)。
 
-![打線實驗室](docs/screenshots/lineup-lab.png)
+| 打線實驗室 | 真實實力估計 |
+| --- | --- |
+| ![打線實驗室](docs/screenshots/lineup-lab.png) | ![真實實力估計](docs/screenshots/talent.png) |
+| **球員檔案** | **季末戰績模擬** |
+| ![球員檔案](docs/screenshots/player-profile.png) | ![季末戰績模擬](docs/screenshots/season.png) |
 
 ## 本機執行與驗證
 
