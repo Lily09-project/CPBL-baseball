@@ -563,8 +563,10 @@ def normalize_pitchers(raw: pd.DataFrame, roster: pd.DataFrame) -> pd.DataFrame:
                 "walks": walks,
                 "strikeouts": strikeouts,
                 "home_runs_allowed": to_int(raw_row.get("被全壘打", 0)),
-                "era": to_number(raw_row.get("防禦率", 0)),
-                "whip": to_number(raw_row.get("每局被上壘率", 0)),
+                # CPBL prints "-" when no out was recorded (ERA/WHIP undefined,
+                # possibly after allowing runs); missing, not a perfect 0.00.
+                "era": to_number(raw_row.get("防禦率", ""), float("nan")),
+                "whip": to_number(raw_row.get("每局被上壘率", ""), float("nan")),
                 "k_bb_ratio": round(count_ratio(strikeouts, walks), 2),
                 "k_rate": round(safe_divide(strikeouts, pa), 4),
                 "bb_rate": round(safe_divide(walks, pa), 4),
