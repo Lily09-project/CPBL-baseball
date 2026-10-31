@@ -35,6 +35,16 @@ export async function openRoute(page: Page, hash: string) {
 }
 
 export async function expectAccessible(page: Page) {
+  // Let finite animations (the 220 ms page-in fade) settle, or axe can measure
+  // half-transparent text and report a false contrast failure.
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().endTime !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
   const serious = results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
   const diagnostics = await Promise.all(
