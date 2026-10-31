@@ -5,6 +5,8 @@ import {
   completeLineup,
   defaultLineup,
   extraBaseProbability,
+  hasBatter,
+  hasPitcher,
   lineupCdfs,
   LINEUP_SIZE,
   matchupProbabilities,
@@ -73,6 +75,18 @@ describe("lineup helpers", () => {
     const cdfs = lineupCdfs(sim, ["a0", "b0"], "p0");
     expect(cdfs).toHaveLength(2);
     expect(cdfs[0]?.at(-1)).toBeCloseTo(1, 9);
+  });
+
+  it("ignores URL ids that only exist on Object.prototype", () => {
+    for (const key of ["constructor", "toString", "__proto__", "hasOwnProperty"]) {
+      expect(hasBatter(sim, key)).toBe(false);
+      expect(hasPitcher(sim, key)).toBe(false);
+      expect(() => matchupProbabilities(sim, key)).toThrow();
+      expect(matchupProbabilities(sim, "a0", key)).toEqual(matchupProbabilities(sim, "a0"));
+    }
+    expect(completeLineup(["constructor", "b1"], players, sim)).not.toContain("constructor");
+    expect(hasBatter(sim, "a0")).toBe(true);
+    expect(hasPitcher(sim, "p0")).toBe(true);
   });
 
   it("summarises on-base and extra-base chances", () => {

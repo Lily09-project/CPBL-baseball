@@ -79,8 +79,10 @@ def simulate_segment(
     """Monte Carlo the rest of the season segment.
 
     Returns one row per team with the projected wins distribution and the
-    probability of finishing first. A tie for first is shared equally, so the
-    first-place probabilities always sum to exactly one.
+    probability of finishing first. Teams are ranked by winning percentage
+    with ties excluded (W / (W + L)), as the CPBL standings are. A tie for
+    first is shared equally, so the first-place probabilities always sum to
+    exactly one and never depend on team order.
     """
     if not records:
         return []
@@ -89,6 +91,14 @@ def simulate_segment(
     strength = np.array([pythagorean_win_pct(r.runs_scored, r.runs_allowed) for r in records])
     remaining = {r.team: max(segment_games - r.games, 0) for r in records}
     schedule = build_remaining_schedule(remaining)
+    # Games the pairing cannot match (unbalanced remaining counts, odd totals)
+    # are played against a league-average opponent (log5 vs .500 is the team's
+    # own strength), so every team plays exactly its remaining games.
+    scheduled = dict.fromkeys(teams, 0)
+    for home, away in schedule:
+        scheduled[home] += 1
+        scheduled[away] += 1
+    unmatched = [(index[t], remaining[t] - scheduled[t]) for t in teams if remaining[t] > scheduled[t]]
     rng = np.random.default_rng(seed)
     wins = np.tile(np.array([r.wins for r in records], dtype=float), (simulations, 1))
     if schedule:
@@ -100,8 +110,14 @@ def simulate_segment(
         for game, (h, a) in enumerate(zip(home_idx, away_idx)):
             wins[:, h] += home_won[:, game]
             wins[:, a] += ~home_won[:, game]
-    best = wins.max(axis=1, keepdims=True)
-    leaders = wins == best
+    for i, count in unmatched:
+        wins[:, i] += (rng.random((simulations, count)) < strength[i]).sum(axis=1)
+    added = wins - np.array([r.wins for r in records], dtype=float)
+    losses = np.array([r.losses + remaining[r.team] for r in records], dtype=float) - added
+    decisions = wins + losses
+    win_pct = np.divide(wins, decisions, out=np.zeros_like(wins), where=decisions > 0)
+    best = win_pct.max(axis=1, keepdims=True)
+    leaders = win_pct == best
     share = leaders / leaders.sum(axis=1, keepdims=True)
     first_prob = share.mean(axis=0)
     rows: list[dict[str, float | int | str | list[int]]] = []

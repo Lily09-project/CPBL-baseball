@@ -3,10 +3,15 @@ import type { PlayerSummary, SimInputs } from "./types";
 
 export const LINEUP_SIZE = 9;
 
+// Ids come from the URL, so look them up as own keys only: `?ids=constructor`
+// must not resolve to Object.prototype members.
+export const hasBatter = (sim: SimInputs, id: string): boolean => Object.hasOwn(sim.batters, id);
+export const hasPitcher = (sim: SimInputs, id: string): boolean => Object.hasOwn(sim.pitchers, id);
+
 /** The team's nine batters with the most plate appearances, in that order. */
 export function defaultLineup(players: readonly PlayerSummary[], sim: SimInputs, team: string): string[] {
   return players
-    .filter((p) => p.type === "batter" && p.team === team && sim.batters[p.player_id])
+    .filter((p) => p.type === "batter" && p.team === team && hasBatter(sim, p.player_id))
     .sort((a, b) => b.trials - a.trials || a.player_id.localeCompare(b.player_id))
     .slice(0, LINEUP_SIZE)
     .map((p) => p.player_id);
@@ -14,18 +19,18 @@ export function defaultLineup(players: readonly PlayerSummary[], sim: SimInputs,
 
 /** Fill missing slots with the league's busiest remaining batters. */
 export function completeLineup(ids: readonly string[], players: readonly PlayerSummary[], sim: SimInputs): string[] {
-  const chosen = ids.filter((id, i) => sim.batters[id] && ids.indexOf(id) === i).slice(0, LINEUP_SIZE);
+  const chosen = ids.filter((id, i) => hasBatter(sim, id) && ids.indexOf(id) === i).slice(0, LINEUP_SIZE);
   if (chosen.length === LINEUP_SIZE) return chosen;
   const extras = players
-    .filter((p) => p.type === "batter" && sim.batters[p.player_id] && !chosen.includes(p.player_id))
+    .filter((p) => p.type === "batter" && hasBatter(sim, p.player_id) && !chosen.includes(p.player_id))
     .sort((a, b) => b.trials - a.trials || a.player_id.localeCompare(b.player_id));
   return [...chosen, ...extras.slice(0, LINEUP_SIZE - chosen.length).map((p) => p.player_id)];
 }
 
 export function matchupProbabilities(sim: SimInputs, batterId: string, pitcherId?: string): EventProbabilities {
-  const batter = sim.batters[batterId];
+  const batter = hasBatter(sim, batterId) ? sim.batters[batterId] : undefined;
   if (!batter) throw new Error(`沒有打者 ${batterId} 的模擬資料`);
-  const pitcher = pitcherId ? sim.pitchers[pitcherId] : undefined;
+  const pitcher = pitcherId && hasPitcher(sim, pitcherId) ? sim.pitchers[pitcherId] : undefined;
   return combineLog5(batter, pitcher ?? sim.league, sim.league);
 }
 

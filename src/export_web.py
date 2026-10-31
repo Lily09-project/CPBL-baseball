@@ -100,10 +100,22 @@ def build_batters(batters: pd.DataFrame) -> tuple[list[dict[str, Any]], dict[str
     return out, priors
 
 
+def _batters_faced(outs: int, row: dict[str, Any]) -> float:
+    """Estimate batters faced so every rate's successes stay within its trials.
+
+    Outs + hits + walks (+ HBP when the source has it) misses batters who
+    reached on a strikeout, so it is floored at strikeouts + hits + walks + HBP:
+    each of those is a separate plate appearance.
+    """
+    hits, walks, strikeouts = (float(row.get(key) or 0) for key in ("hits_allowed", "walks", "strikeouts"))
+    hbp = float(row.get("hit_by_pitch") or 0)
+    return max(outs + hits + walks + hbp, strikeouts + hits + walks + hbp)
+
+
 def build_pitchers(pitchers: pd.DataFrame) -> tuple[list[dict[str, Any]], dict[str, Any], dict[str, float]]:
     rows = pitchers.to_dict("records")
     outs = [events.innings_to_outs(r["innings_pitched"]) for r in rows]
-    bf = [outs[i] + float(r["hits_allowed"] or 0) + float(r["walks"] or 0) for i, r in enumerate(rows)]
+    bf = [_batters_faced(outs[i], r) for i, r in enumerate(rows)]
     ip = [o / 3 for o in outs]
     lg_ip = sum(ip)
     lg_bf = sum(bf)

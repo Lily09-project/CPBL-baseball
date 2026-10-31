@@ -83,3 +83,34 @@ def test_projected_wins_stay_within_possible_range() -> None:
 
 def test_empty_league_simulation() -> None:
     assert league.simulate_segment([]) == []
+
+
+def test_unmatched_remaining_games_are_still_simulated() -> None:
+    # B has 6 games left but C only 1: the pairing can match one game, the
+    # other five must still be played (against a league-average opponent).
+    records = [
+        league.TeamRecord(team="A", games=60, wins=30, losses=30, ties=0, runs_scored=250, runs_allowed=250),
+        league.TeamRecord(team="B", games=54, wins=27, losses=27, ties=0, runs_scored=240, runs_allowed=230),
+        league.TeamRecord(team="C", games=59, wins=29, losses=30, ties=0, runs_scored=230, runs_allowed=240),
+    ]
+    rows = {r["team"]: r for r in league.simulate_segment(records, segment_games=60, simulations=400, seed=5)}
+    assert rows["B"]["games_remaining"] == 6
+    assert rows["C"]["games_remaining"] == 1
+    for row in rows.values():
+        histogram = row["additional_wins_histogram"]
+        assert len(histogram) == row["games_remaining"] + 1
+        assert sum(histogram) == 400
+    # Six simulated games make 0 and 6 extra wins reachable but never more.
+    assert rows["B"]["projected_wins_p90"] <= 33
+    assert rows["B"]["projected_wins_mean"] - 27 > 2
+
+
+def test_first_place_is_decided_by_winning_percentage_not_raw_wins() -> None:
+    # A has more wins but a worse record once ties are excluded.
+    records = [
+        league.TeamRecord(team="A", games=60, wins=31, losses=29, ties=0, runs_scored=250, runs_allowed=250),
+        league.TeamRecord(team="B", games=60, wins=30, losses=25, ties=5, runs_scored=250, runs_allowed=250),
+    ]
+    rows = {r["team"]: r for r in league.simulate_segment(records, segment_games=60, simulations=50)}
+    assert rows["B"]["first_place_probability"] == pytest.approx(1.0)
+    assert rows["A"]["first_place_probability"] == pytest.approx(0.0)

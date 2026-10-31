@@ -56,6 +56,9 @@ def test_data_refresh_only_opens_a_reviewable_pr_for_verified_outputs() -> None:
     assert 'git push origin --delete "$branch"' not in workflow
     assert "The verified refresh branch was preserved for manual recovery" in workflow
     assert 'exit "$pr_status"' in workflow
+    # gh renders --body literally, so "\n" escapes showed up in the PR text.
+    assert '--body-file "$pr_body"' in workflow
+    assert "--body " not in workflow
 
 
 def test_data_health_independently_verifies_public_release_bundle() -> None:
