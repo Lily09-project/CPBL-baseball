@@ -140,12 +140,23 @@ jobs:
             exit 0
           fi
 
+          # gh does not expand "\n" in --body, so write real line breaks to a file.
+          pr_body="$RUNNER_TEMP/data-refresh-pr-body.md"
+          cat > "$pr_body" <<'PR_BODY'
+          Automated refresh from CPBL official public pages.
+
+          - API mode only
+          - Data quality report passed before snapshot creation
+          - Release gate, public release manifest, and test suite passed
+          - Review the generated snapshot, movement, history, analysis validation, and release integrity outputs before merging.
+          PR_BODY
+
           set +e
           pr_output="$(gh pr create \
             --base main \
             --head "$branch" \
             --title "chore(data): refresh verified CPBL data" \
-            --body "Automated refresh from CPBL official public pages.\n\n- API mode only\n- Data quality report passed before snapshot creation\n- Release gate, public release manifest, and test suite passed\n- Review the generated snapshot, movement, history, analysis validation, and release integrity outputs before merging." 2>&1)"
+            --body-file "$pr_body" 2>&1)"
           pr_status=$?
           set -e
           printf '%s\n' "$pr_output"

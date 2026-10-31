@@ -7,6 +7,8 @@ import {
   completeLineup,
   defaultLineup,
   extraBaseProbability,
+  hasBatter,
+  hasPitcher,
   lineupCdfs,
   matchupProbabilities,
   moveSlot,
@@ -37,7 +39,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   const teams = league.teams.map((t) => t.team);
   const team = params.team && teams.includes(params.team) ? params.team : (teams[0] as string);
   const ids = completeLineup(params.ids?.length ? params.ids : defaultLineup(players, sim, team), players, sim);
-  const pitcher = params.pitcher && sim.pitchers[params.pitcher] ? params.pitcher : undefined;
+  const pitcher = params.pitcher && hasPitcher(sim, params.pitcher) ? params.pitcher : undefined;
   const seed = params.seed ?? DEFAULT_SEED;
   const [games, setGames] = useState(GAME_OPTIONS[1] as number);
   const [result, setResult] = useState<SimResult | null>(null);
@@ -45,8 +47,8 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   const { run, cancel, job, progress, error } = useSimWorker();
 
   const byId = useMemo(() => new Map(players.map((p) => [`${p.type}:${p.player_id}`, p])), [players]);
-  const batters = useMemo(() => players.filter((p) => p.type === "batter" && sim.batters[p.player_id]), [players, sim]);
-  const pitchers = useMemo(() => players.filter((p) => p.type === "pitcher" && sim.pitchers[p.player_id]), [players, sim]);
+  const batters = useMemo(() => players.filter((p) => p.type === "batter" && hasBatter(sim, p.player_id)), [players, sim]);
+  const pitchers = useMemo(() => players.filter((p) => p.type === "pitcher" && hasPitcher(sim, p.player_id)), [players, sim]);
   const groupByTeam = (list: PlayerSummary[]) =>
     teams.map((t) => ({ team: t, items: list.filter((p) => p.team === t).sort((a, b) => b.trials - a.trials) })).filter((g) => g.items.length > 0);
 

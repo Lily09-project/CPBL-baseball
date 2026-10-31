@@ -13,6 +13,7 @@ from src.fetch_cpbl_data import (
     clean_player_name,
     fetch_recordall,
     normalize_batters,
+    normalize_pitchers,
     parse_rank_team_player,
 )
 
@@ -174,3 +175,21 @@ def test_add_player_ids_uses_stable_ten_character_ids_for_stats_only_players():
     assert forward_ids == reversed_ids
     assert forward["player_id"].str.fullmatch(r"BAT[0-9A-F]{7}").all()
     assert forward["player_id"].str.len().eq(10).all()
+
+
+def test_zero_denominator_ratios_are_undefined_not_zero():
+    roster = pd.DataFrame(
+        [
+            {"player_id": "0000000001", "player_name": "測試打者", "team": "測試隊"},
+            {"player_id": "0000000002", "player_name": "測試投手", "team": "測試隊"},
+        ]
+    )
+    batters = pd.DataFrame(
+        [{"球員": "1 測試隊 測試打者", "打席": 10, "打數": 8, "安打": 3, "四壞": 2, "被三振": 0, "保送三振比": "-"}]
+    )
+    pitchers = pd.DataFrame(
+        [{"球員": "1 測試隊 測試投手", "投球局數": "2.0", "四壞": 0, "奪三振": 4, "打席": 7}]
+    )
+
+    assert pd.isna(normalize_batters(batters, roster).iloc[0]["bb_k_ratio"])
+    assert pd.isna(normalize_pitchers(pitchers, roster).iloc[0]["k_bb_ratio"])

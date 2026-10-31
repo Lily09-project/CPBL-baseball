@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from src import export_web
@@ -84,3 +85,20 @@ def test_cli_writes_into_requested_directory(tmp_path: Path, monkeypatch: pytest
     export_web.main()
     assert (tmp_path / "out" / "manifest.json").exists()
     assert "league.json" in capsys.readouterr().out
+
+
+def test_pitcher_with_strikeouts_but_no_outs_does_not_crash_export() -> None:
+    # A 0 IP / 1 K line (batter reached on a wild third strike) has more
+    # strikeouts than outs + hits + walks; trials must still cover it.
+    base = {"role": "投手", "earned_runs": 0, "home_runs_allowed": 0, "era": 0.0, "whip": 1.0, "k_bb_ratio": 2.0}
+    rows = [
+        {**base, "player_id": f"P{i}", "player_name": f"投手{i}", "team": "測試隊", "innings_pitched": 30.0,
+         "hits_allowed": 25, "walks": 10, "strikeouts": 20, "earned_runs": 10}
+        for i in range(4)
+    ]
+    rows.append({**base, "player_id": "P9", "player_name": "投手9", "team": "測試隊", "innings_pitched": 0.0,
+                 "hits_allowed": 0, "walks": 0, "strikeouts": 1, "k_bb_ratio": float("nan")})
+    out, _, _ = export_web.build_pitchers(pd.DataFrame(rows))
+    record = next(r for r in out if r["player_id"] == "P9")
+    assert record["stats"]["batters_faced"] == 1
+    assert record["trials"] >= 1

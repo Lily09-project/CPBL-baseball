@@ -169,6 +169,15 @@ def to_number(value: Any, default: float = 0.0) -> float:
         return default
 
 
+def count_ratio(numerator: int, denominator: int) -> float:
+    """Ratio of two counting stats; undefined (NaN) without denominator events.
+
+    A 4 K / 0 BB pitcher has no K/BB, not a K/BB of zero; scoring treats the
+    undefined value explicitly (see ``src.features``) instead of ranking it last.
+    """
+    return float(numerator) / denominator if denominator else float("nan")
+
+
 def to_int(value: Any, default: int = 0) -> int:
     return int(round(to_number(value, float(default))))
 
@@ -525,7 +534,9 @@ def normalize_batters(raw: pd.DataFrame, roster: pd.DataFrame) -> pd.DataFrame:
                 "bb_rate": round(bb_rate, 4),
                 "k_rate": round(k_rate, 4),
                 "hr_rate": round(safe_divide(home_runs, pa), 4),
-                "bb_k_ratio": to_number(raw_row.get("保送三振比", safe_divide(walks, strikeouts))),
+                "bb_k_ratio": to_number(raw_row.get("保送三振比", ""), count_ratio(walks, strikeouts))
+                if strikeouts
+                else count_ratio(walks, strikeouts),
                 "source_note": "CPBL 官方全記錄查詢",
             }
         )
@@ -554,7 +565,7 @@ def normalize_pitchers(raw: pd.DataFrame, roster: pd.DataFrame) -> pd.DataFrame:
                 "home_runs_allowed": to_int(raw_row.get("被全壘打", 0)),
                 "era": to_number(raw_row.get("防禦率", 0)),
                 "whip": to_number(raw_row.get("每局被上壘率", 0)),
-                "k_bb_ratio": round(safe_divide(strikeouts, walks), 2),
+                "k_bb_ratio": round(count_ratio(strikeouts, walks), 2),
                 "k_rate": round(safe_divide(strikeouts, pa), 4),
                 "bb_rate": round(safe_divide(walks, pa), 4),
                 "hr_allowed_rate": round(safe_divide(to_int(raw_row.get("被全壘打", 0)), pa), 4),

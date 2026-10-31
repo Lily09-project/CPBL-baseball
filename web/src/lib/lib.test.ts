@@ -169,4 +169,47 @@ describe("data loader", () => {
     const loader = createLoader("./", fetcher);
     await expect(loader.load("league.json")).rejects.toBeInstanceOf(IntegrityError);
   });
+
+  it("retries the manifest after a failed load instead of caching the rejection", async () => {
+    const league = '{"teams":[]}';
+    const digest = await sha256Hex(encoder.encode(league).buffer as ArrayBuffer);
+    let manifestCalls = 0;
+    const fetcher = vi.fn(async (url: string) => {
+      if (url.endsWith("manifest.json")) {
+        manifestCalls += 1;
+        return manifestCalls === 1 ? respond("unavailable", 503) : respond(JSON.stringify({ schema_version: "2.0", files: { "league.json": digest } }));
+      }
+      return respond(league);
+    });
+    const loader = createLoader("./", fetcher);
+    await expect(loader.load("league.json")).rejects.toThrow("HTTP 503");
+    await expect(loader.load("league.json")).resolves.toEqual({ teams: [] });
+    expect(manifestCalls).toBe(2);
+  });
+
+  it("refetches a stale manifest and file once, bypassing the cache, before failing integrity", async () => {
+    const newLeague = '{"teams":["new"]}';
+    const oldDigest = await sha256Hex(encoder.encode('{"teams":["old"]}').buffer as ArrayBuffer);
+    const newDigest = await sha256Hex(encoder.encode(newLeague).buffer as ArrayBuffer);
+    let deployed = false;
+    const fetcher = vi.fn(async (url: string) => {
+      if (url.endsWith("manifest.json")) {
+        return respond(JSON.stringify({ schema_version: "2.0", files: { "league.json": deployed ? newDigest : oldDigest } }));
+      }
+      // The file request already hits the new deployment.
+      deployed = true;
+      return respond(newLeague);
+    });
+    const loader = createLoader("./", fetcher);
+    await loader.manifest(); // the tab still holds the old manifest
+    await expect(loader.load("league.json")).resolves.toEqual({ teams: ["new"] });
+    expect(fetcher).toHaveBeenCalledWith("./data/manifest.json", { cache: "reload" });
+    expect(fetcher).toHaveBeenCalledWith("./data/league.json", { cache: "reload" });
+
+    const tampered = vi.fn(async (url: string) =>
+      url.endsWith("manifest.json") ? respond(JSON.stringify({ schema_version: "2.0", files: { "league.json": oldDigest } })) : respond(newLeague),
+    );
+    await expect(createLoader("./", tampered).load("league.json")).rejects.toBeInstanceOf(IntegrityError);
+    expect(tampered).toHaveBeenCalledTimes(4); // manifest + file, then one reload of each
+  });
 });
