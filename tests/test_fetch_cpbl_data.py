@@ -193,3 +193,26 @@ def test_zero_denominator_ratios_are_undefined_not_zero():
 
     assert pd.isna(normalize_batters(batters, roster).iloc[0]["bb_k_ratio"])
     assert pd.isna(normalize_pitchers(pitchers, roster).iloc[0]["k_bb_ratio"])
+
+
+def test_dash_era_without_outs_is_missing_not_perfect():
+    roster = pd.DataFrame([{"player_id": "0000000002", "player_name": "測試投手", "team": "測試隊"}])
+    pitchers = pd.DataFrame(
+        [
+            {
+                "球員": "1 測試隊 測試投手",
+                "投球局數": "0.0",
+                "自責分": 2,
+                "被安打": 2,
+                "四壞": 1,
+                "奪三振": 0,
+                "打席": 3,
+                "防禦率": "-",
+                "每局被上壘率": "-",
+            }
+        ]
+    )
+
+    row = normalize_pitchers(pitchers, roster).iloc[0]
+    assert pd.isna(row["era"])
+    assert pd.isna(row["whip"])
