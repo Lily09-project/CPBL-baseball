@@ -7,28 +7,37 @@
 
 **[開啟線上展示](https://lily09-project.github.io/CPBL-baseball/)**
 
-![CPBL Scouting Lab 桌面畫面](docs/screenshots/pages-desktop.png)
+| 桌面版 | 手機版 |
+| --- | --- |
+| ![CPBL Scouting Lab 桌面畫面](docs/screenshots/pages-desktop.png) | ![CPBL Scouting Lab 手機畫面](docs/screenshots/pages-mobile.png) |
 
 ## 功能
 
-- 球員能力估計、趨勢、相似度與比較
-- Empirical Bayes 小樣本修正、log5 對戰估計與 Monte Carlo 模擬
-- 可篩選、比較及下載的球員資料
-- 資料快照與 SHA-256 完整性驗證
+- **真實實力**：以 Empirical Bayes 修正小樣本，估計打者與投手的真實能力、趨勢與相似球員，可比較與下載
+- **球員檔案**：單一球員的能力估計區間、趨勢與相似球員
+- **打線實驗室**：以 log5 估計對戰結果，用 Monte Carlo 模擬每場得分，比較不同打序
+- **季末模擬**：用 Monte Carlo 模擬剩餘賽程，依勝率（和局不計）估計各隊奪得半季第一的機率
+- **資料可信度**：資料快照與 SHA-256 完整性驗證
 
-## 資料與評估邊界
-
-官方 CPBL 資料來源包含[球員](https://www.cpbl.com.tw/player)、[戰績](https://www.cpbl.com.tw/standings/season)及[成績統計](https://www.cpbl.com.tw/stats/recordall)等公開頁面。資料經過資料品質與可稽核性檢查後保存為版本化快照；網站使用靜態資料，不是即時服務。這是非 CPBL 官方服務，估計與模擬僅供研究和情境比較，不代表官方預測。
-
-## 技術與畫面
-
-Python 資料處理與分析、React、TypeScript、Vite、Web Worker；GitHub Pages 提供靜態網站。介面採黑白運動報刊風格，設計原則見 [DESIGN.md](DESIGN.md)。
+## 畫面
 
 | 打線實驗室 | 真實實力估計 |
 | --- | --- |
 | ![打線實驗室](docs/screenshots/lineup-lab.png) | ![真實實力估計](docs/screenshots/talent.png) |
 | **球員檔案** | **季末戰績模擬** |
 | ![球員檔案](docs/screenshots/player-profile.png) | ![季末戰績模擬](docs/screenshots/season.png) |
+
+截圖取自正式網站的 CPBL 公開資料快照。
+
+## 資料與評估邊界
+
+官方 CPBL 資料來源包含[球員](https://www.cpbl.com.tw/player)、[戰績](https://www.cpbl.com.tw/standings/season)及[成績統計](https://www.cpbl.com.tw/stats/recordall)等公開頁面。每天台北時間 00:15 自動抓取，資料經過資料品質與可稽核性檢查後，以 PR 更新版本化快照；任何頁面抓取不完整或分頁不一致都會停止，不會發布部分資料。網站使用靜態資料，不是即時服務。
+
+這是非 CPBL 官方服務，估計與模擬僅供研究和情境比較，不代表官方預測。
+
+## 技術
+
+Python 資料處理與分析、React、TypeScript、Vite、Web Worker；GitHub Pages 提供靜態網站。介面採黑白運動報刊風格，設計原則見 [DESIGN.md](DESIGN.md)。
 
 ## 本機執行與驗證
 

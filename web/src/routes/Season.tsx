@@ -23,7 +23,7 @@ function SeasonView({ league }: { league: LeagueData }) {
           以每隊的畢氏期望勝率作為真實強度，用 log5 計算每場對戰勝率，把剩下的比賽模擬 {league.simulations.toLocaleString()} 次，看看誰最可能拿下這個半季。
         </p>
         <p className="notice">
-          假設：本段賽季每隊共 {league.segment_games} 場（中職半季制）；官方剩餘賽程不在公開快照中，因此依剩餘場數平均配對對手。結果是情境分析，不是官方預測。
+          假設：本段賽季每隊共 {league.segment_games} 場（中職半季制）；官方剩餘賽程不在公開快照中，因此依剩餘場數平均配對對手，配不到的場次以聯盟平均對手計算。結果是情境分析，不是官方預測。
         </p>
       </header>
 
@@ -40,7 +40,7 @@ function SeasonView({ league }: { league: LeagueData }) {
             </li>
           ))}
         </ul>
-        <p className="muted small">同勝場並列第一時平分機率，因此全部加總恰好為 100%。種子 {league.seed}，可完全重現。</p>
+        <p className="muted small">依勝率排名（和局不計），同勝率並列第一時平分機率，因此全部加總恰好為 100%。種子 {league.seed}，可完全重現。</p>
       </section>
 
       <section className="grid grid-2">
