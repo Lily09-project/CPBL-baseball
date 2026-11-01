@@ -53,10 +53,11 @@ jobs:
             exit 0
           fi
 
-          # The official site occasionally rejects GitHub-hosted runner IPs
-          # (HTTP 403) or is temporarily unavailable. Do not publish stale
-          # data, but keep scheduled maintenance runs green and explicit.
-          # Manual runs still fail so an operator gets an actionable signal.
+          # Exit 75 means a typed transient failure (timeout, 403/429/5xx)
+          # while the published release is still recent; verified_pipeline
+          # returns 1 instead once the release is too old to keep deferring.
+          # Do not publish stale data, but keep these scheduled runs green and
+          # explicit. Manual runs still fail so an operator gets a signal.
           if [ "${{ github.event_name }}" = "schedule" ] \
             && [ "$refresh_status" -eq 75 ]; then
             echo "status=deferred" >> "$GITHUB_OUTPUT"
@@ -69,6 +70,17 @@ jobs:
               echo "Run this workflow manually after the official source is available again."
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
+          fi
+
+          if [ "$refresh_status" -eq 77 ]; then
+            echo "::error::The official CPBL CDN refused automated access (see the OfficialSourceBlockedError above); nothing was published."
+            {
+              echo "## Official source blocks automated access"
+              echo
+              echo "The CPBL CDN answered with a deliberate block (for example HTTP 404 with \`X-Cache: RULE\`)."
+              echo "This is not a transient outage: the pipeline does not retry or work around it, and no data was changed."
+              echo "An operator must decide how the data source can be accessed before refreshes can resume."
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
           echo "status=failed" >> "$GITHUB_OUTPUT"
