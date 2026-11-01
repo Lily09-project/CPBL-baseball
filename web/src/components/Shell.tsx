@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useDataset, useRoute } from "../app/hooks";
 import { formatDate, freshness } from "../lib/format";
+import { MODEL_CARD_URL, REPO_URL } from "../lib/links";
 import { routeToHash, type Route } from "../lib/router";
 import { CommandPalette } from "./CommandPalette";
 import "./Shell.css";
@@ -83,8 +84,14 @@ export function Shell({ children }: { children: ReactNode }) {
             )}
             。非 CPBL 官方服務、不是即時戰績；所有估計與模擬皆為分析示範，不構成任何預測保證。
           </p>
-          <p className="muted">
+          <p className="muted footer-links">
             <a href={routeToHash({ name: "data" })}>方法、限制與資料完整性</a>
+            <a href={MODEL_CARD_URL} target="_blank" rel="noopener noreferrer">
+              模型卡<span className="visually-hidden">（在新分頁開啟 GitHub）</span>
+            </a>
+            <a href={REPO_URL} target="_blank" rel="noopener noreferrer">
+              原始碼<span className="visually-hidden">（在新分頁開啟 GitHub）</span>
+            </a>
           </p>
         </div>
       </footer>

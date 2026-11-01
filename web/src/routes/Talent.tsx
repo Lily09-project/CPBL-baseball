@@ -81,14 +81,6 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
 
   return (
     <div className="stack">
-      <header>
-        <span className="eyebrow">實驗 01・Empirical Bayes</span>
-        <h1>真實實力估計</h1>
-        <p className="lede">
-          40 個打席打出 .450 的上壘率，是實力還是運氣？我們用全聯盟的分布估計先驗，把每位球員的原始數據收縮成更可信的「真實實力」，並附上 80% 可信區間。
-        </p>
-      </header>
-
       <section className="card controls" aria-label="篩選條件">
         <fieldset className="segmented">
           <legend className="label">球員類型</legend>
@@ -148,6 +140,9 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
           >
             {plotRows.length > 0 ? <IntervalPlot data={plotRows} reference={prior?.mean ?? 0} format={fmt} /> : <p className="muted">沒有符合條件的球員。</p>}
           </ChartFrame>
+          <p className="muted small chart-guide">
+            怎麼讀：◆ 是帳面上的原始數據，● 是收縮後的真實實力估計，綠色長條是 80% 可信區間，虛線是聯盟平均。◆ 離 ● 越遠，代表原始數據裡的運氣成分越大；樣本越多，長條越短。
+          </p>
           <p className="muted small">
             先驗：Beta(α={prior?.alpha.toFixed(1)}, β={prior?.beta.toFixed(1)})，相當於先看過約 {prior ? Math.round(prior.alpha + prior.beta) : "—"} 次聯盟平均的{type === "batter" ? "打席" : "對戰打者"}。
           </p>
@@ -236,7 +231,15 @@ export default function Talent() {
   const players = useDataset("players.json");
   const league = useDataset("league.json");
   return (
-    <div className="page">
+    <div className="page stack">
+      <header>
+        <span className="eyebrow">實驗 01・Empirical Bayes</span>
+        <h1>真實實力估計</h1>
+        <p className="lede">
+          40 個打席打出 .450 的上壘率，是實力還是運氣？我們用全聯盟的分布估計先驗，把每位球員的原始數據收縮成更可信的「真實實力」，並附上 80% 可信區間。
+        </p>
+      </header>
+
       <Gate<[PlayerSummary[], LeagueData]> states={[players, league]}>{(p, l) => <TalentBoard players={p} league={l} />}</Gate>
     </div>
   );
