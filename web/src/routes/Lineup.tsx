@@ -91,20 +91,26 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   const fresh = result && result.inputKey === inputKey;
   const runsPerGame = result ? mean(result.runs) : null;
   const name = (type: "batter" | "pitcher", id: string) => byId.get(`${type}:${id}`)?.name ?? id;
+  const runsAt = (runs: number[], q: number) => {
+    const v = quantile(runs, q);
+    return Number.isInteger(v) ? String(v) : v.toFixed(1);
+  };
 
   return (
     <div className="stack">
-      <header>
-        <span className="eyebrow">實驗 02・Monte Carlo</span>
-        <h1>打線實驗室</h1>
-        <p className="lede">
-          排出你的 9 棒、指定對手投手，瀏覽器會在背景執行緒用壘包－出局數馬可夫鏈模擬整場比賽，告訴你這套打線平均能得幾分，以及換棒次值不值得。
-        </p>
-      </header>
-
       <section className="lineup-layout">
         <div className="card">
           <h2>排出打線</h2>
+          <p className="muted small lineup-hint">
+            {params.ids?.length ? "" : `預設 9 棒是${team}打席數最多的 9 位打者。`}可以直接執行模擬，或換人、調棒次後再比較。
+            <button type="button" className="btn jump-run" onClick={() => {
+              const panel = document.getElementById("run-panel");
+              panel?.scrollIntoView({ block: "start" });
+              panel?.focus({ preventScroll: true });
+            }}>
+              跳到執行模擬
+            </button>
+          </p>
           <div className="lineup-controls">
             <div className="field">
               <label htmlFor="team-fill">以球隊預設打線填入</label>
@@ -178,8 +184,8 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
           </ol>
         </div>
 
-        <div className="card run-panel">
-          <h2>執行模擬</h2>
+        <div className="card run-panel" id="run-panel" tabIndex={-1} aria-labelledby="run-title">
+          <h2 id="run-title">執行模擬</h2>
           <fieldset className="segmented">
             <legend className="label">模擬場數</legend>
             {GAME_OPTIONS.map((g) => (
@@ -215,6 +221,11 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
           )}
 
           <div aria-live="polite">
+            {!result && !job && (
+              <p className="run-empty muted">
+                按下「模擬 {games.toLocaleString()} 場」後，這裡會顯示平均每場得分、得 5 分以上與被完封的機率，以及每場得分的分布；「搜尋更好的棒次」會嘗試兩兩對調棒次並檢查改善是否只是雜訊。
+              </p>
+            )}
             {result && runsPerGame !== null && (
               <div className="results" data-testid="sim-results">
                 {!fresh && <p className="notice">打線已變更，以下是上一次的結果，請重新模擬。</p>}
@@ -259,6 +270,9 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
                 >
                   <Histogram counts={integerHistogram(result.runs, HIST_CAP)} labels={Array.from({ length: HIST_CAP + 1 }, (_, i) => (i === HIST_CAP ? `${i}+` : String(i)))} highlightFrom={5} />
                 </ChartFrame>
+                <p className="muted small chart-guide">
+                  怎麼讀：橫軸是單場得分，長條高度是場數；黑色長條是得 5 分以上的比賽。中位數 {runsAt(result.runs, 0.5)} 分，80% 的比賽介於 {runsAt(result.runs, 0.1)} 到 {runsAt(result.runs, 0.9)} 分。
+                </p>
               </div>
             )}
 
@@ -316,7 +330,15 @@ export default function Lineup() {
   const sim = useDataset("sim.json");
   const league = useDataset("league.json");
   return (
-    <div className="page">
+    <div className="page stack">
+      <header>
+        <span className="eyebrow">實驗 02・Monte Carlo</span>
+        <h1>打線實驗室</h1>
+        <p className="lede">
+          排出你的 9 棒、指定對手投手，瀏覽器會在背景執行緒用壘包－出局數馬可夫鏈模擬整場比賽，告訴你這套打線平均能得幾分，以及換棒次值不值得。
+        </p>
+      </header>
+
       <Gate<[PlayerSummary[], SimInputs, LeagueData]> states={[players, sim, league]}>{(p, s, l) => <LineupLab players={p} sim={s} league={l} />}</Gate>
     </div>
   );

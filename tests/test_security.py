@@ -91,7 +91,9 @@ def test_web_app_declares_a_strict_content_security_policy():
 
 
 def test_web_source_never_calls_third_party_hosts():
-    allowed = {"www.cpbl.com.tw", "nodejs.org"}
+    # github.com is only a navigational link to the public model card and source;
+    # the CSP (connect-src 'self') and the E2E suite still forbid third-party requests.
+    allowed = {"www.cpbl.com.tw", "nodejs.org", "github.com"}
     for path in Path("web/src").rglob("*.ts*"):
         if ".test." in path.name:
             continue  # tests deliberately contain attack strings such as example.invalid
