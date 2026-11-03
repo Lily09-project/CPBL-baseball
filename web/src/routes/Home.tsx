@@ -3,59 +3,95 @@ import { ChartFrame, DivergingBars } from "../components/charts";
 import { ScrollRegion } from "../components/ScrollRegion";
 import { Gate } from "../components/States";
 import { formatDate, formatPercent, formatSigned } from "../lib/format";
+import { leagueHeadline } from "../lib/insights";
+import { MODEL_CARD_URL } from "../lib/links";
 import { routeToHash } from "../lib/router";
 import type { LeagueData, Provenance } from "../lib/types";
 import "./Home.css";
 
-const FEATURES = [
-  {
-    href: routeToHash({ name: "talent", type: "batter" }),
-    title: "真實實力估計",
-    body: "用 Empirical Bayes 把小樣本的運氣成分收縮回聯盟平均，附 80% 可信區間，揪出被數字騙到的「小樣本陷阱」。",
-    tag: "統計推論",
-  },
-  {
-    href: routeToHash({ name: "lineup" }),
-    title: "打線實驗室",
-    body: "挑 9 名打者對上任一投手，在瀏覽器裡用壘包－出局數馬可夫鏈模擬上千場比賽，並自動搜尋更好的棒次。",
-    tag: "Monte Carlo",
-  },
-  {
-    href: routeToHash({ name: "season" }),
-    title: "季末戰績模擬",
-    body: "以畢氏期望勝率與 log5 對戰機率模擬剩餘賽程 10,000 次，量化每隊的最終勝場區間與奪冠機率。",
-    tag: "情境模擬",
-  },
-  {
-    href: routeToHash({ name: "data" }),
-    title: "可驗證的資料",
-    body: "每個資料檔都以 SHA-256 在瀏覽器端驗證，17 份官方快照的時間軸與品質檢查全部公開。",
-    tag: "資料工程",
-  },
-];
+function experiments(league: LeagueData, provenance: Provenance) {
+  return [
+    {
+      href: routeToHash({ name: "talent", type: "batter" }),
+      step: "01",
+      title: "真實實力估計",
+      body: "用 Empirical Bayes 把小樣本的運氣成分收縮回聯盟平均，附 80% 可信區間，揪出被數字騙到的「小樣本陷阱」。",
+      tag: "統計推論",
+    },
+    {
+      href: routeToHash({ name: "lineup" }),
+      step: "02",
+      title: "打線實驗室",
+      body: "挑 9 名打者對上任一投手，在瀏覽器裡用壘包－出局數馬可夫鏈模擬上千場比賽，並自動搜尋更好的棒次。",
+      tag: "Monte Carlo",
+    },
+    {
+      href: routeToHash({ name: "season" }),
+      step: "03",
+      title: "季末戰績模擬",
+      body: `以畢氏期望勝率與 log5 對戰機率模擬剩餘賽程 ${league.simulations.toLocaleString()} 次，量化每隊的最終勝場區間與拿下半季第一的機率。`,
+      tag: "情境模擬",
+    },
+    {
+      href: routeToHash({ name: "data" }),
+      step: "04",
+      title: "可驗證的資料",
+      body: `每個資料檔都以 SHA-256 在瀏覽器端驗證，${provenance.snapshots.length} 份官方快照的時間軸與品質檢查全部公開。`,
+      tag: "資料工程",
+    },
+  ];
+}
+
+/** The lead story: one sentence a judge can repeat, computed from the snapshot. */
+function Focus({ league, provenance }: { league: LeagueData; provenance: Provenance }) {
+  const headline = leagueHeadline(league);
+  const passed = provenance.snapshots.filter((s) => s.quality_status === "pass").length;
+  return (
+    <section className="focus" aria-labelledby="focus-title" data-testid="headline-insight">
+      <h2 id="focus-title" className="focus-label">
+        本期焦點
+      </h2>
+      {headline && (
+        <>
+          <p className="focus-lead">
+            <strong>{headline.leader.team}</strong>在 {headline.simulations.toLocaleString()} 次季末模擬中，有{" "}
+            <strong>{formatPercent(headline.leader.simulation.first_place_probability)}</strong> 拿下半季第一。
+          </p>
+          <ul className="focus-facts">
+            {headline.runnerUp && (
+              <li>
+                最接近的對手：{headline.runnerUp.team}（{formatPercent(headline.runnerUp.simulation.first_place_probability)}）
+              </li>
+            )}
+            {headline.shutOut.length > 0 && <li>另有 {headline.shutOut.length} 隊在所有模擬中都沒拿到第一</li>}
+            {headline.unluckiest && (
+              <li>
+                運氣最差：{headline.unluckiest.team}比得失分推算的戰績少贏 {Math.abs(headline.unluckiest.luck_wins).toFixed(1)} 場
+              </li>
+            )}
+          </ul>
+        </>
+      )}
+      <p className="focus-source">
+        資料：CPBL 官方公開頁面快照（{formatDate(provenance.generated_at)}，{passed}/{provenance.snapshots.length} 份快照通過品質檢查）。非 CPBL 官方服務。
+        <br />
+        <a href={routeToHash({ name: "data" })}>方法與資料驗證</a>
+        <span aria-hidden="true">・</span>
+        <a href={MODEL_CARD_URL} target="_blank" rel="noopener noreferrer">
+          模型卡<span className="visually-hidden">（在新分頁開啟 GitHub）</span>
+        </a>
+      </p>
+    </section>
+  );
+}
 
 function Dashboard({ league, provenance }: { league: LeagueData; provenance: Provenance }) {
-  const leader = [...league.teams].sort((a, b) => b.simulation.first_place_probability - a.simulation.first_place_probability)[0];
+  const headline = leagueHeadline(league);
+  const leader = headline?.leader;
   const luckiest = [...league.teams].sort((a, b) => b.luck_wins - a.luck_wins)[0];
   const unluckiest = [...league.teams].sort((a, b) => a.luck_wins - b.luck_wins)[0];
   return (
     <>
-      <section className="hero">
-        <span className="eyebrow">2026 球季・資料快照 {formatDate(provenance.generated_at)}</span>
-        <h1>看穿數字背後的真實實力</h1>
-        <p className="lede">
-          中職公開數據的分析實驗室：把運氣和實力分開、讓棒次與戰績用模擬說話。所有計算都在這個靜態網站或可重現的 Python 管線裡完成，不需要伺服器、也不呼叫任何外部服務。
-        </p>
-        <div className="row">
-          <a className="btn btn-primary" href={routeToHash({ name: "lineup" })}>
-            開始模擬打線
-          </a>
-          <a className="btn" href={routeToHash({ name: "talent", type: "batter" })}>
-            查看真實實力排行
-          </a>
-        </div>
-      </section>
-
       <section aria-label="聯盟重點" className="kpis">
         <div className="card kpi">
           <span className="stat-label">聯盟平均每場得分</span>
@@ -64,7 +100,7 @@ function Dashboard({ league, provenance }: { league: LeagueData; provenance: Pro
         </div>
         {leader && (
           <div className="card kpi">
-            <span className="stat-label">奪冠機率最高</span>
+            <span className="stat-label">半季第一機率最高</span>
             <span className="stat-value">{formatPercent(leader.simulation.first_place_probability)}</span>
             <span className="muted">{leader.team}</span>
           </div>
@@ -85,10 +121,36 @@ function Dashboard({ league, provenance }: { league: LeagueData; provenance: Pro
         )}
       </section>
 
+      <section aria-labelledby="features-title" className="experiments">
+        <div className="section-head">
+          <h2 id="features-title">從哪裡開始？</h2>
+          <p className="muted">依序看 01 → 03 三個實驗，最後到 04 檢查資料怎麼來、怎麼驗證。</p>
+        </div>
+        <ol className="grid grid-2 features">
+          {experiments(league, provenance).map((f) => (
+            <li key={f.title}>
+              <a className="card feature" href={f.href}>
+                <span className="feature-top">
+                  <span className="feature-step" aria-hidden="true">
+                    {f.step}
+                  </span>
+                  <span className="badge badge-teal">{f.tag}</span>
+                </span>
+                <h3>{f.title}</h3>
+                <p>{f.body}</p>
+                <span className="feature-cta" aria-hidden="true">
+                  進入 →
+                </span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+
       <section className="grid grid-2">
         <div className="card">
           <h2>戰績與畢氏期望</h2>
-          <p className="muted">畢氏期望勝率只看得失分，比勝敗紀錄更能反映球隊真實強度。</p>
+          <p className="muted">畢氏期望勝率只看得失分，比勝敗紀錄更能反映球隊真實強度；「運氣差」是實際勝場減去期望勝場。</p>
           <ScrollRegion label="戰績與畢氏期望">
             <table data-testid="standings">
               <caption className="visually-hidden">各隊戰績、畢氏期望勝率與運氣差</caption>
@@ -145,23 +207,7 @@ function Dashboard({ league, provenance }: { league: LeagueData; provenance: Pro
           >
             <DivergingBars rows={league.teams.map((t) => ({ key: t.team, label: t.team, value: t.luck_wins }))} format={(v) => formatSigned(v)} />
           </ChartFrame>
-          <p className="muted small">正值代表比得失分應有的戰績多贏；通常會隨賽季進行回歸。</p>
-        </div>
-      </section>
-
-      <section aria-labelledby="features-title">
-        <h2 id="features-title">四個實驗</h2>
-        <div className="grid grid-2 features">
-          {FEATURES.map((f) => (
-            <a key={f.title} className="card feature" href={f.href}>
-              <span className="badge badge-teal">{f.tag}</span>
-              <h3>{f.title}</h3>
-              <p>{f.body}</p>
-              <span className="feature-cta" aria-hidden="true">
-                進入 →
-              </span>
-            </a>
-          ))}
+          <p className="muted small chart-guide">怎麼讀：綠色向右代表比得失分應有的戰績多贏（運氣好），黑色向左代表少贏；這種差距通常會隨賽季進行回歸。</p>
         </div>
       </section>
     </>
@@ -174,6 +220,32 @@ export default function Home() {
   const provenance = useDataset("provenance.json");
   return (
     <div className="page stack">
+      {/* The hero copy is static, so the headline paints before any data arrives. */}
+      <section className="hero" aria-labelledby="home-title">
+        <div className="hero-copy">
+          <span className="eyebrow">中職公開數據・非官方分析實驗室</span>
+          <h1 id="home-title">
+            <span className="phrase">看穿數字背後</span>
+            <span className="phrase">的真實實力</span>
+          </h1>
+          <p className="lede">用中職公開數據回答三個問題：誰的好成績只是運氣？棒次怎麼排最會得分？剩下的比賽，誰最可能拿下半季第一？</p>
+          <div className="row">
+            <a className="btn btn-primary" href={routeToHash({ name: "lineup" })}>
+              開始模擬打線
+            </a>
+            <a className="btn" href={routeToHash({ name: "talent", type: "batter" })}>
+              查看真實實力排行
+            </a>
+          </div>
+        </div>
+        <div className="hero-focus">
+          {league.status === "ready" && provenance.status === "ready" ? (
+            <Focus league={league.data} provenance={provenance.data} />
+          ) : (
+            <div className="focus focus-pending" aria-hidden="true" />
+          )}
+        </div>
+      </section>
       <Gate<[LeagueData, Provenance]> states={[league, provenance]}>{(l, p) => <Dashboard league={l} provenance={p} />}</Gate>
     </div>
   );

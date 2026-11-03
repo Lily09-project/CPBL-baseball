@@ -195,3 +195,33 @@
     white-space: nowrap;
   }
 }
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+.footer-links a {
+  display: inline-block;
+  min-height: 24px;
+  padding-block: 2px;
+}
+
+/* Phones: wrap the five sections onto two rows so none hides off-screen. */
+@media (max-width: 560px) {
+  .site-header .site-nav {
+    overflow-x: visible;
+  }
+
+  .site-header .site-nav ul {
+    flex-wrap: wrap;
+    column-gap: 20px;
+    row-gap: 0;
+  }
+
+  .site-header .site-nav a {
+    min-height: 44px;
+    padding-block: 10px;
+  }
+}

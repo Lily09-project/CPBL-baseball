@@ -1,9 +1,93 @@
 .hero {
+  display: grid;
+  gap: var(--space-6);
   padding: var(--space-5) 0 var(--space-3);
+}
+
+@media (min-width: 980px) {
+  .hero {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    align-items: center;
+  }
 }
 
 .hero h1 {
   max-width: 24em;
+}
+
+/* Break the headline between phrases, never in the middle of a word. */
+.hero h1 .phrase {
+  display: inline-block;
+}
+
+/* ---- Lead story ("本期焦點"): the one takeaway, computed from the snapshot ---- */
+.hero-focus {
+  min-width: 0;
+}
+
+.focus {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 var(--space-3);
+  border-top: 4px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Reserve the lead story's space while data loads to avoid layout shift. */
+.focus-pending {
+  min-height: 15rem;
+}
+
+.focus-label {
+  margin: 0;
+  font-size: var(--step--1);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.focus-lead {
+  margin: 0;
+  font-size: var(--step-2);
+  font-weight: 700;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.focus-lead strong {
+  font-weight: 900;
+}
+
+.focus-facts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+  color: var(--ink-soft);
+}
+
+.focus-facts li {
+  padding-left: 1em;
+  text-indent: -1em;
+}
+
+.focus-facts li::before {
+  content: "— ";
+  color: var(--muted);
+}
+
+.focus-source {
+  margin: 0;
+  font-size: var(--step--1);
+  color: var(--muted);
+}
+
+.focus-source a {
+  display: inline-block;
+  min-height: 24px;
+  padding-block: 2px;
+  color: var(--ink);
+  font-weight: 650;
 }
 
 .kpis {
@@ -21,6 +105,29 @@
   font-size: var(--step--1);
 }
 
+/* ---- Guided path through the experiments ---- */
+.section-head {
+  display: grid;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.section-head h2,
+.section-head p {
+  margin: 0;
+}
+
+ol.features {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+ol.features > li {
+  display: grid;
+  min-width: 0;
+}
+
 .feature {
   display: grid;
   align-content: start;
@@ -28,6 +135,20 @@
   color: var(--ink);
   text-decoration: none;
   transition: transform var(--duration) var(--ease), border-color var(--duration) var(--ease);
+}
+
+.feature-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.feature-step {
+  font-size: var(--step-2);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
 }
 
 .feature h3 {

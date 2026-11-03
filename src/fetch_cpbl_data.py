@@ -15,7 +15,12 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from src.source_contract import CPBL_BASE_URL, CPBL_FETCH_BASE_URL, OFFICIAL_SOURCE_PATHS
-from src.source_failure import TemporaryOfficialSourceError, is_temporary_transport_error
+from src.source_failure import (
+    OfficialSourceBlockedError,
+    TemporaryOfficialSourceError,
+    is_temporary_transport_error,
+    source_block_reason,
+)
 from src.utils import ensure_dirs, project_path, safe_divide
 
 
@@ -220,6 +225,11 @@ def _validate_official_url(url: str, context: str) -> None:
 
 
 def _checked_response_text(response: Any, context: str) -> str:
+    block_reason = source_block_reason(response)
+    if block_reason:
+        raise OfficialSourceBlockedError(
+            f"{context} 拒絕自動化存取：{block_reason}。不重試、不繞過，需人工確認來源存取方式。"
+        )
     response.raise_for_status()
     status_code = getattr(response, "status_code", None)
     if status_code is not None and 300 <= int(status_code) < 400:
@@ -615,6 +625,8 @@ def fetch_cpbl_official_data(timeout: int = 20) -> dict[str, pd.DataFrame]:
     for attempt in range(1, PIPELINE_FETCH_ATTEMPTS + 1):
         try:
             return _fetch_cpbl_official_data_once(timeout)
+        except OfficialSourceBlockedError:
+            raise
         except (requests.RequestException, RuntimeError) as exc:
             if attempt == PIPELINE_FETCH_ATTEMPTS:
                 error_type = TemporaryOfficialSourceError if is_temporary_transport_error(exc) else RuntimeError
