@@ -45,10 +45,13 @@ function Routes() {
       return <DataTrust />;
     case "not-found":
       return (
-        <div className="page">
-          <EmptyState title="找不到這個頁面">
+        <div className="page stack">
+          <header>
+            <h1>找不到這個頁面</h1>
+          </header>
+          <EmptyState title="網址不存在">
             <p>
-              網址 <code>{route.path}</code> 不存在。<a href={routeToHash({ name: "home" })}>回到首頁</a>
+              <code>{route.path}</code> 不是這個網站的頁面。<a href={routeToHash({ name: "home" })}>回到首頁</a>，或從上方選單選擇一個實驗。
             </p>
           </EmptyState>
         </div>
