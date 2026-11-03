@@ -54,9 +54,10 @@ jobs:
             exit 0
           fi
 
-          # A scheduled health check must distinguish a temporary upstream
-          # block/outage from a product regression. Never turn stale data into
-          # a passing verification; defer the dependent checks instead.
+          # A scheduled health check must distinguish a short transient
+          # upstream outage (exit 75) from a product regression or a
+          # deliberate CDN block (exit 77). Never turn stale data into a
+          # passing verification; defer the dependent checks instead.
           if [ "${{ github.event_name }}" = "schedule" ] \
             && [ "$pipeline_status" -eq 75 ]; then
             echo "status=deferred" >> "$GITHUB_OUTPUT"
@@ -68,6 +69,17 @@ jobs:
               echo "No release was marked as freshly verified. Run this workflow manually after the official source is available again."
             } >> "$GITHUB_STEP_SUMMARY"
             exit 0
+          fi
+
+          if [ "$pipeline_status" -eq 77 ]; then
+            echo "::error::The official CPBL CDN refused automated access (see the OfficialSourceBlockedError above); nothing was published."
+            {
+              echo "## Official source blocks automated access"
+              echo
+              echo "The CPBL CDN answered with a deliberate block (for example HTTP 404 with \`X-Cache: RULE\`)."
+              echo "This is not a transient outage: the pipeline does not retry or work around it, and no data was changed."
+              echo "An operator must decide how the data source can be accessed before refreshes can resume."
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
           echo "status=failed" >> "$GITHUB_OUTPUT"
