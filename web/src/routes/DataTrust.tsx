@@ -4,6 +4,7 @@ import { ChartFrame, Histogram } from "../components/charts";
 import { ScrollRegion } from "../components/ScrollRegion";
 import { Gate } from "../components/States";
 import { formatDate } from "../lib/format";
+import { MODEL_CARD_URL } from "../lib/links";
 import type { DataFiles, LeagueData, Manifest, Provenance, SimInputs } from "../lib/types";
 import "./DataTrust.css";
 
@@ -157,6 +158,13 @@ function Trust({ provenance, league, sim }: { provenance: Provenance; league: Le
 
       <section className="card method" id="methods">
         <h2>方法與限制</h2>
+        <p className="muted">
+          完整的假設、驗證方式與已知限制寫在{" "}
+          <a href={MODEL_CARD_URL} target="_blank" rel="noopener noreferrer">
+            模型卡<span className="visually-hidden">（在新分頁開啟 GitHub）</span>
+          </a>
+          。
+        </p>
         <h3>真實實力（Empirical Bayes）</h3>
         <p>
           每個比率視為二項分布結果，以達門檻球員的分布用動差法估計 Beta 先驗，並扣除二項抽樣雜訊；後驗平均與 80% 等尾可信區間由自行實作的不完全 Beta 函數計算。打者上壘率的分子由官方上壘率乘以打席推回，因此包含觸身球。

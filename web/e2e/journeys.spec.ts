@@ -17,6 +17,15 @@ test.describe("F1 聯盟脈動", () => {
     await expect(page.getByTestId("data-age")).toBeVisible();
     await expectAccessible(page);
   });
+
+  test("the lead story names the team the export ranks first", async ({ page }) => {
+    await openRoute(page, "/");
+    const league = await fetchJson<League>(page, "league.json");
+    const leader = [...league.teams].sort((a, b) => b.simulation.first_place_probability - a.simulation.first_place_probability)[0]!;
+    const focus = page.getByTestId("headline-insight");
+    await expect(focus).toContainText(leader.team);
+    await expect(focus).toContainText(`${(leader.simulation.first_place_probability * 100).toFixed(0)}%`);
+  });
 });
 
 test.describe("F2 真實實力", () => {

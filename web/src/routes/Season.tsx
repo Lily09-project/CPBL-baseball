@@ -4,11 +4,13 @@ import { ChartFrame, Histogram, RangeBars } from "../components/charts";
 import { ScrollRegion } from "../components/ScrollRegion";
 import { Gate } from "../components/States";
 import { formatPercent } from "../lib/format";
+import { leagueHeadline, rankByFirstPlace } from "../lib/insights";
 import type { LeagueData } from "../lib/types";
 import "./Season.css";
 
 function SeasonView({ league }: { league: LeagueData }) {
-  const teams = [...league.teams].sort((a, b) => b.simulation.first_place_probability - a.simulation.first_place_probability || b.wins - a.wins);
+  const teams = rankByFirstPlace(league.teams);
+  const headline = leagueHeadline(league);
   const [selected, setSelected] = useState(teams[0]?.team ?? "");
   const team = teams.find((t) => t.team === selected) ?? teams[0];
   const lo = Math.min(...teams.map((t) => t.simulation.current_wins)) - 1;
@@ -28,7 +30,15 @@ function SeasonView({ league }: { league: LeagueData }) {
       </header>
 
       <section className="card">
-        <h2>奪冠機率</h2>
+        <h2>拿下半季第一的機率</h2>
+        {headline && (
+          <p className="takeaway" data-testid="season-takeaway">
+            <strong>{headline.leader.team}</strong>目前 {headline.leader.simulation.current_wins} 勝、剩 {headline.leader.simulation.games_remaining} 場，在 {headline.simulations.toLocaleString()} 次模擬中有{" "}
+            <strong>{formatPercent(headline.leader.simulation.first_place_probability, 1)}</strong> 拿下半季第一
+            {headline.runnerUp ? `；最大威脅是${headline.runnerUp.team}（${formatPercent(headline.runnerUp.simulation.first_place_probability, 1)}）` : ""}
+            {headline.shutOut.length > 0 ? `。${headline.shutOut.length} 隊在所有模擬中都沒拿到第一。` : "。"}
+          </p>
+        )}
         <ul className="prob-list" data-testid="title-odds">
           {teams.map((t) => (
             <li key={t.team}>
@@ -62,6 +72,7 @@ function SeasonView({ league }: { league: LeagueData }) {
               }))}
             />
           </ChartFrame>
+          <p className="muted small chart-guide">怎麼讀：直線是目前勝場，圓點是模擬的中位數，綠色長條涵蓋 80% 的模擬結果；長條越短，代表剩餘場次越少、結局越確定。</p>
         </div>
         <div className="card">
           <div className="field">
@@ -128,7 +139,7 @@ function SeasonTable({ league }: { league: LeagueData }) {
           <th scope="col" className="num">真實強度</th>
           <th scope="col" className="num">預估勝場</th>
           <th scope="col" className="num">80% 區間</th>
-          <th scope="col" className="num">奪冠機率</th>
+          <th scope="col" className="num">半季第一機率</th>
         </tr>
       </thead>
       <tbody>
