@@ -104,6 +104,8 @@ test.describe("F4 季末模擬", () => {
     const values = await page.getByTestId("title-odds").locator(".prob-value").allInnerTexts();
     const total = values.reduce((sum, v) => sum + Number(v.replace("%", "")), 0);
     expect(Math.abs(total - 100)).toBeLessThan(0.6);
+    // The standings are dated: a judge must see which snapshot they come from.
+    await expect(page.getByTestId("snapshot-notice")).toContainText("（台北時間）");
     await page.getByLabel("檢視球隊").selectOption({ index: 1 });
     await expectAccessible(page);
   });

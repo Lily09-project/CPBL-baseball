@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useDataset, useRoute } from "../app/hooks";
-import { formatDate, freshness } from "../lib/format";
+import { formatDateTime, freshness } from "../lib/format";
 import { MODEL_CARD_URL, REPO_URL } from "../lib/links";
 import { routeToHash, type Route } from "../lib/router";
 import { CommandPalette } from "./CommandPalette";
@@ -13,6 +13,9 @@ const NAV: { route: Route; label: string; match: Route["name"][] }[] = [
   { route: { name: "season" }, label: "季末模擬", match: ["season"] },
   { route: { name: "data" }, label: "資料可信度", match: ["data"] },
 ];
+
+// Both Ctrl+K and ⌘K open search; show the one this platform's keyboard has.
+const SHORTCUT_HINT = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘K" : "Ctrl K";
 
 export function Shell({ children }: { children: ReactNode }) {
   const [route] = useRoute();
@@ -61,7 +64,7 @@ export function Shell({ children }: { children: ReactNode }) {
           </nav>
           <div className="site-tools">
             <button type="button" className="btn tool-search" onClick={() => setPaletteOpen(true)} aria-keyshortcuts="Control+K Meta+K /">
-              <span aria-hidden="true">⌕</span> <span className="tool-search-text">搜尋球員</span> <kbd aria-hidden="true">⌘K</kbd>
+              <span aria-hidden="true">⌕</span> <span className="tool-search-text">搜尋球員</span> <kbd aria-hidden="true">{SHORTCUT_HINT}</kbd>
             </button>
           </div>
         </div>
@@ -75,9 +78,9 @@ export function Shell({ children }: { children: ReactNode }) {
             資料來自 CPBL 官方公開頁面的已驗證快照
             {provenance.status === "ready" && (
               <>
-                （{formatDate(provenance.data.generated_at)}，
+                （擷取於 {formatDateTime(provenance.data.generated_at)} 台北時間，
                 <span data-testid="data-age" data-level={age?.level}>
-                  {age?.level === "stale" ? `已 ${age.days} 天未更新` : "近期更新"}
+                  {age?.level === "stale" ? `距今 ${age.days} 天；之後的比賽尚未納入` : "近期更新"}
                 </span>
                 ）
               </>

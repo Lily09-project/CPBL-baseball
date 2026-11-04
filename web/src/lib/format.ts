@@ -36,8 +36,27 @@ export function freshness(capturedAt: string, now: Date): { level: FreshnessLeve
   return { level, days: Math.floor(days) };
 }
 
+// CPBL plays in Taiwan, so dates are shown in Taipei time. Taiwan has used a
+// fixed UTC+8 offset without daylight saving since 1979, so a constant offset
+// keeps the output identical in every browser and test runner.
+const TAIPEI_OFFSET_MS = 8 * 3_600_000;
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** Calendar date in Taipei time, e.g. 2026-09-30. */
 export function formatDate(iso: string): string {
-  const date = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
+  const date = new Date(new Date(iso).getTime() + TAIPEI_OFFSET_MS);
   return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`;
+}
+
+/** Date and minute in Taipei time, e.g. 2026-09-30 04:48. */
+export function formatDateTime(iso: string): string {
+  const date = new Date(new Date(iso).getTime() + TAIPEI_OFFSET_MS);
+  return `${formatDate(iso)} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}`;
+}
+
+/** Innings in baseball notation: 49.333 → "49.1" (49⅓), 51.667 → "51.2". */
+export function formatInnings(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  const outs = Math.round(value * 3);
+  return `${Math.floor(outs / 3)}.${outs % 3}`;
 }

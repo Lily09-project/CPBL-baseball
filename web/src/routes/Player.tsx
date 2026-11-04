@@ -3,7 +3,7 @@ import { useDataset, useDocumentTitle } from "../app/hooks";
 import { ChartFrame, ContributionBars, IntervalPlot, PercentileBar, TrendLine } from "../components/charts";
 import { ScrollRegion } from "../components/ScrollRegion";
 import { EmptyState, Gate } from "../components/States";
-import { formatMetric, formatSigned } from "../lib/format";
+import { formatInnings, formatMetric, formatSigned } from "../lib/format";
 import { routeToHash } from "../lib/router";
 import type { LeagueData, PlayerDetail, PlayerType } from "../lib/types";
 import { TALENT_METRICS } from "./Talent";
@@ -26,8 +26,8 @@ const BATTER_STATS: [string, string, "int" | "rate3"][] = [
   ["ops", "OPS", "rate3"],
 ];
 
-const PITCHER_STATS: [string, string, "int" | "num2"][] = [
-  ["innings_pitched", "局數", "num2"],
+const PITCHER_STATS: [string, string, "int" | "num2" | "ip"][] = [
+  ["innings_pitched", "局數", "ip"],
   ["batters_faced", "面對打者（估計）", "int"],
   ["strikeouts", "三振", "int"],
   ["walks", "保送", "int"],
@@ -37,9 +37,10 @@ const PITCHER_STATS: [string, string, "int" | "num2"][] = [
   ["whip", "WHIP", "num2"],
 ];
 
-function formatStat(value: number | null | undefined, kind: "int" | "rate3" | "num2") {
+function formatStat(value: number | null | undefined, kind: "int" | "rate3" | "num2" | "ip") {
   if (value === null || value === undefined) return "—";
   if (kind === "int") return String(Math.round(value));
+  if (kind === "ip") return formatInnings(value);
   return kind === "rate3" ? formatMetric(value, "rate3") : value.toFixed(2);
 }
 
@@ -60,7 +61,7 @@ function Profile({ player, league, details }: { player: PlayerDetail; league: Le
       <header className="profile-head">
         <div>
           <span className="eyebrow">
-            {player.team}・{player.position}・{player.type === "batter" ? "打者" : "投手"}
+            {[player.team, player.position, player.type === "batter" ? "打者" : "投手"].filter((part, i, all) => part && all.indexOf(part) === i).join("・")}
           </span>
           <h1>{player.name}</h1>
           <div className="row">
@@ -169,7 +170,7 @@ function Profile({ player, league, details }: { player: PlayerDetail; league: Le
           <h2>{trajectory.metric === "ops" ? "OPS" : "ERA"} 快照軌跡</h2>
           {trajectory.series.length >= 2 ? (
             <ChartFrame
-              title={`跨 ${trajectory.series.length} 份官方快照的${trajectory.metric === "ops" ? "OPS" : "ERA"}`}
+              title={`跨 ${trajectory.series.length} 份官方快照的 ${trajectory.metric === "ops" ? "OPS" : "ERA"}`}
               summary={`從 ${trajectoryFmt(trajectory.series[0]?.v ?? 0)} 到 ${trajectoryFmt(trajectory.series.at(-1)?.v ?? 0)}，判讀為${TREND_LABEL[trajectory.trend]}`}
               table={
                 <table>
@@ -185,7 +186,7 @@ function Profile({ player, league, details }: { player: PlayerDetail; league: Le
                       <tr key={`${p.t}-${i}`}>
                         <th scope="row">{p.t}</th>
                         <td className="num">{trajectoryFmt(p.v)}</td>
-                        <td className="num">{p.w ?? "—"}</td>
+                        <td className="num">{p.w === null || p.w === undefined ? "—" : player.type === "pitcher" ? formatInnings(p.w) : p.w}</td>
                       </tr>
                     ))}
                   </tbody>

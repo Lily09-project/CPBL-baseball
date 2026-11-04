@@ -90,6 +90,7 @@ test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
   test("unknown routes render a helpful not-found page", async ({ page }) => {
     await page.goto("./#/nowhere");
     await expect(page.getByText("找不到這個頁面")).toBeVisible();
+    await expect(page).toHaveTitle(/^找不到頁面｜/);
     await expectAccessible(page);
   });
 

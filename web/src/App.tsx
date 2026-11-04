@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
-import { LoaderContext, useRoute } from "./app/hooks";
+import { LoaderContext, useDocumentTitle, useRoute } from "./app/hooks";
 import { Shell } from "./components/Shell";
 import { EmptyState, Loading } from "./components/States";
 import { createLoader, type Loader } from "./lib/data";
@@ -12,6 +12,22 @@ const Season = lazy(() => import("./routes/Season"));
 const Player = lazy(() => import("./routes/Player"));
 const Compare = lazy(() => import("./routes/Compare"));
 const DataTrust = lazy(() => import("./routes/DataTrust"));
+
+function NotFound({ path }: { path: string }) {
+  useDocumentTitle("找不到頁面");
+  return (
+    <div className="page stack">
+      <header>
+        <h1>找不到這個頁面</h1>
+      </header>
+      <EmptyState title="網址不存在">
+        <p>
+          <code>{path}</code> 不是這個網站的頁面。<a href={routeToHash({ name: "home" })}>回到首頁</a>，或從上方選單選擇一個實驗。
+        </p>
+      </EmptyState>
+    </div>
+  );
+}
 
 function Routes() {
   const [route] = useRoute();
@@ -44,18 +60,7 @@ function Routes() {
     case "data":
       return <DataTrust />;
     case "not-found":
-      return (
-        <div className="page stack">
-          <header>
-            <h1>找不到這個頁面</h1>
-          </header>
-          <EmptyState title="網址不存在">
-            <p>
-              <code>{route.path}</code> 不是這個網站的頁面。<a href={routeToHash({ name: "home" })}>回到首頁</a>，或從上方選單選擇一個實驗。
-            </p>
-          </EmptyState>
-        </div>
-      );
+      return <NotFound path={route.path} />;
   }
 }
 
