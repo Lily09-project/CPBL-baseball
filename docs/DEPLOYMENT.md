@@ -41,7 +41,7 @@ npm run preview
 .venv/bin/python -m src.verify_public_release reports/metrics/public_release_manifest.json
 ```
 
-刷新會改寫 `data/processed/` 與 `reports/metrics/`，提交前請檢查 `git diff`。GitHub 上由 `data-refresh.yml` 排程執行，並只以 reviewable PR 的方式提出更新。
+刷新會改寫 `data/processed/` 與 `reports/metrics/`，提交前請檢查 `git diff`。GitHub 上的 `data-refresh.yml` 只以 reviewable PR 的方式提出更新；2026 年資料已凍結，每日排程已停用，只能手動執行（原因見 README「資料已凍結」）。
 
 ## GitHub Pages
 

@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useDataset, useRoute } from "../app/hooks";
+import { DATA_FROZEN } from "../lib/dataPolicy";
 import { formatDateTime, freshness } from "../lib/format";
 import { MODEL_CARD_URL, REPO_URL } from "../lib/links";
 import { routeToHash, type Route } from "../lib/router";
@@ -79,8 +80,12 @@ export function Shell({ children }: { children: ReactNode }) {
             {provenance.status === "ready" && (
               <>
                 （擷取於 {formatDateTime(provenance.data.generated_at)} 台北時間，
-                <span data-testid="data-age" data-level={age?.level}>
-                  {age?.level === "stale" ? `距今 ${age.days} 天；之後的比賽尚未納入` : "近期更新"}
+                <span data-testid="data-age" data-level={DATA_FROZEN ? "frozen" : age?.level}>
+                  {DATA_FROZEN
+                    ? "資料已凍結，不再更新"
+                    : age?.level === "stale"
+                      ? `距今 ${age.days} 天；之後的比賽尚未納入`
+                      : "近期更新"}
                 </span>
                 ）
               </>

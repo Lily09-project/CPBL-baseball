@@ -1,8 +1,9 @@
 name: Verified CPBL data refresh
 
 on:
-  schedule:
-    - cron: "15 16 * * *"
+  # The 2026 data is frozen: the official site blocks automated fetches and this
+  # project does not work around that, so the daily schedule is off. Run manually
+  # only if the source becomes reachable again (see README).
   workflow_dispatch:
 
 permissions:

@@ -14,7 +14,7 @@ test.describe("F1 聯盟脈動", () => {
     const first = league.teams[0]!;
     await expect(rows.first()).toContainText(first.team);
     await expect(rows.first()).toContainText(first.pythag_win_pct.toFixed(3));
-    await expect(page.getByTestId("data-age")).toBeVisible();
+    await expect(page.getByTestId("data-age")).toHaveText("資料已凍結，不再更新");
     await expectAccessible(page);
   });
 
@@ -106,6 +106,7 @@ test.describe("F4 季末模擬", () => {
     expect(Math.abs(total - 100)).toBeLessThan(0.6);
     // The standings are dated: a judge must see which snapshot they come from.
     await expect(page.getByTestId("snapshot-notice")).toContainText("（台北時間）");
+    await expect(page.getByTestId("snapshot-notice")).toContainText("資料已凍結");
     await page.getByLabel("檢視球隊").selectOption({ index: 1 });
     await expectAccessible(page);
   });
@@ -165,6 +166,7 @@ test.describe("F7 資料可信度", () => {
   test("all files pass in-browser SHA-256 verification and match the release", async ({ page }) => {
     await openRoute(page, "/data");
     await expect(page.getByTestId("integrity-summary")).toHaveText("5/5", { timeout: 15_000 });
+    await expect(page.getByTestId("frozen-reason")).toContainText("不繞過網站防護");
     const provenance = await fetchJson<{ release_id: string; snapshots: unknown[] }>(page, "provenance.json");
     await expect(page.getByTestId("release-id")).toHaveText(provenance.release_id);
     await expect(page.getByTestId("snapshot-table").locator("tbody tr")).toHaveCount(provenance.snapshots.length);
