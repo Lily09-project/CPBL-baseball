@@ -24,6 +24,8 @@ import "./Lineup.css";
 const GAME_OPTIONS = [1000, 5000, 20000];
 const DEFAULT_SEED = 2026;
 const HIST_CAP = 12;
+const SEARCH_GAMES = 1500;
+const SEARCH_ROUNDS = 3;
 
 interface SimResult {
   inputKey: string;
@@ -82,7 +84,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   const optimise = async () => {
     const version = ++generation.current;
     try {
-      const found = await run<"optimise">({ kind: "optimise", cdfs: lineupCdfs(sim, ids, pitcher), games: 1500, seed, rounds: 3 });
+      const found = await run<"optimise">({ kind: "optimise", cdfs: lineupCdfs(sim, ids, pitcher), games: SEARCH_GAMES, seed, rounds: SEARCH_ROUNDS });
       if (version !== generation.current || currentKey.current !== inputKey) return;
       setSearch({ ...found, inputKey, ids: [...ids] });
     } catch { /* The worker owns error feedback; cancelled work has no result. */ }
@@ -228,14 +230,14 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
             )}
             {result && runsPerGame !== null && (
               <div className="results" data-testid="sim-results">
-                {!fresh && <p className="notice">打線已變更，以下是上一次的結果，請重新模擬。</p>}
+                {!fresh && <p className="notice">打線或模擬設定已變更，以下是上一次的結果，請重新模擬。</p>}
                 <div className="result-kpis">
                   <div>
                     <span className="stat-label">平均每場得分</span>
                     <span className="stat-value" data-testid="runs-per-game">
                       {runsPerGame.toFixed(2)}
                     </span>
-                    <span className="muted small">聯盟 {league.runs_per_game.toFixed(2)}（{formatSigned(runsPerGame - league.runs_per_game, 2)}）</span>
+                    <span className="muted small">聯盟 {league.runs_per_game.toFixed(2)}（{formatSigned(Number(runsPerGame.toFixed(2)) - Number(league.runs_per_game.toFixed(2)), 2)}）</span>
                   </div>
                   <div>
                     <span className="stat-label">得 5 分以上</span>
@@ -282,7 +284,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
                 {search.order.some((index, slot) => index !== slot) ? (
                   <>
                     <p>
-                      調整後平均每場 {search.bestMean.toFixed(2)} 分，獨立評估的配對差值 <strong>{formatSigned(search.delta, 2)}</strong> 分（95% 區間 {formatSigned(search.deltaLow, 2)} 到 {formatSigned(search.deltaHigh, 2)}）。
+                      以另一組 {SEARCH_GAMES.toLocaleString()} 場未參與搜尋的亂數序列配對評估：原棒次平均每場 {search.baselineMean.toFixed(2)} 分、調整後 {search.bestMean.toFixed(2)} 分，配對差值 <strong>{formatSigned(search.delta, 2)}</strong> 分（95% 區間 {formatSigned(search.deltaLow, 2)} 到 {formatSigned(search.deltaHigh, 2)}）。
                       {search.deltaLow <= 0 && search.deltaHigh >= 0 && " 區間包含 0，差異可能只是模擬雜訊。"}
                       {search.deltaHigh < 0 && " 獨立評估顯示調整後得分較低，不建議依此結果調整。"}
                     </p>
@@ -301,7 +303,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
                 ) : (
                   <p>目前的棒次已是局部最佳：任何兩棒對調都沒有讓平均得分提高。</p>
                 )}
-                <p className="muted small">共評估 {search.evaluations} 種棒次，每種搜尋 1,500 場；建議固定後另用 1,500 場未參與搜尋的亂數序列做配對評估。</p>
+                <p className="muted small">共評估 {search.evaluations} 種棒次，每種搜尋 {SEARCH_GAMES.toLocaleString()} 場；這裡的平均得分來自獨立評估，因此和上方「模擬」按鈕的結果不會完全相同。</p>
               </div>
             )}
           </div>

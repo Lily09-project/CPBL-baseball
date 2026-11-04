@@ -125,7 +125,10 @@ def build_pitchers(pitchers: pd.DataFrame) -> tuple[list[dict[str, Any]], dict[s
     lg_er = sum(float(r["earned_runs"] or 0) for r in rows)
     lg_era = 9 * lg_er / lg_ip
     fip_constant = lg_era - (13 * lg_hr + 3 * lg_bb - 2 * lg_k) / lg_ip
-    min_bf = players.PITCHER_QUALIFIER_IP * 3 + 0.0
+    # Fit priors on the same population the model card and the "qualified"
+    # flag use (15 IP). 15 IP is 45 outs, not 45 batters faced, so filtering
+    # on batters faced would admit pitchers with as few as ~10 IP.
+    qualified = [i >= players.PITCHER_QUALIFIER_IP for i in ip]
     specs = {
         "k_rate": [float(r["strikeouts"] or 0) for r in rows],
         "bb_rate": [float(r["walks"] or 0) for r in rows],
@@ -134,7 +137,11 @@ def build_pitchers(pitchers: pd.DataFrame) -> tuple[list[dict[str, Any]], dict[s
     priors: dict[str, Any] = {}
     posts: dict[str, list[bayes.Posterior]] = {}
     for key, successes in specs.items():
-        prior, post = bayes.shrink_all(successes, bf, min_trials_for_prior=min_bf)
+        prior = bayes.fit_beta_prior(
+            [s for s, q in zip(successes, qualified) if q],
+            [n for n, q in zip(bf, qualified) if q],
+        )
+        post = [bayes.posterior(s, n, prior) for s, n in zip(successes, bf)]
         priors[key] = {"alpha": _num(prior.alpha), "beta": _num(prior.beta), "mean": _num(prior.mean), "equivalent_bf": _num(prior.concentration, 1)}
         posts[key] = post
     out = []
@@ -195,7 +202,8 @@ def attach_percentiles_and_similarity(records: list[dict[str, Any]], metric_defs
 
 def attach_trajectories(records: list[dict[str, Any]], history: pd.DataFrame) -> None:
     history = history.drop_duplicates(subset=["snapshot_id", "player_id", "player_type"]).copy()
-    history["captured"] = pd.to_datetime(history["captured_at"], utc=True)
+    # Snapshot dates are labelled in Taipei time, like every date on the site.
+    history["captured"] = pd.to_datetime(history["captured_at"], utc=True).dt.tz_convert("Asia/Taipei")
     history = history.sort_values(["captured", "snapshot_id"])
     type_map = {"batter": "打者", "pitcher": "投手"}
     for record in records:

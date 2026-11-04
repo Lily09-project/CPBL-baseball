@@ -29,6 +29,16 @@ def _pct_text(percentile: float) -> str:
     return f"聯盟前 {max(1, round(100 - percentile))}%"
 
 
+def _format(value: float, fmt: str) -> str:
+    """Match the web app's formatMetric so a note never restates a number differently."""
+    if fmt == "pct1":
+        return f"{value * 100:.1f}%"
+    if fmt == "rate3":
+        text = f"{value:.3f}"
+        return text[1:] if text.startswith("0.") else text
+    return f"{value:.2f}"
+
+
 def _sentence(text: str, evidence: Sequence[str]) -> dict[str, object]:
     if _PLACEHOLDER.search(text):
         raise ValueError(f"unfilled template variable in: {text}")
@@ -53,6 +63,7 @@ def scouting_notes(
     notes: list[dict[str, object]] = []
     labels = {m.key: m.label for m in metrics}
     shorts = {m.key: m.short for m in metrics}
+    formats = {m.key: m.fmt for m in metrics}
     ranked = sorted(
         ((k, v) for k, v in percentiles.items() if k in labels and not math.isnan(v)),
         key=lambda kv: kv[1],
@@ -77,7 +88,8 @@ def scouting_notes(
             direction = "高估" if gap > 0 else "低估"
             notes.append(
                 _sentence(
-                    f"{shorts[key]}原始值 {raw:.3f} 可能{direction}了實力，收縮後估計為 {post:.3f}。",
+                    f"{shorts[key]}原始值 {_format(raw, formats[key])} 可能{direction}了實力，"
+                    f"收縮後估計為 {_format(post, formats[key])}。",
                     [key],
                 )
             )

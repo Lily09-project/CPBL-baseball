@@ -105,3 +105,17 @@ def test_notes_skip_missing_raw_and_report_underestimates() -> None:
 def test_sentence_guard_rejects_unfilled_templates() -> None:
     with pytest.raises(ValueError):
         narrative._sentence("{name} 很強", ["x"])
+
+
+def test_shrinkage_note_uses_the_metric_display_format() -> None:
+    # The profile shows strikeout rate as a percentage; the note must not
+    # switch to a bare decimal ("0.313") for the same number.
+    notes = _notes(
+        metrics=players.PITCHER_METRICS,
+        percentiles={"k_rate_post": 50.0, "bb_rate_post": 50.0},
+        shrinkage={"k_rate_post": (0.313, 0.261)},
+    )
+    text = " ".join(n["text"] for n in notes)
+    assert "31.3%" in text and "26.1%" in text
+    batter = " ".join(n["text"] for n in _notes())
+    assert ".420" in batter and ".360" in batter and "0.420" not in batter

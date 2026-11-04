@@ -7,7 +7,7 @@ for (const [low, high] of [[-1.2, -0.8], [-0.2, 0.8], [0.2, 0.8]]) {
         postMessage(request: { id: number }) {
           setTimeout(() => this.dispatchEvent(new MessageEvent("message", { data: {
             id: request.id, type: "optimised", search: {
-              order: [1, 0, 2, 3, 4, 5, 6, 7, 8], baseMean: 5,
+              order: [1, 0, 2, 3, 4, 5, 6, 7, 8], baselineMean: 5,
               bestMean: 5 + (low + high) / 2, delta: (low + high) / 2,
               deltaLow: low, deltaHigh: high, evaluations: 28,
             },

@@ -3,7 +3,7 @@ import { LoaderContext, useDataset, useDocumentTitle } from "../app/hooks";
 import { ChartFrame, Histogram } from "../components/charts";
 import { ScrollRegion } from "../components/ScrollRegion";
 import { Gate } from "../components/States";
-import { formatDate } from "../lib/format";
+import { formatDate, formatDateTime } from "../lib/format";
 import { MODEL_CARD_URL } from "../lib/links";
 import type { DataFiles, LeagueData, Manifest, Provenance, SimInputs } from "../lib/types";
 import "./DataTrust.css";
@@ -58,7 +58,7 @@ function Trust({ provenance, league, sim }: { provenance: Provenance; league: Le
           <p className="stat-value quality" data-status={provenance.quality_status}>
             {provenance.quality_status === "pass" ? "通過" : provenance.quality_status}
           </p>
-          <span className="muted small">產生於 {formatDate(provenance.generated_at)}</span>
+          <span className="muted small">快照擷取於 {formatDateTime(provenance.generated_at)}（台北時間）</span>
         </div>
         <div className="card">
           <span className="stat-label">瀏覽器端完整性驗證</span>
@@ -106,7 +106,7 @@ function Trust({ provenance, league, sim }: { provenance: Provenance; league: Le
               <table data-testid="snapshot-table">
                 <thead>
                   <tr>
-                    <th scope="col">擷取時間</th>
+                    <th scope="col">擷取時間（台北）</th>
                     <th scope="col">品質</th>
                     <th scope="col" className="num">總列數</th>
                     <th scope="col" className="num">新增</th>
@@ -117,7 +117,7 @@ function Trust({ provenance, league, sim }: { provenance: Provenance; league: Le
                 <tbody>
                   {snapshots.map((s) => (
                     <tr key={s.snapshot_id}>
-                      <th scope="row">{s.captured_at.replace("T", " ").slice(0, 16)}</th>
+                      <th scope="row">{formatDateTime(s.captured_at)}</th>
                       <td>{s.quality_status}</td>
                       <td className="num">{s.total_rows}</td>
                       <td className="num">{s.added_rows}</td>
@@ -129,7 +129,7 @@ function Trust({ provenance, league, sim }: { provenance: Provenance; league: Le
               </table>
             }
           >
-            <Histogram counts={snapshots.map((s) => s.changed_rows)} labels={snapshots.map((s) => s.captured_at.slice(5, 10))} height={200} labelEvery={4} />
+            <Histogram counts={snapshots.map((s) => s.changed_rows)} labels={snapshots.map((s) => formatDate(s.captured_at).slice(5))} height={200} labelEvery={4} />
           </ChartFrame>
         </div>
         <div className="card">

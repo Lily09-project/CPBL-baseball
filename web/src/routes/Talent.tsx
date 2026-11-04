@@ -67,8 +67,10 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
   const ranked = pool
     .filter((p) => !Number.isNaN(value(p)))
     .sort((a, b) => (metric.higherIsBetter ? value(b) - value(a) : value(a) - value(b)) || b.trials - a.trials);
+  // Traps follow the team filter (they are about small samples, so they
+  // ignore the qualifier checkbox) and say which pool they come from.
   const traps = players
-    .filter((p) => p.type === type && p.trials >= 10 && p.talent[metric.key]?.raw !== null)
+    .filter((p) => p.type === type && (!team || p.team === team) && p.trials >= 10 && p.talent[metric.key]?.raw !== null)
     .map((p) => ({ p, gap: (p.talent[metric.key]?.raw ?? 0) - (p.talent[metric.key]?.mean ?? 0) }))
     .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))
     .slice(0, 5);
@@ -134,7 +136,7 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
       <section className="grid grid-2">
         <div className="card">
           <ChartFrame
-            title={`前 ${plotRows.length} 名的${metric.label}（◆ 原始值 ● 收縮後）`}
+            title={plotRows.length > 0 ? `前 ${plotRows.length} 名的${metric.label}（◆ 原始值 ● 收縮後）` : `${metric.label}：沒有符合條件的球員`}
             summary={plotRows.map((r) => `${r.label} 原始 ${r.raw === null ? "無" : fmt(r.raw)}、收縮後 ${fmt(r.mean)}`).join("；")}
             table={<TalentTable rows={visible.slice(0, 12)} metric={metric} />}
           >
@@ -149,7 +151,7 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
         </div>
         <div className="card" data-testid="traps">
           <h2>小樣本陷阱</h2>
-          <p className="muted">原始數據與收縮後估計差距最大的球員：他們的數字最容易誤導人。</p>
+          <p className="muted">{team || "全聯盟"}中，原始數據與收縮後估計差距最大的球員：他們的數字最容易誤導人。</p>
           <ol className="traps">
             {traps.map(({ p, gap }) => (
               <li key={p.player_id}>
@@ -170,13 +172,19 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
       <section className="card">
         <div className="row spread">
           <h2>完整排行（{ranked.length} 人）</h2>
-          <a className="btn" href={routeToHash({ name: "compare", type, ids: visible.slice(0, 3).map((p) => p.player_id) })}>
-            比較前 3 名
-          </a>
+          {ranked.length > 1 && (
+            <a className="btn" href={routeToHash({ name: "compare", type, ids: visible.slice(0, 3).map((p) => p.player_id) })}>
+              比較前 {Math.min(3, ranked.length)} 名
+            </a>
+          )}
         </div>
-        <ScrollRegion label="完整排行">
-          <TalentTable rows={visible} metric={metric} withRank />
-        </ScrollRegion>
+        {ranked.length > 0 ? (
+          <ScrollRegion label="完整排行">
+            <TalentTable rows={visible} metric={metric} withRank />
+          </ScrollRegion>
+        ) : (
+          <p className="muted">沒有符合條件的球員，請放寬球隊、名稱或門檻篩選。</p>
+        )}
         {shown < ranked.length && (
           <button type="button" className="btn show-more" onClick={() => setShown((s) => s + PAGE)}>
             顯示更多（剩 {ranked.length - shown} 人）
@@ -228,6 +236,8 @@ function TalentTable({ rows, metric, withRank = false }: { rows: PlayerSummary[]
 
 export default function Talent() {
   useDocumentTitle("真實實力估計");
+  const [route] = useRoute();
+  const pitcher = route.name === "talent" && route.type === "pitcher";
   const players = useDataset("players.json");
   const league = useDataset("league.json");
   return (
@@ -236,7 +246,7 @@ export default function Talent() {
         <span className="eyebrow">實驗 01・Empirical Bayes</span>
         <h1>真實實力估計</h1>
         <p className="lede">
-          40 個打席打出 .450 的上壘率，是實力還是運氣？我們用全聯盟的分布估計先驗，把每位球員的原始數據收縮成更可信的「真實實力」，並附上 80% 可信區間。
+          {pitcher ? "投 30 個打者就有 35% 三振率，是實力還是運氣？" : "40 個打席打出 .450 的上壘率，是實力還是運氣？"}我們用全聯盟的分布估計先驗，把每位球員的原始數據收縮成更可信的「真實實力」，並附上 80% 可信區間。
         </p>
       </header>
 

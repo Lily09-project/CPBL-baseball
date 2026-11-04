@@ -2,7 +2,7 @@ import { useDataset, useDocumentTitle } from "../app/hooks";
 import { ChartFrame, DivergingBars } from "../components/charts";
 import { ScrollRegion } from "../components/ScrollRegion";
 import { Gate } from "../components/States";
-import { formatDate, formatPercent, formatSigned } from "../lib/format";
+import { formatDate, formatDateTime, formatPercent, formatSigned } from "../lib/format";
 import { leagueHeadline } from "../lib/insights";
 import { MODEL_CARD_URL } from "../lib/links";
 import { routeToHash } from "../lib/router";
@@ -54,7 +54,7 @@ function Focus({ league, provenance }: { league: LeagueData; provenance: Provena
       {headline && (
         <>
           <p className="focus-lead">
-            <strong>{headline.leader.team}</strong>在 {headline.simulations.toLocaleString()} 次季末模擬中，有{" "}
+            以 {formatDate(provenance.generated_at)} 快照的戰績推演，<strong>{headline.leader.team}</strong>在 {headline.simulations.toLocaleString()} 次季末模擬中有{" "}
             <strong>{formatPercent(headline.leader.simulation.first_place_probability)}</strong> 拿下半季第一。
           </p>
           <ul className="focus-facts">
@@ -73,7 +73,7 @@ function Focus({ league, provenance }: { league: LeagueData; provenance: Provena
         </>
       )}
       <p className="focus-source">
-        資料：CPBL 官方公開頁面快照（{formatDate(provenance.generated_at)}，{passed}/{provenance.snapshots.length} 份快照通過品質檢查）。非 CPBL 官方服務。
+        資料：CPBL 官方公開頁面快照（擷取於 {formatDateTime(provenance.generated_at)} 台北時間，{passed}/{provenance.snapshots.length} 份快照通過品質檢查）。快照之後的比賽沒有納入。非 CPBL 官方服務。
         <br />
         <a href={routeToHash({ name: "data" })}>方法與資料驗證</a>
         <span aria-hidden="true">・</span>
@@ -96,7 +96,7 @@ function Dashboard({ league, provenance }: { league: LeagueData; provenance: Pro
         <div className="card kpi">
           <span className="stat-label">聯盟平均每場得分</span>
           <span className="stat-value">{league.runs_per_game.toFixed(2)}</span>
-          <span className="muted">本段賽季戰績表</span>
+          <span className="muted">截至 {formatDate(provenance.generated_at)} 的半季戰績</span>
         </div>
         {leader && (
           <div className="card kpi">
@@ -150,10 +150,10 @@ function Dashboard({ league, provenance }: { league: LeagueData; provenance: Pro
       <section className="grid grid-2">
         <div className="card">
           <h2>戰績與畢氏期望</h2>
-          <p className="muted">畢氏期望勝率只看得失分，比勝敗紀錄更能反映球隊真實強度；「運氣差」是實際勝場減去期望勝場。</p>
+          <p className="muted">畢氏期望勝率只看得失分，比勝敗紀錄更能反映球隊真實強度；「實際−期望」是實際勝場減去期望勝場，正值代表比得失分應有的戰績多贏（運氣好）。</p>
           <ScrollRegion label="戰績與畢氏期望">
             <table data-testid="standings">
-              <caption className="visually-hidden">各隊戰績、畢氏期望勝率與運氣差</caption>
+              <caption className="visually-hidden">各隊戰績、畢氏期望勝率與實際減期望勝場</caption>
               <thead>
                 <tr>
                   <th scope="col">球隊</th>
@@ -161,7 +161,7 @@ function Dashboard({ league, provenance }: { league: LeagueData; provenance: Pro
                   <th scope="col" className="num">勝率</th>
                   <th scope="col" className="num">得失分差</th>
                   <th scope="col" className="num">畢氏勝率</th>
-                  <th scope="col" className="num">運氣差</th>
+                  <th scope="col" className="num">實際−期望</th>
                 </tr>
               </thead>
               <tbody>
@@ -184,14 +184,14 @@ function Dashboard({ league, provenance }: { league: LeagueData; provenance: Pro
         </div>
         <div className="card">
           <ChartFrame
-            title="運氣差：實際勝場 − 期望勝場"
+            title="運氣：實際勝場 − 期望勝場（正值＝多贏）"
             summary={league.teams.map((t) => `${t.team} ${formatSigned(t.luck_wins)}`).join("，")}
             table={
               <table>
                 <thead>
                   <tr>
                     <th scope="col">球隊</th>
-                    <th scope="col" className="num">運氣差（勝場）</th>
+                    <th scope="col" className="num">實際−期望（勝場）</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -228,7 +228,7 @@ export default function Home() {
             <span className="phrase">看穿數字背後</span>
             <span className="phrase">的真實實力</span>
           </h1>
-          <p className="lede">用中職公開數據回答三個問題：誰的好成績只是運氣？棒次怎麼排最會得分？剩下的比賽，誰最可能拿下半季第一？</p>
+          <p className="lede">用中職公開數據回答三個問題：誰的好成績只是運氣？棒次怎麼排最會得分？從快照當時的戰績推演，誰最可能拿下半季第一？</p>
           <div className="row">
             <a className="btn btn-primary" href={routeToHash({ name: "lineup" })}>
               開始模擬打線

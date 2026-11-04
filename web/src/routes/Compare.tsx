@@ -11,6 +11,7 @@ import "./Compare.css";
 function CompareView({ details, league, provenance, type, ids }: { details: Record<string, PlayerDetail>; league: LeagueData; provenance: Provenance; type: PlayerType; ids: string[] }) {
   const [, navigate] = useRoute();
   const players = ids.map((id) => details[`${id}:${type}`]).filter((p): p is PlayerDetail => Boolean(p));
+  const unknown = ids.length - players.length;
   const definitions = league.metric_definitions[type];
   const candidates = Object.values(details)
     .filter((p) => p.type === type && p.qualified && !ids.includes(p.player_id))
@@ -57,6 +58,11 @@ function CompareView({ details, league, provenance, type, ids }: { details: Reco
         </div>
       </section>
 
+      {unknown > 0 && (
+        <p className="notice" role="status">
+          網址裡有 {unknown} 個{type === "batter" ? "打者" : "投手"}代碼找不到對應的球員，已略過。
+        </p>
+      )}
       {players.length === 0 ? (
         <EmptyState title="還沒有選擇球員">
           <p>從上方選單加入球員，或在球員檔案按「與相似球員比較」。</p>

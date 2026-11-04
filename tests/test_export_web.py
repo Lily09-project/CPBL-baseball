@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 from src import export_web
+from src.analytics import bayes, events
 
 
 @pytest.fixture(scope="module")
@@ -102,3 +103,23 @@ def test_pitcher_with_strikeouts_but_no_outs_does_not_crash_export() -> None:
     record = next(r for r in out if r["player_id"] == "P9")
     assert record["stats"]["batters_faced"] == 1
     assert record["trials"] >= 1
+
+
+def test_pitcher_prior_uses_the_documented_15_inning_qualifier() -> None:
+    # The model card and the "qualified" flag both use 15 IP. A pitcher with
+    # 12 IP but 50+ batters faced must not join the population the prior is
+    # fitted on (15 IP is 45 outs, not 45 batters faced).
+    base = {"role": "投手", "home_runs_allowed": 1, "era": 3.0, "whip": 1.2, "k_bb_ratio": 2.0, "earned_runs": 5}
+    rows = [
+        {**base, "player_id": f"Q{i}", "player_name": f"投手{i}", "team": "測試隊", "innings_pitched": 40.0,
+         "hits_allowed": 35, "walks": 12, "strikeouts": 25 + 5 * i}
+        for i in range(5)
+    ]
+    rows.append({**base, "player_id": "S1", "player_name": "短局數", "team": "測試隊", "innings_pitched": 12.0,
+                 "hits_allowed": 20, "walks": 10, "strikeouts": 30})
+    _, priors, _ = export_web.build_pitchers(pd.DataFrame(rows))
+    qualified = [r for r in rows if r["innings_pitched"] >= 15]
+    bf = [export_web._batters_faced(events.innings_to_outs(r["innings_pitched"]), r) for r in qualified]
+    expected = bayes.fit_beta_prior([r["strikeouts"] for r in qualified], bf, min_trials=0)
+    assert priors["k_rate"]["alpha"] == pytest.approx(expected.alpha, abs=1e-4)
+    assert priors["k_rate"]["beta"] == pytest.approx(expected.beta, abs=1e-4)

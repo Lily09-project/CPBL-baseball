@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { escapeCell, toCsv } from "./csv";
 import { createLoader, IntegrityError, sha256Hex } from "./data";
-import { formatDate, formatMetric, formatPercent, formatSigned, freshness, ordinalPercentile } from "./format";
+import { formatDate, formatDateTime, formatInnings, formatMetric, formatPercent, formatSigned, freshness, ordinalPercentile } from "./format";
 import { gameSeed, mulberry32 } from "./rng";
 import { parseRoute, routeToHash, type Route } from "./router";
 import { searchPlayers } from "./search";
@@ -51,7 +51,14 @@ describe("format", () => {
     expect(formatSigned(-2.5)).toBe("-2.5");
     expect(ordinalPercentile(87.4)).toBe("PR 87");
     expect(ordinalPercentile(null)).toBe("—");
-    expect(formatDate("2026-09-29T20:48:33+00:00")).toBe("2026-09-29");
+    // 20:48 UTC is 04:48 the next morning in Taipei.
+    expect(formatDate("2026-09-29T20:48:33+00:00")).toBe("2026-09-30");
+    expect(formatDate("2026-09-29T15:59:00Z")).toBe("2026-09-29");
+    expect(formatDateTime("2026-09-29T20:48:33+00:00")).toBe("2026-09-30 04:48");
+    expect(formatInnings(49.333)).toBe("49.1");
+    expect(formatInnings(51.667)).toBe("51.2");
+    expect(formatInnings(15)).toBe("15.0");
+    expect(formatInnings(null)).toBe("—");
   });
 
   it("classifies data freshness without pretending to be live", () => {
