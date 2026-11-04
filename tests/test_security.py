@@ -105,7 +105,6 @@ def test_scheduled_data_health_check_is_read_only():
     workflow = Path(".github/workflows/data-health.yml").read_text(encoding="utf-8-sig")
 
     for required in [
-        "schedule:",
         "workflow_dispatch:",
         "contents: read",
         "python -m src.verified_pipeline --mode api",
@@ -117,6 +116,17 @@ def test_scheduled_data_health_check_is_read_only():
     assert "contents: write" not in workflow
     assert "git push" not in workflow
     assert "git add" not in workflow
+
+
+def test_frozen_data_has_no_daily_source_schedule():
+    # The 2026 data is frozen (the official site blocks automated fetches), so
+    # neither workflow may hit the source on a schedule; both stay manual.
+    for path in (".github/workflows/data-health.yml", ".github/workflows/data-refresh.yml"):
+        workflow = Path(path).read_text(encoding="utf-8-sig")
+        assert "schedule:" not in workflow, path
+        assert "workflow_dispatch:" in workflow, path
+    source = Path("web/src/lib/dataPolicy.ts").read_text(encoding="utf-8")
+    assert "export const DATA_FROZEN = true;" in source
 
 
 def test_security_workflow_scans_secrets_and_audits_both_ecosystems():

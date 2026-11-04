@@ -3,6 +3,7 @@ import { LoaderContext, useDataset, useDocumentTitle } from "../app/hooks";
 import { ChartFrame, Histogram } from "../components/charts";
 import { ScrollRegion } from "../components/ScrollRegion";
 import { Gate } from "../components/States";
+import { DATA_FROZEN, FROZEN_REASON } from "../lib/dataPolicy";
 import { formatDate, formatDateTime } from "../lib/format";
 import { MODEL_CARD_URL } from "../lib/links";
 import type { DataFiles, LeagueData, Manifest, Provenance, SimInputs } from "../lib/types";
@@ -44,6 +45,13 @@ function Trust({ provenance, league, sim }: { provenance: Provenance; league: Le
         <h1>資料可信度</h1>
         <p className="lede">這個網站的每一個數字都能追溯到 CPBL 官方頁面的某一份快照，並在你的瀏覽器裡重新驗證。</p>
       </header>
+
+      {DATA_FROZEN && (
+        <p className="notice" data-testid="frozen-reason">
+          <strong>為什麼資料不再更新：</strong>
+          {FROZEN_REASON}最後一份快照擷取於 {formatDateTime(provenance.generated_at)}（台北時間）。
+        </p>
+      )}
 
       <section className="grid grid-3">
         <div className="card">
