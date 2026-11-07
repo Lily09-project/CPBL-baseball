@@ -62,6 +62,7 @@ def scouting_notes(
     """
     notes: list[dict[str, object]] = []
     labels = {m.key: m.label for m in metrics}
+    higher_is_better = {m.key: m.higher_is_better for m in metrics}
     shorts = {m.key: m.short for m in metrics}
     formats = {m.key: m.fmt for m in metrics}
     ranked = sorted(
@@ -85,7 +86,7 @@ def scouting_notes(
             continue
         gap = raw - post
         if abs(gap) >= SMALL_SAMPLE_GAP:
-            direction = "高估" if gap > 0 else "低估"
+            direction = "高估" if (gap > 0) == higher_is_better[key] else "低估"
             notes.append(
                 _sentence(
                     f"{shorts[key]}原始值 {_format(raw, formats[key])} 可能{direction}了實力，"
