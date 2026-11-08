@@ -3,6 +3,7 @@ import { useDataset, useDocumentTitle } from "../app/hooks";
 import { ChartFrame, ContributionBars, IntervalPlot, PercentileBar, TrendLine } from "../components/charts";
 import { ScrollRegion } from "../components/ScrollRegion";
 import { EmptyState, Gate } from "../components/States";
+import { playerDetailsFile } from "../lib/data";
 import { formatInnings, formatMetric, formatSigned } from "../lib/format";
 import { routeToHash } from "../lib/router";
 import type { LeagueData, PlayerDetail, PlayerType } from "../lib/types";
@@ -262,7 +263,7 @@ function Profile({ player, league, details }: { player: PlayerDetail; league: Le
 }
 
 export default function Player({ type, id }: { type: PlayerType; id: string }) {
-  const details = useDataset("player-details.json");
+  const details = useDataset(playerDetailsFile(type));
   const league = useDataset("league.json");
   const player = details.status === "ready" ? details.data[`${id}:${type}`] : undefined;
   useDocumentTitle(player ? player.name : "球員檔案");

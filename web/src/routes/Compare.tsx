@@ -3,6 +3,7 @@ import { PercentileBar } from "../components/charts";
 import { EmptyState, Gate } from "../components/States";
 import { addToComparison, comparisonCsv, comparisonJson, MAX_COMPARE, removeFromComparison } from "../lib/compare";
 import { downloadText } from "../lib/csv";
+import { playerDetailsFile } from "../lib/data";
 import { formatMetric } from "../lib/format";
 import { routeToHash } from "../lib/router";
 import type { LeagueData, PlayerDetail, PlayerType, Provenance } from "../lib/types";
@@ -98,7 +99,7 @@ function CompareView({ details, league, provenance, type, ids }: { details: Reco
 
 export default function Compare({ type, ids }: { type: PlayerType; ids: string[] }) {
   useDocumentTitle("球員比較");
-  const details = useDataset("player-details.json");
+  const details = useDataset(playerDetailsFile(type));
   const league = useDataset("league.json");
   const provenance = useDataset("provenance.json");
   return (

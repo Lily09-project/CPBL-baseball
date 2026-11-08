@@ -133,7 +133,8 @@ export interface Manifest {
 export interface DataFiles {
   "league.json": LeagueData;
   "players.json": PlayerSummary[];
-  "player-details.json": Record<string, PlayerDetail>;
+  "player-details-batter.json": Record<string, PlayerDetail>;
+  "player-details-pitcher.json": Record<string, PlayerDetail>;
   "sim.json": SimInputs;
   "provenance.json": Provenance;
 }

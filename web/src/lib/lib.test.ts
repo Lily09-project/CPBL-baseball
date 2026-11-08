@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { escapeCell, toCsv } from "./csv";
-import { createLoader, IntegrityError, sha256Hex } from "./data";
+import { createLoader, IntegrityError, playerDetailsFile, sha256Hex } from "./data";
 import { formatDate, formatDateTime, formatInnings, formatMetric, formatPercent, formatSigned, freshness, ordinalPercentile } from "./format";
 import { gameSeed, mulberry32 } from "./rng";
 import { parseRoute, routeToHash, type Route } from "./router";
@@ -151,6 +151,11 @@ describe("search", () => {
 });
 
 describe("data loader", () => {
+  it("names one player-details file per player type", () => {
+    expect(playerDetailsFile("batter")).toBe("player-details-batter.json");
+    expect(playerDetailsFile("pitcher")).toBe("player-details-pitcher.json");
+  });
+
   const encoder = new TextEncoder();
   const respond = (body: string, status = 200) => new Response(encoder.encode(body), { status });
 
