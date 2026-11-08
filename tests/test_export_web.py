@@ -24,7 +24,15 @@ def _load(path: Path, name: str):
 
 def test_export_is_byte_for_byte_reproducible(exported: Path, tmp_path: Path) -> None:
     export_web.export(tmp_path)
-    for name in ("league.json", "players.json", "player-details.json", "sim.json", "provenance.json", "manifest.json"):
+    for name in (
+        "league.json",
+        "players.json",
+        "player-details-batter.json",
+        "player-details-pitcher.json",
+        "sim.json",
+        "provenance.json",
+        "manifest.json",
+    ):
         assert (exported / name).read_bytes() == (tmp_path / name).read_bytes(), name
 
 
@@ -47,7 +55,10 @@ def test_league_payload(exported: Path) -> None:
 
 def test_players_index_and_details_agree(exported: Path) -> None:
     index = _load(exported, "players.json")
-    details = _load(exported, "player-details.json")
+    by_type = {kind: _load(exported, f"player-details-{kind}.json") for kind in ("batter", "pitcher")}
+    for kind, records in by_type.items():
+        assert {record["type"] for record in records.values()} == {kind}
+    details = by_type["batter"] | by_type["pitcher"]
     assert len(index) == len(details)
     ids = {p["player_id"] + ":" + p["type"] for p in index}
     assert ids == set(details)
@@ -57,7 +68,7 @@ def test_players_index_and_details_agree(exported: Path) -> None:
             assert interval["low"] <= interval["mean"] <= interval["high"]
         for similar in record["similar"]:
             assert similar["player_id"] != record["player_id"]
-            assert similar["player_id"] + ":" + record["type"] in details
+            assert similar["player_id"] + ":" + record["type"] in by_type[record["type"]]
         for note in record["notes"]:
             assert note["evidence"] and "{" not in note["text"]
 

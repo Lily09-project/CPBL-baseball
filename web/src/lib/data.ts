@@ -5,9 +5,12 @@
  * before it is parsed, so a truncated or tampered deployment fails loudly
  * instead of rendering wrong numbers.
  */
-import type { DataFiles, Manifest } from "./types";
+import type { DataFiles, Manifest, PlayerType } from "./types";
 
 export const DATA_SCHEMA_VERSION = "2.0";
+
+/** Player details ship as one file per type; a page only ever needs one of them. */
+export const playerDetailsFile = (type: PlayerType) => `player-details-${type}.json` as const;
 
 export class IntegrityError extends Error {
   constructor(public readonly file: string) {

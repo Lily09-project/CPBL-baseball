@@ -1,5 +1,5 @@
 import { useDataset, useDocumentTitle } from "../app/hooks";
-import { ChartFrame, DivergingBars } from "../components/charts";
+import { ChartFrame, DivergingBars } from "../components/chartFrame";
 import { ScrollRegion } from "../components/ScrollRegion";
 import { Gate } from "../components/States";
 import { formatDate, formatDateTime, formatPercent, formatSigned } from "../lib/format";
@@ -29,7 +29,7 @@ function experiments(league: LeagueData, provenance: Provenance) {
       href: routeToHash({ name: "season" }),
       step: "03",
       title: "季末戰績模擬",
-      body: `以畢氏期望勝率與 log5 對戰機率模擬剩餘賽程 ${league.simulations.toLocaleString()} 次，量化每隊的最終勝場區間與拿下半季第一的機率。`,
+      body: `從快照當時的戰績出發，以畢氏期望勝率與 log5 對戰機率模擬剩餘賽程 ${league.simulations.toLocaleString()} 次，量化每隊的最終勝場區間與拿下半季第一的機率。`,
       tag: "情境模擬",
     },
     {
@@ -49,7 +49,7 @@ function Focus({ league, provenance }: { league: LeagueData; provenance: Provena
   return (
     <section className="focus" aria-labelledby="focus-title" data-testid="headline-insight">
       <h2 id="focus-title" className="focus-label">
-        本期焦點
+        快照焦點
       </h2>
       {headline && (
         <>

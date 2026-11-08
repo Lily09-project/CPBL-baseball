@@ -20,7 +20,7 @@
   display: inline-block;
 }
 
-/* ---- Lead story ("本期焦點"): the one takeaway, computed from the snapshot ---- */
+/* ---- Lead story ("快照焦點"): the one takeaway, computed from the snapshot ---- */
 .hero-focus {
   min-width: 0;
 }

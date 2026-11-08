@@ -362,7 +362,13 @@ def export(out_dir: Path, segment_games: int = league.DEFAULT_SEGMENT_GAMES) -> 
 
     summary_keys = ("player_id", "name", "team", "type", "position", "trials", "qualified", "metrics", "percentiles", "talent")
     index = [{k: r[k] for k in summary_keys} | {"trend": r["trajectory"]["trend"]} for r in all_records]
-    details = {r["player_id"] + ":" + r["type"]: r for r in all_records}
+    # Details are split by player type: a profile or comparison only ever needs
+    # one type (similar players are always the same type), so a page downloads
+    # about half of the detail data.
+    details = {
+        kind: {r["player_id"] + ":" + r["type"]: r for r in all_records if r["type"] == kind}
+        for kind in ("batter", "pitcher")
+    }
     league_payload = build_league(teams, segment_games)
     league_payload["pitching"] = pitching_league
     league_payload["priors"] = {"batter": batter_priors, "pitcher": pitcher_priors}
@@ -374,7 +380,8 @@ def export(out_dir: Path, segment_games: int = league.DEFAULT_SEGMENT_GAMES) -> 
     files = {
         "league.json": league_payload,
         "players.json": index,
-        "player-details.json": details,
+        "player-details-batter.json": details["batter"],
+        "player-details-pitcher.json": details["pitcher"],
         "sim.json": build_sim_inputs(batters, pitchers),
         "provenance.json": build_provenance(),
     }

@@ -165,7 +165,7 @@ test.describe("F6 比較與分享", () => {
 test.describe("F7 資料可信度", () => {
   test("all files pass in-browser SHA-256 verification and match the release", async ({ page }) => {
     await openRoute(page, "/data");
-    await expect(page.getByTestId("integrity-summary")).toHaveText("5/5", { timeout: 15_000 });
+    await expect(page.getByTestId("integrity-summary")).toHaveText("6/6", { timeout: 15_000 });
     await expect(page.getByTestId("frozen-reason")).toContainText("不繞過網站防護");
     const provenance = await fetchJson<{ release_id: string; snapshots: unknown[] }>(page, "provenance.json");
     await expect(page.getByTestId("release-id")).toHaveText(provenance.release_id);

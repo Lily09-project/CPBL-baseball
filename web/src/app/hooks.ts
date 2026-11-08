@@ -12,19 +12,21 @@ export function useDataset<K extends keyof DataFiles>(name: K | null): DatasetSt
 /** Load and verify one data file; pass null to defer loading. */
 export function useDataset<K extends keyof DataFiles>(name: K | null): DatasetState<DataFiles[K]> {
   const loader = useContext(LoaderContext);
-  const [state, setState] = useState<DatasetState<DataFiles[K]>>({ status: "loading" });
+  // Remember which file the state belongs to, so switching files (for example
+  // batter → pitcher details) never hands back the previous file's data.
+  const [state, setState] = useState<{ name: K | null; value: DatasetState<DataFiles[K]> }>({ name, value: { status: "loading" } });
   useEffect(() => {
     if (!loader || name === null) return;
     let alive = true;
     loader.load(name).then(
-      (data) => alive && setState({ status: "ready", data }),
-      (error: unknown) => alive && setState({ status: "error", error: error instanceof Error ? error : new Error(String(error)) }),
+      (data) => alive && setState({ name, value: { status: "ready", data } }),
+      (error: unknown) => alive && setState({ name, value: { status: "error", error: error instanceof Error ? error : new Error(String(error)) } }),
     );
     return () => {
       alive = false;
     };
   }, [loader, name]);
-  return state;
+  return state.name === name ? state.value : { status: "loading" };
 }
 
 const subscribeHash = (callback: () => void) => {

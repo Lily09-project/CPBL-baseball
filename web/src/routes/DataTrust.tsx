@@ -9,7 +9,14 @@ import { MODEL_CARD_URL } from "../lib/links";
 import type { DataFiles, LeagueData, Manifest, Provenance, SimInputs } from "../lib/types";
 import "./DataTrust.css";
 
-const FILES: (keyof DataFiles)[] = ["league.json", "players.json", "player-details.json", "sim.json", "provenance.json"];
+const FILES: (keyof DataFiles)[] = [
+  "league.json",
+  "players.json",
+  "player-details-batter.json",
+  "player-details-pitcher.json",
+  "sim.json",
+  "provenance.json",
+];
 
 type Check = { file: string; status: "pending" | "ok" | "failed"; hash?: string };
 

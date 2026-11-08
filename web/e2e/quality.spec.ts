@@ -132,4 +132,42 @@ test.describe("Q6 performance and Q8 security", () => {
     expect(csp).toContain("object-src 'none'");
     expect(csp).not.toContain("unsafe-eval");
   });
+
+  test("first-screen data is preloaded and fetched only once", async ({ page }) => {
+    const requests: string[] = [];
+    page.on("request", (r) => requests.push(new URL(r.url()).pathname.split("/").pop() ?? ""));
+    await page.goto("./");
+    await expect(page.getByTestId("standings")).toBeVisible();
+    for (const file of ["manifest.json", "provenance.json", "league.json"]) {
+      await expect(page.locator(`link[rel="preload"][as="fetch"][href="./data/${file}"]`)).toHaveCount(1);
+      expect(requests.filter((name) => name === file), file).toHaveLength(1);
+    }
+  });
+});
+
+test.describe("sharing and discoverability", () => {
+  test("share previews, icons and canonical URL are declared and served", async ({ page }) => {
+    await page.goto("./");
+    const attr = (selector: string, name = "content") => page.locator(selector).getAttribute(name);
+    const canonical = await attr('link[rel="canonical"]', "href");
+    expect(canonical).toMatch(/^https:\/\/.+\/$/);
+    expect(await attr('meta[property="og:url"]')).toBe(canonical);
+    expect(await attr('meta[property="og:image"]')).toBe(`${canonical}og-image.png`);
+    expect(await attr('meta[name="twitter:image"]')).toBe(`${canonical}og-image.png`);
+    expect(await attr('meta[name="twitter:card"]')).toBe("summary_large_image");
+    expect(await attr('meta[property="og:title"]')).toBe(await page.title());
+    expect(await attr('meta[name="theme-color"]')).toBe("#ffffff");
+    expect(await page.locator("html").getAttribute("lang")).toBe("zh-Hant-TW");
+    for (const path of ["og-image.png", "apple-touch-icon.png", "favicon.svg"]) {
+      const response = await page.request.get(`./${path}`);
+      expect(response.ok(), path).toBe(true);
+    }
+    const size = await page.evaluate(async () => {
+      const image = new Image();
+      image.src = "./og-image.png";
+      await image.decode();
+      return [image.naturalWidth, image.naturalHeight];
+    });
+    expect(size).toEqual([1200, 630]);
+  });
 });
