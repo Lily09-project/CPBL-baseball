@@ -58,6 +58,10 @@ test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
   });
 
   test("every page keeps one palette under both system color preferences", async ({ page }) => {
+    // 7 routes × 2 colour schemes = 14 page loads and full axe scans. Axe alone
+    // takes ~14 s per 7-route pass on main and on this layout alike, so under two
+    // parallel workers the default 60 s budget is too tight; triple it.
+    test.slow();
     await page.addInitScript((key) => {
       try {
         window.localStorage.setItem(key, "dark");

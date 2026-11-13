@@ -105,14 +105,14 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
           <h2>排出打線</h2>
           <p className="muted small lineup-hint">
             {params.ids?.length ? "" : `預設 9 棒是${team}打席數最多的 9 位打者。`}可以直接執行模擬，或換人、調棒次後再比較。
-            <button type="button" className="btn jump-run" onClick={() => {
-              const panel = document.getElementById("run-panel");
-              panel?.scrollIntoView({ block: "start" });
-              panel?.focus({ preventScroll: true });
-            }}>
-              跳到執行模擬
-            </button>
           </p>
+          <button type="button" className="btn jump-run" onClick={() => {
+            const panel = document.getElementById("run-panel");
+            panel?.scrollIntoView({ block: "start" });
+            panel?.focus({ preventScroll: true });
+          }}>
+            跳到執行模擬
+          </button>
           <div className="lineup-controls">
             <div className="field">
               <label htmlFor="team-fill">以球隊預設打線填入</label>
@@ -139,6 +139,12 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
                 ))}
               </select>
             </div>
+          </div>
+          <div className="slots-head" aria-hidden="true">
+            <span>棒次</span>
+            <span>打者（打席）</span>
+            <span>對戰上壘・長打</span>
+            <span>調整</span>
           </div>
           <ol className="slots" data-testid="lineup-slots">
             {ids.map((id, slot) => {
@@ -333,7 +339,7 @@ export default function Lineup() {
   const league = useDataset("league.json");
   return (
     <div className="page stack">
-      <header>
+      <header className="spread-head">
         <span className="eyebrow">實驗 02・Monte Carlo</span>
         <h1>打線實驗室</h1>
         <p className="lede">

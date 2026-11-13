@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useDataset, useRoute } from "../app/hooks";
 import { DATA_FROZEN } from "../lib/dataPolicy";
-import { formatDateTime, freshness } from "../lib/format";
+import { formatDate, formatDateTime, freshness } from "../lib/format";
 import { MODEL_CARD_URL, REPO_URL } from "../lib/links";
 import { routeToHash, type Route } from "../lib/router";
 import { CommandPalette } from "./CommandPalette";
@@ -43,8 +43,22 @@ export function Shell({ children }: { children: ReactNode }) {
       <a className="skip-link" href="#main" onClick={(e) => { e.preventDefault(); document.getElementById("main")?.focus(); }}>
         跳到主要內容
       </a>
-      <header className="site-header">
+      <header className={route.name === "home" ? "site-header site-header-front" : "site-header"}>
         <div className="site-header-inner">
+          <p className="dateline">
+            <span className="dateline-ear">非官方分析示範・不是即時戰績</span>
+            {/* The edition date is the snapshot date; the slot keeps its height while provenance loads. */}
+            <span className="dateline-edition" data-testid="edition-date">
+              {provenance.status === "ready" ? (
+                <>
+                  <time dateTime={provenance.data.generated_at}>{formatDate(provenance.data.generated_at)}</time> 快照版
+                  {DATA_FROZEN && <span className="dateline-frozen">・資料已凍結</span>}
+                </>
+              ) : (
+                <span aria-hidden="true">&nbsp;</span>
+              )}
+            </span>
+          </p>
           <a className="brand" href={routeToHash({ name: "home" })}>
             <span className="brand-mark" aria-hidden="true">CPBL</span>
             <span className="brand-text">
@@ -52,6 +66,11 @@ export function Shell({ children }: { children: ReactNode }) {
               <span>中職數據實驗室</span>
             </span>
           </a>
+          <div className="site-tools">
+            <button type="button" className="btn tool-search" onClick={() => setPaletteOpen(true)} aria-keyshortcuts="Control+K Meta+K /">
+              <span aria-hidden="true">⌕</span> <span className="tool-search-text">搜尋球員</span> <kbd aria-hidden="true">{SHORTCUT_HINT}</kbd>
+            </button>
+          </div>
           <nav aria-label="主要頁面" className="site-nav">
             <ul>
               {NAV.map((item) => (
@@ -63,11 +82,6 @@ export function Shell({ children }: { children: ReactNode }) {
               ))}
             </ul>
           </nav>
-          <div className="site-tools">
-            <button type="button" className="btn tool-search" onClick={() => setPaletteOpen(true)} aria-keyshortcuts="Control+K Meta+K /">
-              <span aria-hidden="true">⌕</span> <span className="tool-search-text">搜尋球員</span> <kbd aria-hidden="true">{SHORTCUT_HINT}</kbd>
-            </button>
-          </div>
         </div>
       </header>
       <main id="main" tabIndex={-1}>
@@ -75,7 +89,12 @@ export function Shell({ children }: { children: ReactNode }) {
       </main>
       <footer className="site-footer">
         <div className="site-footer-inner">
-          <p>
+          <p className="footer-flag" aria-hidden="true">
+            <span className="footer-mark">CPBL</span>
+            <span className="footer-name">Scouting Lab</span>
+            <span className="footer-sub">中職數據實驗室</span>
+          </p>
+          <p className="footer-note">
             資料來自 CPBL 官方公開頁面的已驗證快照
             {provenance.status === "ready" && (
               <>
@@ -93,6 +112,7 @@ export function Shell({ children }: { children: ReactNode }) {
             。非 CPBL 官方服務、不是即時戰績；所有估計與模擬皆為分析示範，不構成任何預測保證。
           </p>
           <p className="muted footer-links">
+            <span className="footer-links-label">延伸閱讀</span>
             <a href={routeToHash({ name: "data" })}>方法、限制與資料完整性</a>
             <a href={MODEL_CARD_URL} target="_blank" rel="noopener noreferrer">
               模型卡<span className="visually-hidden">（在新分頁開啟 GitHub）</span>

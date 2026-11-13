@@ -1,15 +1,26 @@
+/* ---- Lineup lab as a feature spread: a scorecard on the left, the
+   results column on the right, the method note as a boxed sidebar. ---- */
+
 .lineup-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  gap: var(--space-5);
+  gap: var(--space-7);
   align-items: start;
+}
+
+.lineup-layout > .card {
+  border-top: 4px solid var(--rule);
+}
+
+.lineup-hint {
+  margin: 0 0 var(--space-4);
 }
 
 .lineup-controls {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
 }
 
 .lineup-controls select.input {
@@ -19,34 +30,64 @@
   min-height: 48px;
 }
 
+/* Scorecard: column heads, then nine ruled rows. */
+.slots-head,
+.slot {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 11.5em 96px;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.slots-head {
+  padding: 4px 0;
+  border-top: 2px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.slots-head span:first-child,
+.slots-head span:last-child {
+  text-align: center;
+}
+
 .slots {
-  list-style: none;
+  display: grid;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: var(--space-2);
+  list-style: none;
+  border-bottom: 2px solid var(--rule);
 }
 
 .slot {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto auto;
-  gap: var(--space-2);
-  align-items: center;
-  padding: var(--space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-m);
-  background: var(--bg);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule-hair);
+}
+
+.slot:last-child {
+  border-bottom: 0;
 }
 
 .slot-no {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--bg);
-  font-weight: 800;
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.slot-select .input {
+  border-color: transparent;
+  border-bottom-color: var(--line-strong);
+  padding-inline: var(--space-2);
+  font-weight: 700;
+}
+
+.slot-select .input:hover {
+  border-bottom-color: var(--ink);
 }
 
 .slot-stat {
@@ -57,6 +98,7 @@
 
 .slot-move {
   display: flex;
+  justify-content: flex-end;
   gap: 4px;
 }
 
@@ -65,16 +107,29 @@
   padding: 0;
 }
 
+/* Only useful once the run panel stacks below the nine slots. */
+.jump-run {
+  display: none;
+}
+
+/* ---- Results column ---- */
 .run-panel {
   position: sticky;
-  top: 84px;
+  top: var(--space-4);
+}
+
+.run-panel:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.run-panel .segmented {
+  margin-bottom: var(--space-2);
 }
 
 .progress {
+  height: 6px;
   margin-top: var(--space-3);
-  height: 8px;
-  border-radius: 999px;
-  background: var(--bg-sunken);
+  background: var(--box-fill);
   overflow: hidden;
 }
 
@@ -85,33 +140,67 @@
   transition: width 120ms linear;
 }
 
+.run-empty {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4);
+  background: var(--box-fill);
+  border-left: 4px solid var(--rule-mid);
+}
+
 .results {
-  margin-top: var(--space-4);
   display: grid;
   gap: var(--space-4);
+  margin-top: var(--space-4);
 }
 
 .result-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 2px solid var(--rule);
 }
 
 .result-kpis > div {
   display: grid;
+  align-content: start;
   gap: 2px;
+  min-width: 0;
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+}
+
+.result-kpis > div + div {
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--rule-hair);
+}
+
+.result-kpis .stat-value {
+  font-size: clamp(2rem, 1.5rem + 1.4vw, 2.9rem);
 }
 
 .search-result {
   margin-top: var(--space-5);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--line);
+  padding-top: var(--space-3);
+  border-top: 4px solid var(--rule);
+}
+
+.search-result h3 {
+  font-size: var(--step-1);
 }
 
 .suggested {
-  padding-left: 1.6em;
   display: grid;
-  gap: 4px;
+  gap: 0;
+  margin: 0 0 var(--space-4);
+  padding-left: 2em;
+  border-block: 1px solid var(--rule);
+}
+
+.suggested li {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--rule-hair);
+}
+
+.suggested li:last-child {
+  border-bottom: 0;
 }
 
 .suggested .moved {
@@ -124,57 +213,72 @@
 
 .error-text {
   color: var(--bad);
-  font-weight: 650;
+  font-weight: 700;
 }
 
-.method ul {
-  padding-left: 1.2em;
-  display: grid;
-  gap: var(--space-2);
-}
-
-.lineup-hint {
-  margin: 0 0 var(--space-4);
-}
-
-/* Only useful once the run panel stacks below the nine slots. */
-.jump-run {
-  display: none;
-}
-
-.run-panel:focus:not(:focus-visible) {
-  outline: none;
-}
-
-.run-empty {
-  margin: var(--space-4) 0 0;
-  padding: var(--space-4);
-  background: var(--bg-sunken);
-  border-left: 4px solid var(--line-strong);
-}
-
-@media (max-width: 980px) {
-  .lineup-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .jump-run {
-    display: flex;
-    margin-top: var(--space-2);
-  }
-
-  .run-panel {
-    position: static;
-  }
-}
-
-@media (max-width: 560px) {
+@media (max-width: 1180px) {
+  .slots-head,
   .slot {
-    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-columns: 44px minmax(0, 1fr) 96px;
+  }
+
+  .slots-head span:nth-child(3) {
+    display: none;
   }
 
   .slot-stat {
     grid-column: 2 / -1;
     grid-row: 2;
+    padding-left: var(--space-2);
+  }
+}
+
+@media (max-width: 980px) {
+  .lineup-layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+
+  .run-panel {
+    position: static;
+  }
+
+  /* Phone/tablet: a shortcut past the nine slots straight to the results. */
+  .jump-run {
+    display: flex;
+    width: 100%;
+    margin: 0 0 var(--space-4);
+  }
+}
+
+@media (max-width: 640px) {
+  .slots-head {
+    display: none;
+  }
+
+  .slots {
+    border-top: 2px solid var(--rule);
+  }
+
+  .slots-head,
+  .slot {
+    grid-template-columns: 32px minmax(0, 1fr) 92px;
+    gap: var(--space-2);
+  }
+
+  .slot-no {
+    font-size: 1.5rem;
+  }
+
+  .slot-select .input {
+    padding-inline: 4px;
+  }
+
+  .slot-stat {
+    padding-left: 4px;
+  }
+
+  .result-kpis .stat-value {
+    font-size: 1.9rem;
   }
 }

@@ -11,6 +11,10 @@
   gap: var(--space-4);
 }
 
+.compare-card {
+  border-top: 4px solid var(--rule);
+}
+
 .compare-card header {
   display: grid;
   gap: var(--space-2);

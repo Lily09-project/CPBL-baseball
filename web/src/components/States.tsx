@@ -4,8 +4,16 @@ import type { DatasetState } from "../app/hooks";
 export function Loading({ label = "資料載入中" }: { label?: string }) {
   return (
     <div className="state state-loading" role="status" aria-live="polite">
-      <span className="spinner" aria-hidden="true" />
-      {label}…
+      <span className="state-label">
+        <span className="spinner" aria-hidden="true" />
+        {label}…
+      </span>
+      {/* Static column placeholders: no shimmer, so nothing animates forever. */}
+      <span className="state-skeleton" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </span>
     </div>
   );
 }
@@ -13,7 +21,8 @@ export function Loading({ label = "資料載入中" }: { label?: string }) {
 export function ErrorState({ error }: { error: Error }) {
   return (
     <div className="state state-error" role="alert">
-      <strong>無法顯示這個頁面</strong>
+      <span className="state-kicker">資料錯誤</span>
+      <strong className="state-title">無法顯示這個頁面</strong>
       <p>{error.message}</p>
       <p className="muted">請重新整理；若問題持續，代表部署的資料檔不完整，網站不會用不完整的資料計算。</p>
     </div>
@@ -23,7 +32,10 @@ export function ErrorState({ error }: { error: Error }) {
 export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
   return (
     <div className="state state-empty">
-      <strong>{title}</strong>
+      <span className="state-kicker" aria-hidden="true">
+        查無資料
+      </span>
+      <strong className="state-title">{title}</strong>
       {children}
     </div>
   );
