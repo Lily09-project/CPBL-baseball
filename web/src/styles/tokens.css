@@ -1,8 +1,12 @@
-/* Design tokens for CPBL Scouting Lab: one fixed light palette. */
+/* Design tokens for CPBL Scouting Lab: one fixed light palette.
+   The colour values below are fixed; the newspaper layout only adds aliases. */
 :root {
   color-scheme: light;
-  --font-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-serif: "Noto Serif TC", "Songti TC", "PMingLiU", Georgia, serif;
+  /* Platform CJK faces with few weights: the variable Noto Sans TC face cost
+     ~0.9 s of first layout on a 4x-throttled phone. Weights used: 400 and 700. */
+  --font-sans: "PingFang TC", "Heiti TC", "Microsoft JhengHei", "Noto Sans CJK TC", sans-serif;
+  /* Latin-only serif for the nameplate and figures; CJK falls back to the sans face. */
+  --font-serif: Georgia, "Times New Roman", "PingFang TC", "Microsoft JhengHei", serif;
   --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 
   --bg: #ffffff;
@@ -30,7 +34,7 @@
   --shadow: none;
 
   --radius-s: 2px;
-  --radius-m: 24px;
+  --radius-m: 2px;
   --radius-l: 0px;
   --space-1: 4px;
   --space-2: 8px;
@@ -44,7 +48,17 @@
   --step-1: clamp(1.15rem, 1.08rem + 0.35vw, 1.35rem);
   --step-2: clamp(1.4rem, 1.25rem + 0.7vw, 1.85rem);
   --step-3: clamp(2rem, 1.5rem + 2vw, 4.5rem);
+  --step-4: clamp(2.1rem, 1.3rem + 3.2vw, 4rem);
+  --step-5: clamp(2.6rem, 1.4rem + 4.6vw, 5.5rem);
   --content: 1360px;
+
+  /* Newspaper aliases: every one points at an existing colour token. */
+  --paper: var(--bg);
+  --rule: var(--ink);
+  --rule-hair: var(--line);
+  --rule-mid: var(--line-strong);
+  --kicker: var(--teal);
+  --box-fill: var(--bg-sunken);
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --duration: 220ms;
 }

@@ -85,6 +85,32 @@ function Profile({ player, league, details }: { player: PlayerDetail; league: Le
         </div>
       </header>
 
+      <section className="card stat-line">
+        <h2>成績與衍生指標</h2>
+        <ScrollRegion label="成績與衍生指標">
+          <table data-testid="raw-stats">
+            <thead>
+              <tr>
+                {stats.map(([key, label]) => (
+                  <th key={key} scope="col" className="num">
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {stats.map(([key, , kind]) => (
+                  <td key={key} className="num">
+                    {formatStat(player.stats[key], kind)}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </ScrollRegion>
+      </section>
+
       <section className="grid grid-2">
         <div className="card notes" data-testid="scouting-notes">
           <h2>球探摘要</h2>
@@ -231,32 +257,6 @@ function Profile({ player, league, details }: { player: PlayerDetail; league: Le
             </ol>
           </>
         )}
-      </section>
-
-      <section className="card">
-        <h2>成績與衍生指標</h2>
-        <ScrollRegion label="成績與衍生指標">
-          <table data-testid="raw-stats">
-            <thead>
-              <tr>
-                {stats.map(([key, label]) => (
-                  <th key={key} scope="col" className="num">
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                {stats.map(([key, , kind]) => (
-                  <td key={key} className="num">
-                    {formatStat(player.stats[key], kind)}
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
-        </ScrollRegion>
       </section>
     </div>
   );

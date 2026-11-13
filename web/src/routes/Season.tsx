@@ -19,19 +19,21 @@ function SeasonView({ league, provenance }: { league: LeagueData; provenance: Pr
 
   return (
     <div className="stack">
-      <header>
+      <header className="spread-head">
         <span className="eyebrow">實驗 03・情境模擬</span>
         <h1>季末戰績模擬</h1>
         <p className="lede">
           以每隊的畢氏期望勝率作為真實強度，用 log5 計算每場對戰勝率，從快照當時的戰績出發，把剩下的比賽模擬 {league.simulations.toLocaleString()} 次，看看誰最可能拿下這個半季。
         </p>
-        <SnapshotNotice provenance={provenance} />
-        <p className="notice">
-          假設：每個半季每隊共 {league.segment_games} 場（中職半季制）；官方剩餘賽程不在公開快照中，因此依剩餘場數平均配對對手，配不到的場次以聯盟平均對手計算。結果是情境分析，不是官方預測。
-        </p>
+        <div className="spread-notes">
+          <SnapshotNotice provenance={provenance} />
+          <p className="notice">
+            假設：每個半季每隊共 {league.segment_games} 場（中職半季制）；官方剩餘賽程不在公開快照中，因此依剩餘場數平均配對對手，配不到的場次以聯盟平均對手計算。結果是情境分析，不是官方預測。
+          </p>
+        </div>
       </header>
 
-      <section className="card">
+      <section className="card odds">
         <h2>拿下半季第一的機率</h2>
         {headline && (
           <p className="takeaway" data-testid="season-takeaway">
@@ -42,8 +44,11 @@ function SeasonView({ league, provenance }: { league: LeagueData; provenance: Pr
           </p>
         )}
         <ul className="prob-list" data-testid="title-odds">
-          {teams.map((t) => (
+          {teams.map((t, rank) => (
             <li key={t.team}>
+              <span className="prob-rank" aria-hidden="true">
+                {rank + 1}
+              </span>
               <span className="prob-team">{t.team}</span>
               <span className="prob-track" aria-hidden="true">
                 <span style={{ width: `${t.simulation.first_place_probability * 100}%` }} />

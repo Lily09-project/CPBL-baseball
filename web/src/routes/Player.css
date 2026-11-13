@@ -17,6 +17,14 @@
 
 .profile-head h1 {
   margin-bottom: var(--space-2);
+  font-size: var(--step-5);
+  line-height: 1.04;
+}
+
+/* Profile stat line: the box score sits under a heavy rule. */
+.notes,
+.similar-players {
+  min-width: 0;
 }
 
 .notes ul {
@@ -41,13 +49,19 @@
 }
 
 .chip {
-  min-height: 32px;
+  min-height: 36px;
   padding: 0 var(--space-3);
   border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border-radius: var(--radius-s);
   background: var(--bg-sunken);
   font-size: var(--step--1);
   cursor: help;
+}
+
+@media (pointer: coarse) {
+  .chip {
+    min-height: 44px;
+  }
 }
 
 .chip[aria-pressed="true"] {
@@ -98,4 +112,27 @@
 .similar-head strong {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
+}
+
+.similar > li {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--rule-hair);
+}
+
+/* The player's line, box-score style, directly under the name. */
+.stat-line {
+  border-top: 0;
+  padding-top: var(--space-3);
+}
+
+.stat-line > h2:first-child {
+  font-size: var(--step--1);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.stat-line td {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  font-variant-numeric: lining-nums tabular-nums;
 }

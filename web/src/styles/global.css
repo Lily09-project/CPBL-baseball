@@ -1,3 +1,6 @@
+/* Base layer for the "sports daily" layout: newsprint rules, box-score tables
+   and headline typography. Colours only come from tokens.css. */
+
 *,
 *::before,
 *::after {
@@ -16,9 +19,19 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   font-size: var(--step-0);
-  line-height: 1.65;
+  line-height: 1.7;
   font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
+  /* CJK line breaking: never start a line with closing punctuation, keep
+     Latin words and numbers whole, and space CJK from Latin where supported. */
+  line-break: strict;
+  overflow-wrap: break-word;
+  text-autospace: normal;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--accent-ink);
 }
 
 h1,
@@ -26,31 +39,32 @@ h2,
 h3,
 h4 {
   margin: 0 0 var(--space-3);
+  font-family: var(--font-sans);
+  font-weight: 700;
   line-height: 1.25;
+  letter-spacing: 0;
   text-wrap: balance;
 }
 
 h1 {
-  font-family: var(--font-serif);
-  font-size: var(--step-3);
-  font-weight: 800;
-  letter-spacing: 0.01em;
+  font-size: var(--step-4);
+  line-height: 1.12;
 }
 
 h2 {
   font-size: var(--step-2);
-  font-weight: 750;
 }
 
 h3 {
   font-size: var(--step-1);
-  font-weight: 700;
 }
 
+/* Body copy uses the default wrapper: text-wrap: pretty on every paragraph
+   measured ~300 ms of extra layout on a 4x-throttled phone. Headlines keep
+   balance; decks opt into pretty below. */
 p {
   margin: 0 0 var(--space-3);
   max-width: 72ch;
-  text-wrap: pretty;
 }
 
 a {
@@ -65,7 +79,19 @@ a:hover {
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 2px;
+}
+
+/* Route changes move focus to <main>; only keyboard users need the ring. */
+main:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Reserve a full screen for the page so the footer starts below the fold and
+   never jumps while the route's data loads (desktop CLS). */
+main {
+  display: block;
+  min-height: 100vh;
 }
 
 button,
@@ -73,33 +99,71 @@ input,
 select {
   font: inherit;
   color: inherit;
+  touch-action: manipulation;
 }
 
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* ---- Box-score tables: tight rows, tabular figures, hard rules ---- */
 table {
   border-collapse: collapse;
   width: 100%;
+  font-size: var(--step--1);
   font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+  border-bottom: 2px solid var(--rule);
 }
 
 th,
 td {
-  padding: var(--space-2) var(--space-3);
+  padding: 7px var(--space-3);
   text-align: left;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--rule-hair);
   vertical-align: middle;
 }
 
 th {
-  font-size: var(--step--1);
   font-weight: 700;
-  color: var(--muted);
   white-space: nowrap;
+}
+
+thead th {
+  padding-block: 6px;
+  color: var(--ink);
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  border-top: 2px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+tbody th {
+  color: var(--ink);
+}
+
+/* Align the first and last columns with the text column above. */
+tr > :first-child {
+  padding-left: 4px;
+}
+
+tr > :last-child {
+  padding-right: 4px;
 }
 
 td.num,
 th.num {
   text-align: right;
   white-space: nowrap;
+}
+
+tbody tr {
+  transition: background 120ms ease;
+}
+
+tbody tr:hover > * {
+  background: var(--box-fill);
 }
 
 .visually-hidden {
@@ -122,17 +186,18 @@ th.num {
   padding: var(--space-2) var(--space-4);
   background: var(--ink);
   color: var(--bg);
-  border-radius: var(--radius-s);
 }
 
 .skip-link:focus {
   top: var(--space-3);
 }
 
+/* ---- Page frame ---- */
 .page {
   width: min(var(--content), 100% - 2 * var(--space-4));
+  min-width: 0;
   margin: 0 auto;
-  padding: var(--space-6) 0 var(--space-7);
+  padding: var(--space-5) 0 var(--space-7);
   animation: page-in var(--duration) var(--ease);
 }
 
@@ -143,17 +208,21 @@ th.num {
   }
 }
 
+/* Kicker: the small label over a headline. */
 .eyebrow {
   display: inline-block;
   margin-bottom: var(--space-2);
   font-size: var(--step--1);
   font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--accent);
+  letter-spacing: 0.08em;
+  color: var(--kicker);
 }
 
+/* Deck: the sentence under a headline. */
 .lede {
+  text-wrap: pretty;
   font-size: var(--step-1);
+  line-height: 1.65;
   color: var(--ink-soft);
 }
 
@@ -161,18 +230,87 @@ th.num {
   color: var(--muted);
 }
 
+.small {
+  font-size: var(--step--1);
+}
+
+/* Section front for inside pages: thick rule, kicker, headline, deck, hairline. */
+.page header:has(> h1),
+.page .profile-head {
+  padding: var(--space-4) 0 var(--space-2);
+  border-top: 4px solid var(--rule);
+}
+
+.page header:has(> h1) .lede {
+  max-width: 46em;
+  margin-bottom: 0;
+}
+
+.page header:has(> h1) .lede + * {
+  margin-top: var(--space-4);
+}
+
+/* Feature spread opener (lineup lab, season simulation): oversized headline
+   with the deck beside it; editor's notes run in a row underneath. */
+.spread-head h1 {
+  font-size: var(--step-5);
+  line-height: 1.04;
+}
+
+@media (min-width: 980px) {
+  .page header.spread-head {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: var(--space-7);
+    align-items: end;
+  }
+
+  .spread-head .eyebrow {
+    grid-column: 1 / -1;
+  }
+
+  .spread-head h1 {
+    margin: 0;
+  }
+
+  .spread-head .lede {
+    padding-left: var(--space-5);
+    border-left: 1px solid var(--rule-hair);
+  }
+
+  .spread-head .spread-notes {
+    grid-column: 1 / -1;
+  }
+}
+
+.spread-notes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: var(--space-3) var(--space-5);
+  margin-top: var(--space-5);
+}
+
+.spread-notes .notice {
+  max-width: none;
+  margin: 0;
+}
+
+/* A column of copy: newspaper sections are separated by rules, not boxes. */
 .card {
-  background: var(--bg-raised);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-l);
-  padding: var(--space-5);
-  box-shadow: var(--shadow);
   min-width: 0;
+  padding: var(--space-4) 0 var(--space-5);
+  border-top: 1px solid var(--rule);
+  background: transparent;
 }
 
 .card > h2:first-child,
 .card > h3:first-child {
   margin-top: 0;
+}
+
+.card > h2:first-child {
+  font-size: var(--step-1);
+  line-height: 1.3;
 }
 
 .grid {
@@ -188,6 +326,38 @@ th.num {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
 }
 
+/* Wide screens: fixed columns with a hairline column rule between them. */
+@media (min-width: 1100px) {
+  .grid-2,
+  .grid-3 {
+    column-gap: var(--space-7);
+  }
+
+  .grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .grid-2 > *,
+  .grid-3 > * {
+    position: relative;
+  }
+
+  .grid-2 > :nth-child(2n)::before,
+  .grid-3 > :not(:nth-child(3n + 1))::before {
+    content: "";
+    position: absolute;
+    top: var(--space-4);
+    bottom: var(--space-4);
+    left: calc(var(--space-7) / -2);
+    width: 1px;
+    background: var(--rule-hair);
+  }
+}
+
 .stack > * + * {
   margin-top: var(--space-5);
 }
@@ -197,36 +367,41 @@ th.num {
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
+  min-width: 0;
 }
 
 .table-scroll {
   overflow-x: auto;
-  border-radius: var(--radius-m);
 }
 
+/* ---- Controls ---- */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   min-height: 44px;
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-m);
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-s);
   background: var(--bg-raised);
-  font-weight: 650;
-  cursor: pointer;
-  transition: background var(--duration) var(--ease), border-color var(--duration) var(--ease), transform var(--duration) var(--ease);
-  text-decoration: none;
   color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--duration) var(--ease), color var(--duration) var(--ease), transform var(--duration) var(--ease);
 }
 
 .btn:hover {
-  border-color: var(--ink-soft);
+  background: var(--accent-soft);
 }
 
 .btn:active {
   transform: translateY(1px);
+}
+
+.btn:focus-visible {
+  outline-offset: 3px;
 }
 
 .btn-primary {
@@ -236,7 +411,7 @@ th.num {
 }
 
 .btn-primary:hover {
-  border-color: var(--ink);
+  background: var(--ink-soft);
 }
 
 .btn:disabled {
@@ -262,7 +437,8 @@ th.num {
   min-height: 44px;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--line-strong);
-  border-radius: var(--radius-m);
+  border-bottom-color: var(--ink);
+  border-radius: var(--radius-s);
   background: var(--bg-raised);
 }
 
@@ -270,12 +446,13 @@ th.num {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 2px var(--space-2);
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--bg-sunken);
-  font-size: var(--step--1);
-  font-weight: 650;
+  padding: 0 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  background: var(--bg-raised);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.6;
   white-space: nowrap;
 }
 
@@ -291,24 +468,52 @@ th.num {
   color: var(--ink);
 }
 
+/* Short, prominent copy avoids one-character last lines. Long body copy keeps
+   the default wrapper for layout cost. */
+.notice,
+.takeaway,
+.chart-guide,
+.state p {
+  text-wrap: pretty;
+}
+
+/* Editor's note: freeze notices, assumptions and other caveats. */
 .notice {
+  max-width: 72ch;
   padding: var(--space-3) var(--space-4);
   border-left: 4px solid var(--gold);
-  background: var(--bg-sunken);
-  border-radius: var(--radius-s);
+  background: var(--box-fill);
 }
 
 .stat-label {
+  text-wrap: balance;
   font-size: var(--step--1);
   font-weight: 700;
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
 
 .stat-value {
+  font-family: var(--font-serif);
   font-size: var(--step-3);
-  font-weight: 800;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* One computed sentence that says what to notice. */
+.takeaway {
+  max-width: 72ch;
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-3);
+  border-left: 4px solid var(--ink);
+  color: var(--ink);
+}
+
+.chart-guide {
+  max-width: 72ch;
+  margin: var(--space-2) 0 0;
 }
 
 .chart {
@@ -327,19 +532,62 @@ th.num {
   stroke: var(--chart-grid);
 }
 
-details.data-table summary {
-  cursor: pointer;
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  color: var(--ink-soft);
-  font-weight: 650;
+.chart .grid-line,
+.chart .zero,
+.chart .ref-line {
+  shape-rendering: crispEdges;
 }
 
-/* Shared form controls (used by several lazily loaded pages). */
+.chart-frame .chart-title {
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--rule-hair);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+/* "View as table" toggle with a drawn +/− marker (flex hides the native one). */
+details.data-table summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  color: var(--ink-soft);
+  font-weight: 700;
+  font-size: var(--step--1);
+  list-style: none;
+  cursor: pointer;
+}
+
+details.data-table summary::-webkit-details-marker {
+  display: none;
+}
+
+details.data-table summary::before {
+  content: "+" / "";
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--ink-soft);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1;
+}
+
+details.data-table[open] summary::before {
+  content: "−" / "";
+}
+
+details.data-table summary:hover {
+  color: var(--ink);
+}
+
+/* Shared segmented control (used by several lazily loaded pages). */
 .segmented {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  row-gap: 8px;
   gap: 0;
   margin: 0;
   padding: 0;
@@ -360,44 +608,38 @@ details.data-table summary {
 
 .segmented input {
   position: absolute;
-  opacity: 0;
   inset: 0;
   margin: 0;
+  opacity: 0;
   cursor: pointer;
 }
 
 .segmented span {
   display: inline-flex;
-  white-space: nowrap;
   align-items: center;
   min-height: 44px;
-  padding: 0 var(--space-4);
-  border: 1px solid var(--line-strong);
-  background: var(--bg-raised);
-  font-weight: 650;
   margin-left: -1px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--ink);
+  background: var(--bg-raised);
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .segmented label:first-of-type span {
-  border-radius: var(--radius-m) 0 0 var(--radius-m);
   margin-left: 0;
-}
-
-.segmented label:last-of-type span {
-  border-radius: 0 var(--radius-m) var(--radius-m) 0;
 }
 
 .segmented input:checked + span {
   background: var(--ink);
   color: var(--bg);
-  border-color: var(--ink);
 }
 
 .segmented input:focus-visible + span {
-  outline: 3px solid var(--focus);
-  outline-offset: 2px;
   position: relative;
   z-index: 1;
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .check {
@@ -414,13 +656,76 @@ details.data-table summary {
   accent-color: var(--accent);
 }
 
+/* ---- Method note: a boxed sidebar (lineup lab, data trust) ---- */
+.method {
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  border: 1px solid var(--rule);
+  border-top-width: 4px;
+  background: var(--paper);
+}
+
+.method ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding-left: 1.2em;
+}
+
+@media (min-width: 1100px) {
+  .method ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-7);
+  }
+}
+
+/* ---- Motion preference ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 @media (max-width: 640px) {
   .page {
-    padding-top: var(--space-5);
+    padding-top: var(--space-4);
   }
 
-  .card {
-    padding: var(--space-4);
-    border-radius: var(--radius-m);
+  .page header:has(> h1),
+  .page .profile-head {
+    padding: var(--space-3) 0 0;
+    border-top-width: 3px;
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 8vw, 2.4rem);
+  }
+
+  .lede {
+    font-size: 1.0625rem;
+  }
+
+  .input {
+    font-size: 1rem;
+  }
+
+  .method {
+    padding-inline: var(--space-4);
+  }
+
+  th,
+  td {
+    padding: 6px var(--space-2);
+  }
+
+  /* Charts are drawn ~520 units wide and shrink to the phone's width; larger
+     lettering keeps labels near 11px on screen. Labels still fit their gutters. */
+  .chart text,
+  .chart text.row-label {
+    font-size: 16px;
   }
 }

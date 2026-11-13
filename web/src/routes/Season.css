@@ -1,16 +1,42 @@
+/* ---- Season simulation as a feature spread: an odds board, then the
+   projection graphics side by side, then the full box. ---- */
+
+.odds {
+  border-top: 4px solid var(--rule);
+}
+
+.odds > h2:first-child {
+  font-size: var(--step-2);
+}
+
 .prob-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: grid;
-  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+  border-block: 2px solid var(--rule);
 }
 
 .prob-list li {
   display: grid;
-  grid-template-columns: minmax(7em, 10em) 1fr 4.5em;
-  gap: var(--space-3);
+  grid-template-columns: 2.2em minmax(7em, 11em) minmax(0, 1fr) 5em;
+  gap: var(--space-4);
   align-items: center;
+  min-height: 48px;
+  border-bottom: 1px solid var(--rule-hair);
+}
+
+.prob-list li:last-child {
+  border-bottom: 0;
+}
+
+.prob-rank {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .prob-team {
@@ -18,9 +44,8 @@
 }
 
 .prob-track {
-  height: 14px;
-  border-radius: 999px;
-  background: var(--bg-sunken);
+  height: 12px;
+  background: var(--box-fill);
   overflow: hidden;
 }
 
@@ -28,22 +53,29 @@
   display: block;
   height: 100%;
   min-width: 2px;
-  background: linear-gradient(90deg, var(--teal), var(--accent));
-  border-radius: 999px;
+  background: var(--teal);
+}
+
+.prob-list li:first-child .prob-track span {
+  background: var(--ink);
 }
 
 .prob-value {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
   text-align: right;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
-@media (max-width: 520px) {
+@media (max-width: 640px) {
   .prob-list li {
-    grid-template-columns: 1fr 4.5em;
+    grid-template-columns: 1.6em minmax(0, 1fr) 4.5em;
+    gap: 4px var(--space-2);
+    padding: var(--space-2) 0;
   }
 
   .prob-track {
-    grid-column: 1 / -1;
+    grid-column: 2 / -1;
     grid-row: 2;
   }
 }

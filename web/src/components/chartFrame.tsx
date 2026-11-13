@@ -46,7 +46,7 @@ export function DivergingBars({
   height?: number;
 }) {
   const width = W;
-  const labelWidth = 120;
+  const labelWidth = 140;
   const extent = Math.max(...rows.map((r) => Math.abs(r.value)), 1);
   const x = linear([-extent, extent], [labelWidth + 44, width - 48]);
   const total = rows.length * height + 8;
