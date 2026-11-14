@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDataset, useDocumentTitle, useRoute } from "../app/hooks";
 import { ChartFrame, Histogram } from "../components/charts";
+import { downloadText, toCsv } from "../lib/csv";
+import { summarizePairedRuns } from "../lib/pairedLineup";
 import { Gate } from "../components/States";
 import { formatPercent, formatSigned } from "../lib/format";
 import {
@@ -14,10 +16,10 @@ import {
   moveSlot,
   onBaseProbability,
 } from "../lib/lineup";
-import { routeToHash } from "../lib/router";
+import { routeToHash, type SavedLineup } from "../lib/router";
 import type { OrderSearchResult } from "../lib/sim";
 import { integerHistogram, mean, quantile, shareAtLeast } from "../lib/stats";
-import type { LeagueData, PlayerSummary, SimInputs } from "../lib/types";
+import type { LeagueData, PlayerSummary, Provenance, SimInputs } from "../lib/types";
 import { useSimWorker } from "../workers/useSimWorker";
 import "./Lineup.css";
 
@@ -35,7 +37,7 @@ interface SimResult {
   games: number;
 }
 
-function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: SimInputs; league: LeagueData }) {
+function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[]; sim: SimInputs; league: LeagueData; snapshot: string }) {
   const [route, navigate] = useRoute();
   const params = route.name === "lineup" ? route : { name: "lineup" as const };
   const teams = league.teams.map((t) => t.team);
@@ -43,7 +45,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   const ids = completeLineup(params.ids?.length ? params.ids : defaultLineup(players, sim, team), players, sim);
   const pitcher = params.pitcher && hasPitcher(sim, params.pitcher) ? params.pitcher : undefined;
   const seed = params.seed ?? DEFAULT_SEED;
-  const [games, setGames] = useState(GAME_OPTIONS[1] as number);
+  const games = params.games ?? GAME_OPTIONS[1]!;
   const [result, setResult] = useState<SimResult | null>(null);
   const [search, setSearch] = useState<(OrderSearchResult & { inputKey: string; ids: string[] }) | null>(null);
   const { run, cancel, job, progress, error } = useSimWorker();
@@ -54,7 +56,21 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   const groupByTeam = (list: PlayerSummary[]) =>
     teams.map((t) => ({ team: t, items: list.filter((p) => p.team === t).sort((a, b) => b.trials - a.trials) })).filter((g) => g.items.length > 0);
 
-  const inputKey = JSON.stringify([ids, pitcher, seed, games]);
+  const a = params.a;
+  const b = params.b;
+  const valid = (value: SavedLineup | undefined) => Boolean(value && value.ids.length === 9 &&
+    new Set(value.ids).size === 9 && value.ids.every((id) => hasBatter(sim, id)) &&
+    (!value.pitcher || hasPitcher(sim, value.pitcher)));
+  const canCompare = params.snapshot === snapshot && valid(a) && valid(b);
+  const comparisonKey = JSON.stringify([snapshot, a, b, seed, games]);
+  const [paired, setPaired] = useState<{ key: string; a: number[]; b: number[] } | null>(null);
+  const [comparing, setComparing] = useState(false);
+  const pairedResult = canCompare && paired?.key === comparisonKey ? paired : null;
+  const stats = pairedResult ? summarizePairedRuns(pairedResult.a, pairedResult.b) : null;
+  const distributions = pairedResult ? [pairedResult.a, pairedResult.b].map((runs) => integerHistogram(runs, HIST_CAP)) : [];
+  const bins = Array.from({ length: HIST_CAP + 1 }, (_, i) => i === HIST_CAP ? `${i}+` : String(i));
+
+  const inputKey = JSON.stringify([ids, pitcher, seed, games, comparisonKey]);
   const currentKey = useRef(inputKey);
   const generation = useRef(0);
   useEffect(() => {
@@ -88,6 +104,26 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
     setResult(null);
     setSearch(null);
     navigate({ ...params, team, ids, pitcher, seed: params.seed, ...patch, name: "lineup" }, { replace: true });
+  };
+
+  const savePair = (patch: Partial<typeof params>) => update({ snapshot, ...patch });
+
+  const compare = async () => {
+    if (!canCompare || !a || !b) return;
+    const version = ++generation.current;
+    setPaired(null);
+    setComparing(true);
+    try {
+      const first = await run<"simulate">({ kind: "simulate", cdfs: lineupCdfs(sim, a.ids, a.pitcher), games, seed });
+      if (version !== generation.current) return;
+      const second = await run<"simulate">({ kind: "simulate", cdfs: lineupCdfs(sim, b.ids, b.pitcher), games, seed });
+      if (version !== generation.current) return;
+      setPaired({ key: comparisonKey, a: first, b: second });
+    } catch {
+      // Worker errors are displayed next to the comparison controls.
+    } finally {
+      setComparing(false);
+    }
   };
 
   const simulate = async () => {
@@ -217,7 +253,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
             <legend className="label">模擬場數</legend>
             {GAME_OPTIONS.map((g) => (
               <label key={g}>
-                <input type="radio" name="games" value={g} checked={games === g} onChange={() => setGames(g)} />
+                <input type="radio" name="games" value={g} checked={games === g} onChange={() => update({ games: g })} />
                 <span>{g.toLocaleString()}</span>
               </label>
             ))}
@@ -335,6 +371,52 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
         </div>
       </section>
 
+      <section className="card" aria-labelledby="lineup-scenarios">
+        <h2 id="lineup-scenarios">打線方案 A／B</h2>
+        <p className="muted">把上方打線存成方案，再用相同場數與種子比較。網址會保留兩組設定與快照。</p>
+        {(a || b) && params.snapshot !== snapshot ? (
+          <div role="status">
+            <p>這組方案使用不同資料快照。請重新確認球員，再儲存兩組方案。</p>
+            <button type="button" className="btn" onClick={() => savePair({ a: undefined, b: undefined })}>清除舊方案</button>
+          </div>
+        ) : <>
+          <div className="row">
+            <button className="btn" type="button" onClick={() => savePair({ a: { ids, pitcher } })}>儲存為 A</button>
+            <button className="btn" type="button" onClick={() => savePair({ b: { ids, pitcher } })}>儲存為 B</button>
+            <button className="btn" type="button" disabled={!a} onClick={() => savePair({ b: a })}>複製 A 到 B</button>
+            <button className="btn" type="button" disabled={!a || !b} onClick={() => savePair({ a: b, b: a })}>交換 A／B</button>
+          </div>
+          {([a, b] as const).map((value, index) => value && <details key={index}>
+            <summary>{index === 0 ? "方案 A" : "方案 B"} · {value.pitcher ? name("pitcher", value.pitcher) : "聯盟平均投手"}</summary>
+            <ol>{value.ids.map((id, slot) => <li key={slot}>{name("batter", id)}</li>)}</ol>
+            <button className="btn" type="button" disabled={!valid(value)} onClick={() => update({ ids: value.ids, pitcher: value.pitcher })}>載入到編輯區</button>
+          </details>)}
+          {((a && !valid(a)) || (b && !valid(b))) && <p role="status">方案含有無法使用的球員，請重新儲存。</p>}
+          <div className="row">
+            <button className="btn" type="button" disabled={!canCompare || comparing || Boolean(job)} onClick={() => void compare()}>比較兩組打線</button>
+            {comparing && <button className="btn" type="button" onClick={invalidate}>取消比較</button>}
+            {a && b && <a className="btn" href={routeToHash(params)}>比較分享網址</a>}
+          </div>
+          {comparing && <p role="status">正在模擬兩組打線</p>}
+          {error && !comparing && <p role="status">{error}</p>}
+          {stats && pairedResult && <div data-testid="paired-lineup-result">
+            <p>A 每場 {stats.a.toFixed(2)} 分 · B 每場 {stats.b.toFixed(2)} 分</p>
+            <p>B − A <strong>{formatSigned(stats.delta, 2)}</strong> 分，95% 配對模擬區間 {stats.low.toFixed(2)} 至 {stats.high.toFixed(2)} 分。</p>
+            <ChartFrame title="兩組方案的得分分布" summary="比較每場得分的模擬次數" table={<table>
+              <thead><tr><th scope="col">得分</th><th scope="col">A</th><th scope="col">B</th></tr></thead>
+              <tbody>{bins.map((bin, i) => <tr key={bin}><th scope="row">{bin}</th><td>{distributions[0]?.[i]}</td><td>{distributions[1]?.[i]}</td></tr>)}</tbody>
+            </table>}>
+              <p>方案 A</p><Histogram counts={distributions[0]!} labels={bins} />
+              <p>方案 B</p><Histogram counts={distributions[1]!} labels={bins} />
+            </ChartFrame>
+            <button className="btn" type="button" onClick={() => downloadText("cpbl-lineup-comparison.csv",
+              toCsv(["snapshot", "seed", "game", "a", "b", "delta"], pairedResult.a.map((value, i) => ({
+                snapshot, seed, game: i + 1, a: value, b: pairedResult.b[i]!, delta: pairedResult.b[i]! - value,
+              }))), "text/csv;charset=utf-8")}>下載比較 CSV</button>
+          </div>}
+        </>}
+      </section>
+
       <section className="card method">
         <h2>模型怎麼運作</h2>
         <ul>
@@ -356,6 +438,7 @@ export default function Lineup() {
   const players = useDataset("players.json");
   const sim = useDataset("sim.json");
   const league = useDataset("league.json");
+  const provenance = useDataset("provenance.json");
   return (
     <div className="page stack">
       <header className="spread-head">
@@ -366,7 +449,7 @@ export default function Lineup() {
         </p>
       </header>
 
-      <Gate<[PlayerSummary[], SimInputs, LeagueData]> states={[players, sim, league]}>{(p, s, l) => <LineupLab players={p} sim={s} league={l} />}</Gate>
+      <Gate<[PlayerSummary[], SimInputs, LeagueData, Provenance]> states={[players, sim, league, provenance]}>{(p, s, l, source) => <LineupLab players={p} sim={s} league={l} snapshot={source.snapshot_id} />}</Gate>
     </div>
   );
 }

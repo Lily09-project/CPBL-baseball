@@ -2,10 +2,12 @@
  * Hash-based routes: they work on any static host (GitHub Pages included)
  * and every screen state lives in the URL, so any view can be shared.
  */
+export type SavedLineup = { ids: string[]; pitcher?: string };
+
 export type Route =
   | { name: "home" }
   | { name: "talent"; type: "batter" | "pitcher"; metric?: string; sort?: "raw" | "posterior"; team?: string; q?: string; all?: boolean }
-  | { name: "lineup"; team?: string; ids?: string[]; pitcher?: string; seed?: number }
+  | { name: "lineup"; team?: string; ids?: string[]; pitcher?: string; seed?: number; games?: number; snapshot?: string; a?: SavedLineup; b?: SavedLineup }
   | { name: "season" }
   | { name: "player"; type: "batter" | "pitcher"; id: string }
   | { name: "compare"; type: "batter" | "pitcher"; ids: string[] }
@@ -44,12 +46,21 @@ export function parseRoute(hash: string): Route {
     }
     case "lineup": {
       const seed = Number(params.get("seed"));
+      const games = Number(params.get("games"));
+      const saved = (key: "a" | "b"): SavedLineup | undefined => {
+        const ids = list(params.get(key));
+        return ids.length === 9 ? { ids, pitcher: params.get(key + "p") ?? undefined } : undefined;
+      };
       return {
         name: "lineup",
         team: params.get("team") ?? undefined,
         ids: list(params.get("ids")).slice(0, 9),
         pitcher: params.get("pitcher") ?? undefined,
-        seed: Number.isInteger(seed) && seed > 0 ? seed : undefined,
+        seed: Number.isSafeInteger(seed) && seed > 0 && seed <= 0xffffffff ? seed : undefined,
+        games: [1000, 5000, 20000].includes(games) ? games : undefined,
+        snapshot: params.get("snapshot")?.slice(0, 128),
+        a: saved("a"),
+        b: saved("b"),
       };
     }
     case "season":
@@ -81,7 +92,7 @@ export function routeToHash(route: Route): string {
     case "talent":
       return `#/talent${query({ type: route.type, metric: route.metric, sort: route.sort, team: route.team, q: route.q, all: route.all ? 1 : undefined })}`;
     case "lineup":
-      return `#/lineup${query({ team: route.team, ids: route.ids?.join(","), pitcher: route.pitcher, seed: route.seed })}`;
+      return `#/lineup${query({ team: route.team, ids: route.ids?.join(","), pitcher: route.pitcher, seed: route.seed, games: route.games, snapshot: route.snapshot, a: route.a?.ids.join(","), ap: route.a?.pitcher, b: route.b?.ids.join(","), bp: route.b?.pitcher })}`;
     case "season":
       return "#/season";
     case "player":
