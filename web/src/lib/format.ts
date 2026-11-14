@@ -19,7 +19,9 @@ export function formatPercent(value: number | null | undefined, digits = 0): str
 
 export function formatSigned(value: number, digits = 1): string {
   const fixed = value.toFixed(digits);
-  return value > 0 ? `+${fixed}` : fixed === `-${(0).toFixed(digits)}` ? (0).toFixed(digits) : fixed;
+  // A value that rounds to zero carries no sign: neither "+0.00" nor "-0.00".
+  if (Number(fixed) === 0) return (0).toFixed(digits);
+  return value > 0 ? `+${fixed}` : fixed;
 }
 
 export function ordinalPercentile(value: number | null | undefined): string {

@@ -269,16 +269,21 @@ export default function Player({ type, id }: { type: PlayerType; id: string }) {
   useDocumentTitle(player ? player.name : "球員檔案");
   return (
     <div className="page">
-      <Gate<[Record<string, PlayerDetail>, LeagueData]> states={[details, league]}>
+      <Gate<[Record<string, PlayerDetail>, LeagueData]> states={[details, league]} heading="球員檔案">
         {(d, l) =>
           player ? (
             <Profile player={player} league={l} details={d} />
           ) : (
-            <EmptyState title="找不到這位球員">
-              <p>
-                網址中的球員編號不存在於目前的資料快照。<a href={routeToHash({ name: "talent", type })}>回到排行</a>
-              </p>
-            </EmptyState>
+            <div className="stack">
+              <header>
+                <h1>球員檔案</h1>
+              </header>
+              <EmptyState title="找不到這位球員">
+                <p>
+                  網址中的球員編號不存在於目前的資料快照。<a href={routeToHash({ name: "talent", type })}>回到排行</a>
+                </p>
+              </EmptyState>
+            </div>
           )
         }
       </Gate>

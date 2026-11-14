@@ -80,7 +80,11 @@ function CompareView({ details, league, provenance, type, ids }: { details: Reco
                   {p.team}・{p.trials} {type === "batter" ? "打席" : "對戰打者"}
                   {!p.qualified && "・小樣本"}
                 </p>
-                <button type="button" className="btn" onClick={() => go(removeFromComparison(ids, p.player_id))} aria-label={`從比較中移除 ${p.name}`}>
+                <button type="button" className="btn" onClick={() => {
+                    // The card (and this button) is about to disappear; keep keyboard focus on the page.
+                    document.getElementById("add-player")?.focus();
+                    go(removeFromComparison(ids, p.player_id));
+                  }} aria-label={`從比較中移除 ${p.name}`}>
                   移除
                 </button>
               </header>
@@ -104,7 +108,7 @@ export default function Compare({ type, ids }: { type: PlayerType; ids: string[]
   const provenance = useDataset("provenance.json");
   return (
     <div className="page">
-      <Gate<[Record<string, PlayerDetail>, LeagueData, Provenance]> states={[details, league, provenance]}>
+      <Gate<[Record<string, PlayerDetail>, LeagueData, Provenance]> states={[details, league, provenance]} heading="球員並列比較">
         {(d, l, p) => <CompareView details={d} league={l} provenance={p} type={type} ids={ids} />}
       </Gate>
     </div>

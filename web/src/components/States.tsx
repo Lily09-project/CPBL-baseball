@@ -44,14 +44,28 @@ export function EmptyState({ title, children }: { title: string; children?: Reac
 /** Render children only once every dataset is ready; otherwise show state. */
 export function Gate<T extends unknown[]>({
   states,
+  heading,
   children,
 }: {
   states: { [K in keyof T]: DatasetState<T[K]> };
+  /** Page title shown while loading or failed, for pages whose own <h1> is rendered from the data. */
+  heading?: string;
   children: (...data: T) => ReactNode;
 }) {
+  const framed = (state: ReactNode) =>
+    heading ? (
+      <div className="stack">
+        <header>
+          <h1>{heading}</h1>
+        </header>
+        {state}
+      </div>
+    ) : (
+      state
+    );
   const failed = states.find((s) => s.status === "error");
-  if (failed && failed.status === "error") return <ErrorState error={failed.error} />;
-  if (states.some((s) => s.status === "loading")) return <Loading />;
+  if (failed && failed.status === "error") return framed(<ErrorState error={failed.error} />);
+  if (states.some((s) => s.status === "loading")) return framed(<Loading />);
   const data = states.map((s) => (s.status === "ready" ? s.data : undefined)) as T;
   return <>{children(...data)}</>;
 }

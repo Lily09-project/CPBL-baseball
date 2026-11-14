@@ -46,3 +46,13 @@
 th .badge {
   margin-left: var(--space-2);
 }
+
+/* The list item is a grid, so keep the link as wide as the name, not the column. */
+.traps a {
+  justify-self: start;
+}
+
+/* Long team names (統一7-ELEVEn獅) stay on one line; the table scrolls inside its region. */
+td.team {
+  white-space: nowrap;
+}

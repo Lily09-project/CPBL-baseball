@@ -174,7 +174,7 @@ export default function Season() {
   const provenance = useDataset("provenance.json");
   return (
     <div className="page">
-      <Gate<[LeagueData, Provenance]> states={[league, provenance]}>{(l, p) => <SeasonView league={l} provenance={p} />}</Gate>
+      <Gate<[LeagueData, Provenance]> states={[league, provenance]} heading="季末戰績模擬">{(l, p) => <SeasonView league={l} provenance={p} />}</Gate>
     </div>
   );
 }

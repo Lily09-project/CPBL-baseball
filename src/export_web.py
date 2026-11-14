@@ -57,6 +57,10 @@ def _interval(post: bayes.Posterior, digits: int = 4) -> dict[str, float | None]
     }
 
 
+# Rates whose denominator is plate appearances (or at-bats): undefined, not zero, without any.
+BATTER_RATE_STATS = frozenset({"batting_average", "obp", "slg", "ops", "iso"})
+
+
 def build_batters(batters: pd.DataFrame) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     rows = batters.to_dict("records")
     pa = [float(r["pa"] or 0) for r in rows]
@@ -83,17 +87,17 @@ def build_batters(batters: pd.DataFrame) -> tuple[list[dict[str, Any]], dict[str
             "trials": int(pa[i]),
             "qualified": pa[i] >= players.BATTER_QUALIFIER_PA,
             "stats": {
-                k: _num(r[k], 3)
+                k: None if k in BATTER_RATE_STATS and not pa[i] else _num(r[k], 3)
                 for k in ["pa", "ab", "hits", "doubles", "triples", "home_runs", "walks", "strikeouts", "stolen_bases", "batting_average", "obp", "slg", "ops", "iso"]
             },
             "talent": {key: _interval(posts[key][i]) for key in specs},
             "metrics": {
                 "obp_post": _num(posts["obp"][i].mean),
-                "iso": _num(r["iso"]),
+                "iso": _num(r["iso"]) if pa[i] else None,
                 "hr_rate_post": _num(posts["hr_rate"][i].mean),
                 "bb_rate_post": _num(posts["bb_rate"][i].mean),
                 "k_rate_post": _num(posts["k_rate"][i].mean),
-                "speed": _num(float(r["stolen_bases"] or 0) / pa[i] if pa[i] else 0.0),
+                "speed": _num(float(r["stolen_bases"] or 0) / pa[i]) if pa[i] else None,
             },
         }
         out.append(record)
@@ -213,7 +217,8 @@ def attach_trajectories(records: list[dict[str, Any]], history: pd.DataFrame) ->
         series = [
             {"t": row["captured"].strftime("%Y-%m-%d"), "v": _num(row[metric], 3), "w": _num(row[workload], 1)}
             for row in rows.to_dict("records")
-            if _num(row[metric], 3) is not None
+            # No plate appearances / no innings yet: OPS and ERA are undefined, not 0.
+            if _num(row[metric], 3) is not None and _num(row[workload], 1) != 0
         ]
         points = [(datetime.strptime(p["t"], "%Y-%m-%d"), p["v"]) for p in series]
         trend = players.linear_trend(points)
@@ -232,10 +237,18 @@ def attach_notes(records: list[dict[str, Any]], metric_defs: tuple[players.Metri
         metric_key = "obp_post" if record["type"] == "batter" else "k_rate_post"
         talent = record["talent"][shrink_key]
         comparable = names.get(record["similar"][0]["player_id"]) if record["similar"] else None
+        # Below the qualifier the notes promise to read shrunk estimates only, so raw
+        # rates (ISO, WHIP, steal frequency) cannot be named a strength or weakness;
+        # with no trials at all every estimate is just the league prior.
+        usable = {
+            k: v
+            for k, v in record["percentiles"].items()
+            if record["qualified"] or (record["trials"] > 0 and k.endswith("_post"))
+        }
         record["notes"] = narrative.scouting_notes(
             name=record["name"],
             metrics=metric_defs,
-            percentiles={k: (v if v is not None else float("nan")) for k, v in record["percentiles"].items()},
+            percentiles={k: (v if v is not None else float("nan")) for k, v in usable.items()},
             shrinkage={metric_key: (talent["raw"], talent["mean"])},
             trend=record["trajectory"]["trend"],
             trend_metric=record["trajectory"]["metric"],

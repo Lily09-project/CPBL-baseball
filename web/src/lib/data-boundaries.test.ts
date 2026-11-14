@@ -44,4 +44,11 @@ describe("deployment data boundaries", () => {
     broken = false;
     await expect(loader.load("league.json")).resolves.toEqual({ items: [] });
   });
+
+  it("reports a network failure in Traditional Chinese rather than the browser message", async () => {
+    const loader = createLoader("./", async () => {
+      throw new TypeError("Failed to fetch");
+    });
+    await expect(loader.load("league.json")).rejects.toThrow(/^無法載入 (manifest|league)\.json（網路連線失敗）$/);
+  });
 });

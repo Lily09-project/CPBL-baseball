@@ -38,16 +38,18 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
   const metrics = TALENT_METRICS[type];
   const metric = metrics.find((m) => m.key === params.metric) ?? (metrics[0] as TalentMetric);
   const sort = params.sort ?? "posterior";
-  const team = params.team ?? "";
   const query = params.q ?? "";
   const [shown, setShown] = useState(PAGE);
-  const [onlyQualified, setOnlyQualified] = useState(true);
+  // The qualifier toggle lives in the URL like every other filter, so it survives back/forward and sharing.
+  const onlyQualified = !params.all;
   const update = (patch: Partial<typeof params>) => {
     setShown(PAGE);
     navigate({ ...params, ...patch, name: "talent" }, { replace: true });
   };
 
   const teams = [...new Set(players.map((p) => p.team))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
+  // An unknown team in a hand-edited URL falls back to the whole league instead of an empty board.
+  const team = params.team && teams.includes(params.team) ? params.team : "";
   const prior = league.priors[type][metric.key];
   const fmt = (v: number) => formatMetric(v, metric.fmt);
 
@@ -128,7 +130,7 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
           <input id="q" className="input" type="search" value={query} placeholder="輸入名字篩選" onChange={(e) => update({ q: e.target.value || undefined })} />
         </div>
         <label className="check">
-          <input type="checkbox" checked={onlyQualified} onChange={(e) => { setOnlyQualified(e.target.checked); setShown(PAGE); }} />
+          <input type="checkbox" checked={onlyQualified} onChange={(e) => update({ all: e.target.checked ? undefined : true })} />
           只看達比較門檻的球員（{type === "batter" ? "50 打席" : "15 局"}）
         </label>
       </section>
@@ -219,7 +221,7 @@ function TalentTable({ rows, metric, withRank = false }: { rows: PlayerSummary[]
                 <a href={routeToHash({ name: "player", type: p.type, id: p.player_id })}>{p.name}</a>
                 {!p.qualified && <span className="badge">小樣本</span>}
               </th>
-              <td>{p.team}</td>
+              <td className="team">{p.team}</td>
               <td className="num">{p.trials}</td>
               <td className="num">{formatMetric(t?.raw, metric.fmt)}</td>
               <td className="num strong">{formatMetric(t?.mean, metric.fmt)}</td>

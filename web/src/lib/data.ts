@@ -60,7 +60,13 @@ export function createLoader(baseUrl: string, fetcher: Fetcher = (url, init) => 
   const verified = new Set<string>();
 
   const getBytes = async (name: string, init?: RequestInit): Promise<ArrayBuffer> => {
-    const response = await fetcher(`${baseUrl}data/${name}`, init);
+    let response: Response;
+    try {
+      response = await fetcher(`${baseUrl}data/${name}`, init);
+    } catch {
+      // Browsers reject with an English, engine-specific message ("Failed to fetch").
+      throw new Error(`無法載入 ${name}（網路連線失敗）`);
+    }
     if (!response.ok) throw new Error(`無法載入 ${name}（HTTP ${response.status}）`);
     return response.arrayBuffer();
   };
