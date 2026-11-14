@@ -52,3 +52,33 @@ describe("deployment data boundaries", () => {
     await expect(loader.load("league.json")).rejects.toThrow(/^無法載入 (manifest|league)\.json（網路連線失敗）$/);
   });
 });
+
+it("does not return a new file alongside cached files from an older deployment", async () => {
+  const old = '{"version":"old"}';
+  const next = '{"version":"new"}';
+  const digest = async (value: string) => sha256Hex(new TextEncoder().encode(value).buffer as ArrayBuffer);
+  const oldHash = await digest(old);
+  const nextHash = await digest(next);
+  let deployed = false;
+  let finishOld!: (response: Response) => void;
+  const delayed = new Promise<Response>((resolve) => { finishOld = resolve; });
+  const loader = createLoader("./", async (url) => {
+    if (url.endsWith("manifest.json")) {
+      const hash = deployed ? nextHash : oldHash;
+      return respond(JSON.stringify({ schema_version: "2.0", files: {
+        "league.json": hash, "players.json": hash, "sim.json": hash,
+      } }));
+    }
+    if (url.endsWith("sim.json")) return delayed;
+    return respond(deployed ? next : old);
+  });
+  await expect(loader.load("league.json")).resolves.toEqual({ version: "old" });
+  const late = expect(loader.load("sim.json")).rejects.toThrow("網站資料已更新");
+  deployed = true;
+  await expect(loader.load("players.json")).rejects.toThrow("網站資料已更新");
+  finishOld(respond(old));
+  await late;
+  await expect(loader.load("league.json")).rejects.toThrow("網站資料已更新");
+  await expect(loader.manifest()).rejects.toThrow("網站資料已更新");
+  expect(loader.verifiedFiles()).toEqual([]);
+});

@@ -100,3 +100,21 @@ test.describe("post-relayout QA: talent filters and boundary players", () => {
     }
   });
 });
+
+
+test("a changed deployment blocks a mixed player comparison and offers a reload", async ({ page }) => {
+  await openRoute(page, "/");
+  await expect(page.getByRole("link", { name: "打線實驗室", exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId("headline-insight")).toBeVisible();
+  await page.route("**/data/player-details-batter.json", (route) => route.fulfill({ json: { updated: true } }));
+  await page.route("**/data/manifest.json", async (route) => {
+    const response = await route.fetch();
+    const manifest = await response.json();
+    manifest.files["player-details-batter.json"] = "0".repeat(64);
+    await route.fulfill({ response, json: manifest });
+  });
+  await page.evaluate(() => { window.location.hash = "/compare?type=batter&ids=0000005549"; });
+  await expect(page.getByRole("alert")).toContainText("網站資料已更新");
+  await expect(page.getByRole("button", { name: "重新整理" })).toBeVisible();
+  await expect(page.getByTestId("compare-grid")).toHaveCount(0);
+});
