@@ -1,8 +1,8 @@
-import { lazy, Suspense, useEffect, useMemo, useRef } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { LoaderContext, useDocumentTitle, useRoute } from "./app/hooks";
 import { Shell } from "./components/Shell";
-import { EmptyState, Loading } from "./components/States";
-import { createLoader, type Loader } from "./lib/data";
+import { EmptyState, ErrorState, Loading } from "./components/States";
+import { createLoader, DeploymentChangedError, type Loader } from "./lib/data";
 import { routeToHash, type Route } from "./lib/router";
 import Home from "./routes/Home";
 
@@ -54,6 +54,7 @@ function Routes({ route }: { route: Route }) {
 
 export default function App({ loader }: { loader?: Loader }) {
   const value = useMemo(() => loader ?? createLoader(import.meta.env.BASE_URL), [loader]);
+  const deploymentChanged = useSyncExternalStore(value.subscribe, value.hasDeploymentChanged);
   const [route] = useRoute();
   const key = route.name === "player" ? `player-${route.type}-${route.id}` : route.name;
   const previousKey = useRef(key);
@@ -76,7 +77,12 @@ export default function App({ loader }: { loader?: Loader }) {
             </div>
           }
         >
-          <Routes route={route} />
+          {deploymentChanged ? (
+            <div className="page">
+              <ErrorState error={new DeploymentChangedError()} />
+              <button type="button" className="btn" onClick={() => window.location.reload()}>重新整理</button>
+            </div>
+          ) : <Routes route={route} />}
         </Suspense>
       </Shell>
     </LoaderContext.Provider>

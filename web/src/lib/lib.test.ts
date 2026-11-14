@@ -220,7 +220,8 @@ describe("data loader", () => {
     });
     const loader = createLoader("./", fetcher);
     await loader.manifest(); // the tab still holds the old manifest
-    await expect(loader.load("league.json")).resolves.toEqual({ teams: ["new"] });
+    await expect(loader.load("league.json")).rejects.toThrow("網站資料已更新");
+    await expect(createLoader("./", fetcher).load("league.json")).resolves.toEqual({ teams: ["new"] });
     expect(fetcher).toHaveBeenCalledWith("./data/manifest.json", { cache: "reload" });
     expect(fetcher).toHaveBeenCalledWith("./data/league.json", { cache: "reload" });
 
