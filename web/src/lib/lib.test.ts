@@ -48,6 +48,9 @@ describe("format", () => {
     expect(formatPercent(undefined)).toBe("—");
     expect(formatSigned(1.25)).toBe("+1.3");
     expect(formatSigned(-0.04)).toBe("0.0");
+    expect(formatSigned(0.004, 2)).toBe("0.00");
+    expect(formatSigned(-0.004, 2)).toBe("0.00");
+    expect(formatSigned(0.005, 2)).toBe("+0.01");
     expect(formatSigned(-2.5)).toBe("-2.5");
     expect(ordinalPercentile(87.4)).toBe("PR 87");
     expect(ordinalPercentile(null)).toBe("—");
@@ -78,6 +81,7 @@ describe("router", () => {
     roundTrip({ name: "season" });
     roundTrip({ name: "data" });
     roundTrip({ name: "talent", type: "pitcher", metric: "k_rate_post", sort: "raw", team: "味全龍", q: "王" });
+    roundTrip({ name: "talent", type: "batter", all: true });
     roundTrip({ name: "lineup", team: "中信兄弟", ids: ["1", "2"], pitcher: "9", seed: 7 });
     roundTrip({ name: "player", type: "batter", id: "0000005549" });
     roundTrip({ name: "compare", type: "batter", ids: ["a", "b"] });
@@ -89,6 +93,8 @@ describe("router", () => {
     expect(parseRoute("#/player/batter")).toEqual({ name: "not-found", path: "/player/batter" });
     expect(parseRoute("#/talent?type=x&sort=y")).toMatchObject({ type: "batter", sort: undefined });
     expect(parseRoute("#/talent?sort=posterior")).toMatchObject({ sort: "posterior" });
+    expect(parseRoute("#/talent?all=0")).toMatchObject({ name: "talent", all: undefined });
+    expect(routeToHash({ name: "talent", type: "batter", all: undefined })).toBe("#/talent?type=batter");
     expect(parseRoute("#/compare?ids=a,a,b,c,d")).toMatchObject({ ids: ["a", "b", "c"] });
     expect(parseRoute("#/lineup?seed=-3")).toMatchObject({ seed: undefined, ids: [] });
     expect(routeToHash({ name: "not-found", path: "/x" })).toBe("#/x");

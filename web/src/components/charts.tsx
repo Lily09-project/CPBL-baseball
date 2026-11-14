@@ -1,5 +1,6 @@
 import { scaleBand, scaleLinear } from "d3-scale";
 import { line } from "d3-shape";
+import { formatSigned } from "../lib/format";
 import { W } from "./chartFrame";
 
 export { ChartFrame, DivergingBars } from "./chartFrame";
@@ -146,9 +147,11 @@ export function TrendLine({
   const min = Math.min(...values);
   const max = Math.max(...values);
   const pad = (max - min) * 0.15 || 0.05;
+  // OPS and ERA cannot be negative, so the padded axis never dips below zero.
+  const floor = Math.max(0, min - pad);
   const x = scaleLinear().domain([0, Math.max(points.length - 1, 1)]).range([48, width - 16]);
   const y = scaleLinear()
-    .domain(invert ? [max + pad, min - pad] : [min - pad, max + pad])
+    .domain(invert ? [max + pad, floor] : [floor, max + pad])
     .range([height - 28, 12]);
   const path = line<{ v: number }>()
     .x((_, i) => x(i))
@@ -236,7 +239,7 @@ export function ContributionBars({ items, labels }: { items: Record<string, numb
           <span className="contrib-track" aria-hidden="true">
             <span className={value >= 0 ? "contrib-pos" : "contrib-neg"} style={{ width: `${(Math.abs(value) / extent) * 50}%`, [value >= 0 ? "left" : "right"]: "50%" }} />
           </span>
-          <span className="contrib-value">{value >= 0 ? "+" : ""}{value.toFixed(2)}</span>
+          <span className="contrib-value">{formatSigned(value, 2)}</span>
         </li>
       ))}
     </ul>

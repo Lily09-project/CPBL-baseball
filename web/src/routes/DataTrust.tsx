@@ -210,7 +210,7 @@ export default function DataTrust() {
   const sim = useDataset("sim.json");
   return (
     <div className="page">
-      <Gate<[Provenance, LeagueData, SimInputs]> states={[provenance, league, sim]}>{(p, l, s) => <Trust provenance={p} league={l} sim={s} />}</Gate>
+      <Gate<[Provenance, LeagueData, SimInputs]> states={[provenance, league, sim]} heading="資料可信度">{(p, l, s) => <Trust provenance={p} league={l} sim={s} />}</Gate>
     </div>
   );
 }

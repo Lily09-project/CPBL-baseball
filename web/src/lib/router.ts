@@ -4,7 +4,7 @@
  */
 export type Route =
   | { name: "home" }
-  | { name: "talent"; type: "batter" | "pitcher"; metric?: string; sort?: "raw" | "posterior"; team?: string; q?: string }
+  | { name: "talent"; type: "batter" | "pitcher"; metric?: string; sort?: "raw" | "posterior"; team?: string; q?: string; all?: boolean }
   | { name: "lineup"; team?: string; ids?: string[]; pitcher?: string; seed?: number }
   | { name: "season" }
   | { name: "player"; type: "batter" | "pitcher"; id: string }
@@ -39,6 +39,7 @@ export function parseRoute(hash: string): Route {
         sort: sort === "raw" ? "raw" : sort === "posterior" ? "posterior" : undefined,
         team: params.get("team") ?? undefined,
         q: params.get("q") ?? undefined,
+        all: params.get("all") === "1" ? true : undefined,
       };
     }
     case "lineup": {
@@ -78,7 +79,7 @@ export function routeToHash(route: Route): string {
     case "home":
       return "#/";
     case "talent":
-      return `#/talent${query({ type: route.type, metric: route.metric, sort: route.sort, team: route.team, q: route.q })}`;
+      return `#/talent${query({ type: route.type, metric: route.metric, sort: route.sort, team: route.team, q: route.q, all: route.all ? 1 : undefined })}`;
     case "lineup":
       return `#/lineup${query({ team: route.team, ids: route.ids?.join(","), pitcher: route.pitcher, seed: route.seed })}`;
     case "season":

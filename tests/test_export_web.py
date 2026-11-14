@@ -134,3 +134,26 @@ def test_pitcher_prior_uses_the_documented_15_inning_qualifier() -> None:
     expected = bayes.fit_beta_prior([r["strikeouts"] for r in qualified], bf, min_trials=0)
     assert priors["k_rate"]["alpha"] == pytest.approx(expected.alpha, abs=1e-4)
     assert priors["k_rate"]["beta"] == pytest.approx(expected.beta, abs=1e-4)
+
+
+def test_batters_without_plate_appearances_have_no_rates_or_raw_rankings(exported: Path) -> None:
+    details = _load(exported, "player-details-batter.json")
+    empty = [record for record in details.values() if record["trials"] == 0]
+    assert empty, "the frozen snapshot contains batters with zero plate appearances"
+    for record in empty:
+        for key in export_web.BATTER_RATE_STATS:
+            assert record["stats"][key] is None, (record["name"], key)
+        assert record["metrics"]["iso"] is None and record["metrics"]["speed"] is None
+        assert record["percentiles"]["iso"] is None and record["percentiles"]["speed"] is None
+        assert all(point["w"] != 0 for point in record["trajectory"]["series"])
+        assert [note["evidence"] for note in record["notes"]] == [["trials"]]
+
+
+def test_small_sample_notes_only_rank_shrunk_metrics(exported: Path) -> None:
+    for kind in ("batter", "pitcher"):
+        for record in _load(exported, f"player-details-{kind}.json").values():
+            if record["qualified"]:
+                continue
+            cited = {key for note in record["notes"] for key in note["evidence"]}
+            assert cited.isdisjoint({"iso", "speed", "whip"}), (record["name"], cited)
+            assert all(point["w"] != 0 for point in record["trajectory"]["series"])

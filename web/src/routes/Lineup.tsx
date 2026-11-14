@@ -64,6 +64,25 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
   }, [inputKey, cancel]);
 
   const invalidate = () => { generation.current += 1; cancel(); };
+
+  // Keyboard focus follows the action: a moved batter keeps focus on its move
+  // button, and controls that disappear (cancel, apply) hand focus to the run button.
+  const focusNext = useRef<string | null>(null);
+  useEffect(() => {
+    const id = focusNext.current;
+    if (!id) return;
+    const wanted = document.getElementById(id) as HTMLButtonElement | null;
+    if (!wanted) return;
+    // First/last slots have one disabled arrow; use the other arrow of that slot.
+    const target = wanted.disabled && id.startsWith("slot-") ? wanted.parentElement?.querySelector<HTMLButtonElement>("button:not(:disabled)") : wanted;
+    if (!target || target.disabled) return;
+    focusNext.current = null;
+    target.focus();
+  });
+  const move = (from: number, to: number) => {
+    focusNext.current = `slot-${to}-${to < from ? "up" : "down"}`;
+    update({ ids: moveSlot(ids, from, to) });
+  };
   const update = (patch: Partial<typeof params>) => {
     invalidate();
     setResult(null);
@@ -150,7 +169,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
             {ids.map((id, slot) => {
               const probs = matchupProbabilities(sim, id, pitcher);
               return (
-                <li key={`${slot}-${id}`} className="slot">
+                <li key={slot} className="slot">
                   <span className="slot-no" aria-hidden="true">
                     {slot + 1}
                   </span>
@@ -179,10 +198,10 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
                     上壘 {formatPercent(onBaseProbability(probs), 0)}・長打 {formatPercent(extraBaseProbability(probs), 1)}
                   </span>
                   <span className="slot-move">
-                    <button type="button" className="btn icon" aria-label={`${name("batter", id)} 往前一棒`} disabled={slot === 0} onClick={() => update({ ids: moveSlot(ids, slot, slot - 1) })}>
+                    <button type="button" id={`slot-${slot}-up`} className="btn icon" aria-label={`${name("batter", id)} 往前一棒`} disabled={slot === 0} onClick={() => move(slot, slot - 1)}>
                       ↑
                     </button>
-                    <button type="button" className="btn icon" aria-label={`${name("batter", id)} 往後一棒`} disabled={slot === ids.length - 1} onClick={() => update({ ids: moveSlot(ids, slot, slot + 1) })}>
+                    <button type="button" id={`slot-${slot}-down`} className="btn icon" aria-label={`${name("batter", id)} 往後一棒`} disabled={slot === ids.length - 1} onClick={() => move(slot, slot + 1)}>
                       ↓
                     </button>
                   </span>
@@ -205,14 +224,14 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
           </fieldset>
           <p className="muted small">亂數種子 {seed}：相同打線與種子永遠得到相同結果。</p>
           <div className="row">
-            <button type="button" className="btn btn-primary" onClick={simulate} disabled={job !== null}>
+            <button type="button" id="run-simulate" className="btn btn-primary" onClick={simulate} disabled={job !== null}>
               模擬 {games.toLocaleString()} 場
             </button>
             <button type="button" className="btn" onClick={optimise} disabled={job !== null}>
               搜尋更好的棒次
             </button>
             {job && (
-              <button type="button" className="btn" onClick={invalidate}>
+              <button type="button" className="btn" onClick={() => { focusNext.current = "run-simulate"; invalidate(); }}>
                 取消
               </button>
             )}
@@ -302,7 +321,7 @@ function LineupLab({ players, sim, league }: { players: PlayerSummary[]; sim: Si
                         </li>
                       ))}
                     </ol>
-                    <button type="button" className="btn btn-primary" onClick={() => update({ ids: search.order.map((i) => search.ids[i] as string) })}>
+                    <button type="button" className="btn btn-primary" onClick={() => { focusNext.current = "run-simulate"; update({ ids: search.order.map((i) => search.ids[i] as string) }); }}>
                       套用建議棒次
                     </button>
                   </>
