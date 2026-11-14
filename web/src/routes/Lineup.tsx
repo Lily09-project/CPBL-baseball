@@ -148,6 +148,8 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
   const fresh = result && result.inputKey === inputKey;
   const runsPerGame = result ? mean(result.runs) : null;
   const name = (type: "batter" | "pitcher", id: string) => byId.get(`${type}:${id}`)?.name ?? id;
+  const changedSlots = a && b ? a.ids.flatMap((id, index) => id === b.ids[index] ? [] : [{ slot: index + 1, left: id, right: b.ids[index]! }]) : [];
+  const pitcherName = (id?: string) => id ? name("pitcher", id) : "聯盟平均投手";
   const runsAt = (runs: number[], q: number) => {
     const v = quantile(runs, q);
     return Number.isInteger(v) ? String(v) : v.toFixed(1);
@@ -392,6 +394,17 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
             <button className="btn" type="button" disabled={!valid(value)} onClick={() => update({ ids: value.ids, pitcher: value.pitcher })}>載入到編輯區</button>
           </details>)}
           {((a && !valid(a)) || (b && !valid(b))) && <p role="status">方案含有無法使用的球員，請重新儲存。</p>}
+          {canCompare && a && b && <div className="notice" data-testid="lineup-differences">
+            <strong>方案差異</strong>
+            <p>{changedSlots.length === 0 ? "棒次與打者相同" : `第 ${changedSlots.map(({ slot }) => slot).join("、")} 棒不同`}
+              {a.pitcher === b.pitcher ? " · 對手投手相同" : ` · 對手投手 A ${pitcherName(a.pitcher)}／B ${pitcherName(b.pitcher)}`}</p>
+            {changedSlots.length > 0 && <details>
+              <summary>查看打者差異</summary>
+              <ul>{changedSlots.map(({ slot, left, right }) => <li key={slot}>
+                第 {slot} 棒 · A {name("batter", left)}／B {name("batter", right)}
+              </li>)}</ul>
+            </details>}
+          </div>}
           <div className="row">
             <button className="btn" type="button" disabled={!canCompare || comparing || Boolean(job)} onClick={() => void compare()}>比較兩組打線</button>
             {comparing && <button className="btn" type="button" onClick={invalidate}>取消比較</button>}
@@ -400,8 +413,11 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
           {comparing && <p role="status">正在模擬兩組打線</p>}
           {error && !comparing && <p role="status">{error}</p>}
           {stats && pairedResult && <div data-testid="paired-lineup-result">
-            <p>A 每場 {stats.a.toFixed(2)} 分 · B 每場 {stats.b.toFixed(2)} 分</p>
-            <p>B − A <strong>{formatSigned(stats.delta, 2)}</strong> 分，95% 配對模擬區間 {stats.low.toFixed(2)} 至 {stats.high.toFixed(2)} 分。</p>
+            <h3>每場得分差（B − A）</h3>
+            <p><strong className="stat-value">{formatSigned(stats.delta, 2)} 分</strong></p>
+            <p>95% 配對模擬區間 {stats.low.toFixed(2)} 至 {stats.high.toFixed(2)} 分。
+              {stats.low <= 0 && stats.high >= 0 ? "區間包含 0，模擬中尚未看出明確差異。" : stats.low > 0 ? "方案 B 的模擬平均得分較高。" : "方案 A 的模擬平均得分較高。"}</p>
+            <p className="muted">A 平均 {stats.a.toFixed(2)} 分 · B 平均 {stats.b.toFixed(2)} 分</p>
             <ChartFrame title="兩組方案的得分分布" summary="比較每場得分的模擬次數" table={<table>
               <thead><tr><th scope="col">得分</th><th scope="col">A</th><th scope="col">B</th></tr></thead>
               <tbody>{bins.map((bin, i) => <tr key={bin}><th scope="row">{bin}</th><td>{distributions[0]?.[i]}</td><td>{distributions[1]?.[i]}</td></tr>)}</tbody>
