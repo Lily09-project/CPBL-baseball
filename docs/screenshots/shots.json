@@ -1,0 +1,53 @@
+{
+  "site": "https://lily09-project.github.io/CPBL-baseball/",
+  "shots": [
+    {
+      "file": "pages-desktop.png",
+      "route": "/",
+      "viewport": {
+        "width": 1440,
+        "height": 1150
+      }
+    },
+    {
+      "file": "pages-mobile.png",
+      "route": "/",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "mobile": true
+    },
+    {
+      "file": "lineup-lab.png",
+      "route": "/lineup",
+      "viewport": {
+        "width": 1440,
+        "height": 1250
+      },
+      "clicks": [
+        "main .btn-primary"
+      ],
+      "waitFor": "[data-testid=runs-per-game]"
+    },
+    {
+      "file": "talent.png",
+      "route": "/talent"
+    },
+    {
+      "file": "player-profile.png",
+      "firstLinkFrom": {
+        "route": "/talent",
+        "selector": "main a[href^='#/player']"
+      }
+    },
+    {
+      "file": "season.png",
+      "route": "/season",
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      }
+    }
+  ]
+}

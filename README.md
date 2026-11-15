@@ -31,7 +31,7 @@
 | **球員檔案** | **季末戰績模擬** |
 | ![球員檔案](docs/screenshots/player-profile.png) | ![季末戰績模擬](docs/screenshots/season.png) |
 
-截圖取自正式網站的 CPBL 公開資料快照。
+截圖取自正式網站的 CPBL 公開資料快照。改版上線後在 `web/` 執行 `npm run screenshots` 即可重拍，截圖清單在 `docs/screenshots/shots.json`。
 
 ## 資料與評估邊界
 
