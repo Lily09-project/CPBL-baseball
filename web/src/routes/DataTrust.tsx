@@ -5,7 +5,7 @@ import { ScrollRegion } from "../components/ScrollRegion";
 import { Gate } from "../components/States";
 import { DATA_FROZEN, FROZEN_REASON } from "../lib/dataPolicy";
 import { formatDate, formatDateTime } from "../lib/format";
-import { MODEL_CARD_URL } from "../lib/links";
+import { MODEL_CARD_URL, safeExternalUrl } from "../lib/links";
 import type { DataFiles, LeagueData, Manifest, Provenance, SimInputs } from "../lib/types";
 import "./DataTrust.css";
 
@@ -152,10 +152,14 @@ function Trust({ provenance, league, sim }: { provenance: Provenance; league: Le
           <ul className="sources">
             {provenance.sources.map((s) => (
               <li key={s.url}>
-                <a href={s.url} target="_blank" rel="noopener noreferrer">
-                  {s.label}
-                  <span className="visually-hidden">（在新分頁開啟）</span>
-                </a>
+                {safeExternalUrl(s.url) ? (
+                  <a href={safeExternalUrl(s.url)!} target="_blank" rel="noopener noreferrer">
+                    {s.label}
+                    <span className="visually-hidden">（在新分頁開啟）</span>
+                  </a>
+                ) : (
+                  s.label
+                )}
               </li>
             ))}
           </ul>
