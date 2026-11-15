@@ -1,5 +1,9 @@
 import { expect, expectAccessible, openRoute, test } from "./fixtures";
 
+// CI enforces the 1.5 s load budget. A local run often shares the CPU with other work,
+// so it gets more slack; set CI=1 to check the real budget locally.
+const LOAD_BUDGET_MS = process.env.CI ? 1500 : 4000;
+
 const ROUTES = [
   "/",
   "/talent",
@@ -124,7 +128,7 @@ test.describe("Q6 performance and Q8 security", () => {
     const start = Date.now();
     await page.goto("./");
     await expect(page.locator("main h1")).toBeVisible();
-    expect(Date.now() - start).toBeLessThan(1500);
+    expect(Date.now() - start).toBeLessThan(LOAD_BUDGET_MS);
     await page.waitForLoadState("networkidle");
     expect([...hosts]).toEqual([new URL(page.url()).host]);
   });
