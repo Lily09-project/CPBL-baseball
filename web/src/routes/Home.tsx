@@ -96,15 +96,17 @@ function LeadStory({ league, provenance }: { league: LeagueData; provenance: Pro
           快照焦點
         </h2>
       )}
-      <p className="lead-source">
-        資料：CPBL 官方公開頁面快照（擷取於 {formatDateTime(provenance.generated_at)} 台北時間，{passed}/{provenance.snapshots.length} 份快照通過品質檢查）。快照之後的比賽沒有納入。非 CPBL 官方服務。
-        <br />
-        <a href={routeToHash({ name: "data" })}>方法與資料驗證</a>
-        <span aria-hidden="true">・</span>
-        <a href={MODEL_CARD_URL} target="_blank" rel="noopener noreferrer">
-          模型卡<span className="visually-hidden">（在新分頁開啟 GitHub）</span>
-        </a>
-      </p>
+      <div className="lead-byline">
+        <p className="lead-source">
+          資料：CPBL 官方公開頁面快照（擷取於 {formatDateTime(provenance.generated_at)} 台北時間，{passed}/{provenance.snapshots.length} 份快照通過品質檢查）。快照之後的比賽沒有納入。非 CPBL 官方服務。
+        </p>
+        <p className="meta-row">
+          <a href={routeToHash({ name: "data" })}>方法與資料驗證</a>
+          <a href={MODEL_CARD_URL} target="_blank" rel="noopener noreferrer">
+            模型卡<span className="visually-hidden">（在新分頁開啟 GitHub）</span>
+          </a>
+        </p>
+      </div>
     </article>
   );
 }

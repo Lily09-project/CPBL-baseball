@@ -1,4 +1,4 @@
-Design language references: VoltAgent/awesome-design-md, design-md/nike/DESIGN.md.
+Design language references: VoltAgent/awesome-design-md, design-md/nike/DESIGN.md (layout concept), design-md/wired/DESIGN.md (type ladder and editorial layout rules) and design-md/theverge/DESIGN.md (headline rhythm only).
 Adapted for this independent product. No third-party trademarks or proprietary font files are included.
 
 MIT License
