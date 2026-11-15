@@ -17,9 +17,9 @@ body {
   min-height: 100vh;
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   font-size: var(--step-0);
-  line-height: 1.7;
+  line-height: var(--leading-body);
   font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
   /* CJK line breaking: never start a line with closing punctuation, keep
@@ -34,29 +34,36 @@ body {
   color: var(--accent-ink);
 }
 
+/* Serif for narrative headlines, sans for structure (h4 labels, tables, nav). */
 h1,
 h2,
 h3,
 h4 {
   margin: 0 0 var(--space-3);
-  font-family: var(--font-sans);
+  font-family: var(--font-display);
   font-weight: 700;
-  line-height: 1.25;
+  line-height: var(--leading-display);
   letter-spacing: 0;
   text-wrap: balance;
 }
 
+h4 {
+  font-family: var(--font-meta);
+}
+
 h1 {
-  font-size: var(--step-4);
-  line-height: 1.12;
+  font-size: var(--display-lg);
+  line-height: var(--leading-display);
 }
 
 h2 {
-  font-size: var(--step-2);
+  font-size: var(--display-md);
+  line-height: 1.2;
 }
 
 h3 {
-  font-size: var(--step-1);
+  font-size: var(--display-sm);
+  line-height: var(--leading-display-sm);
 }
 
 /* Body copy uses the default wrapper: text-wrap: pretty on every paragraph
@@ -79,7 +86,7 @@ a:hover {
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-none);
 }
 
 /* Route changes move focus to <main>; only keyboard users need the ring. */
@@ -208,14 +215,56 @@ tbody tr:hover > * {
   }
 }
 
-/* Kicker: the small label over a headline. */
+/* Kicker: the small sans label 8px over a headline. */
 .eyebrow {
   display: inline-block;
   margin-bottom: var(--space-2);
-  font-size: var(--step--1);
+  font-family: var(--font-meta);
+  font-size: var(--meta-size);
   font-weight: 700;
-  letter-spacing: 0.08em;
+  line-height: 1.4;
+  letter-spacing: var(--meta-tracking);
   color: var(--kicker);
+}
+
+/* Metadata row: sans, small, muted items split by hairline dividers
+   (bylines, sources, "read more" links). */
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-meta);
+  font-size: var(--meta-size);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--meta);
+}
+
+/* The divider is a short hairline drawn inside the item, so tall tap targets
+   don't stretch it. */
+.meta-row > * + * {
+  margin-left: var(--space-3);
+}
+
+.meta-row > * + *::before {
+  content: "";
+  display: inline-block;
+  width: var(--rule-minor);
+  height: 1em;
+  margin-right: var(--space-3);
+  background: var(--rule-mid);
+}
+
+.meta-row a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--ink);
+  font-weight: 700;
 }
 
 /* Deck: the sentence under a headline. */
@@ -253,8 +302,8 @@ tbody tr:hover > * {
 /* Feature spread opener (lineup lab, season simulation): oversized headline
    with the deck beside it; editor's notes run in a row underneath. */
 .spread-head h1 {
-  font-size: var(--step-5);
-  line-height: 1.04;
+  font-size: var(--display-hero);
+  line-height: var(--leading-hero);
 }
 
 @media (min-width: 980px) {
@@ -309,8 +358,8 @@ tbody tr:hover > * {
 }
 
 .card > h2:first-child {
-  font-size: var(--step-1);
-  line-height: 1.3;
+  font-size: var(--display-sm);
+  line-height: var(--leading-display-sm);
 }
 
 .grid {
@@ -382,6 +431,8 @@ tbody tr:hover > * {
   gap: var(--space-2);
   min-height: 44px;
   padding: var(--space-2) var(--space-5);
+  font-family: var(--font-meta);
+  letter-spacing: 0.02em;
   border: 1px solid var(--ink);
   border-radius: var(--radius-s);
   background: var(--bg-raised);
@@ -487,14 +538,15 @@ tbody tr:hover > * {
 
 .stat-label {
   text-wrap: balance;
-  font-size: var(--step--1);
+  font-family: var(--font-meta);
+  font-size: var(--meta-size);
   font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  letter-spacing: var(--meta-tracking);
+  color: var(--meta);
 }
 
 .stat-value {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--step-3);
   font-weight: 700;
   line-height: 1;
@@ -703,6 +755,7 @@ details.data-table summary:hover {
 
   h1 {
     font-size: clamp(1.9rem, 8vw, 2.4rem);
+    line-height: 1.12;
   }
 
   .lede {

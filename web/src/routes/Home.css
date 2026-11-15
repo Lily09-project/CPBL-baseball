@@ -19,8 +19,8 @@
 
 .banner h1 {
   margin: 0;
-  font-size: var(--step-5);
-  line-height: 1.04;
+  font-size: var(--display-hero);
+  line-height: var(--leading-hero);
   letter-spacing: -0.01em;
 }
 
@@ -104,26 +104,28 @@
   align-items: center;
   gap: var(--space-2) var(--space-3);
   margin: 0;
-  font-size: var(--step--1);
+  font-family: var(--font-meta);
+  font-size: var(--meta-size);
   font-weight: 700;
-  color: var(--muted);
+  letter-spacing: 0.02em;
+  color: var(--meta);
 }
 
 .lead-kicker-tag {
   padding: 1px var(--space-2);
   background: var(--ink);
   color: var(--accent-ink);
-  letter-spacing: 0.08em;
+  letter-spacing: var(--meta-tracking);
 }
 
 .lead-headline {
   margin: 0;
-  font-size: var(--step-4);
-  line-height: 1.12;
+  font-size: var(--display-lg);
+  line-height: var(--leading-display);
 }
 
 .lead-figure {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-variant-numeric: lining-nums;
   color: var(--kicker);
 }
@@ -161,24 +163,27 @@
 }
 
 .lead-fact-label {
-  font-size: 0.8125rem;
+  font-family: var(--font-meta);
+  font-size: var(--meta-size);
   font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--muted);
+  letter-spacing: var(--meta-tracking);
+  color: var(--meta);
+}
+
+/* Byline: source line plus a metadata row of links, 8px under the facts. */
+.lead-byline {
+  display: grid;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
 }
 
 .lead-source {
   margin: 0;
-  font-size: var(--step--1);
-  color: var(--muted);
-}
-
-.lead-source a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  color: var(--ink);
-  font-weight: 700;
+  max-width: 60em;
+  font-family: var(--font-meta);
+  font-size: var(--meta-size);
+  line-height: 1.6;
+  color: var(--meta);
 }
 
 /* ---- Box: standings with a heavy top rule, like an agate page ---- */
@@ -195,13 +200,16 @@
   gap: var(--space-1) var(--space-3);
   margin: 0;
   padding: var(--space-2) 0;
-  font-size: var(--step-1);
+  font-size: var(--display-sm);
+  line-height: var(--leading-display-sm);
 }
 
 .box-title-note {
-  font-size: var(--step--1);
+  font-family: var(--font-meta);
+  font-size: var(--meta-size);
   font-weight: 400;
-  color: var(--muted);
+  letter-spacing: 0.02em;
+  color: var(--meta);
 }
 
 .box-score thead th {
@@ -246,7 +254,7 @@
 }
 
 .kpi .stat-value {
-  font-size: clamp(2.2rem, 1.5rem + 2vw, 3.4rem);
+  font-size: clamp(2.1rem, 1.5rem + 1.5vw, 2.9rem);
 }
 
 /* ---- Secondary stories: four columns with column rules ---- */
@@ -265,12 +273,14 @@
 
 .stories-head h2 {
   margin: 0;
-  font-size: var(--step-1);
+  font-size: var(--display-sm);
+  line-height: var(--leading-display-sm);
 }
 
 .stories-head p {
   margin: 0;
-  font-size: var(--step--1);
+  font-family: var(--font-meta);
+  font-size: var(--meta-size);
 }
 
 .story-list {
@@ -304,38 +314,49 @@
   background: var(--box-fill);
 }
 
+/* Story card: kicker, serif headline, deck, then a metadata line on a hairline. */
 .story-kicker {
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
-  font-size: var(--step--1);
+  font-family: var(--font-meta);
+  font-size: var(--meta-size);
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--meta-tracking);
   color: var(--kicker);
 }
 
+/* Step number: a serif figure inside the kicker, never larger than the headline. */
 .story-step {
-  font-family: var(--font-serif);
-  font-size: var(--step-2);
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
   line-height: 1;
+  letter-spacing: 0;
   color: var(--ink);
 }
 
 .story h3 {
   margin: 0;
-  font-size: var(--step-1);
+  font-size: var(--display-sm);
+  line-height: var(--leading-display-sm);
 }
 
 .story p {
   text-wrap: pretty;
   margin: 0;
   font-size: 0.9375rem;
+  line-height: 1.7;
   color: var(--ink-soft);
 }
 
 .story-cta {
-  font-size: var(--step--1);
+  margin-top: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: var(--rule-minor) solid var(--rule-hair);
+  font-family: var(--font-meta);
+  font-size: var(--meta-size);
   font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .story:hover h3,
@@ -364,7 +385,7 @@
 }
 
 .front-chart-copy h2 {
-  font-size: var(--step-2);
+  font-size: var(--display-md);
 }
 
 .front-chart-figure {
@@ -454,6 +475,13 @@
   .story-list > li + li .story {
     border-left: 0;
     border-top: 1px solid var(--rule-hair);
+  }
+
+  /* Story rows: the hairline between rows is the only divider. */
+  .story-cta {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: 0;
   }
 }
 
