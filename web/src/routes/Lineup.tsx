@@ -21,6 +21,7 @@ import type { OrderSearchResult } from "../lib/sim";
 import { integerHistogram, mean, quantile, shareAtLeast } from "../lib/stats";
 import type { LeagueData, PlayerSummary, Provenance, SimInputs } from "../lib/types";
 import { useSimWorker } from "../workers/useSimWorker";
+import { LineupPresets } from "../components/LineupPresets";
 import "./Lineup.css";
 
 const GAME_OPTIONS = [1000, 5000, 20000];
@@ -375,6 +376,8 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
 
       <section className="card" aria-labelledby="lineup-scenarios">
         <h2 id="lineup-scenarios">打線方案 A／B</h2>
+        <LineupPresets snapshot={snapshot} current={{ ids, pitcher }} isValid={valid}
+          onLoad={(preset) => update({ ids: preset.ids, pitcher: preset.pitcher })} />
         <p className="muted">把上方打線存成方案，再用相同場數與種子比較。網址會保留兩組設定與快照。</p>
         {(a || b) && params.snapshot !== snapshot ? (
           <div role="status">
