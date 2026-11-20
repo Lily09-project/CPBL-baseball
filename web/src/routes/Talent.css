@@ -56,3 +56,23 @@ th .badge {
 td.team {
   white-space: nowrap;
 }
+
+.team-inline {
+  display: none;
+}
+
+/* Phones: drop the team column (the team sits under the name instead) so the
+   key 收縮後 and 80% 區間 columns fit without scrolling. */
+@media (max-width: 560px) {
+  th.team,
+  td.team {
+    display: none;
+  }
+
+  .team-inline {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 400;
+    line-height: 1.3;
+  }
+}

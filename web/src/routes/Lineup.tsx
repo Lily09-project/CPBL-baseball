@@ -15,6 +15,7 @@ import {
   matchupProbabilities,
   moveSlot,
   onBaseProbability,
+  unknownBatterIds,
 } from "../lib/lineup";
 import { routeToHash, type SavedLineup } from "../lib/router";
 import type { OrderSearchResult } from "../lib/sim";
@@ -43,7 +44,10 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
   const params = route.name === "lineup" ? route : { name: "lineup" as const };
   const teams = league.teams.map((t) => t.team);
   const team = params.team && teams.includes(params.team) ? params.team : (teams[0] as string);
-  const ids = completeLineup(params.ids?.length ? params.ids : defaultLineup(players, sim, team), players, sim);
+  const teamLineup = defaultLineup(players, sim, team);
+  // A short or partly unknown URL is filled from the team the select shows, not the whole league.
+  const ids = completeLineup(params.ids?.length ? params.ids : teamLineup, players, sim, teamLineup);
+  const unknownIds = params.ids?.length ? unknownBatterIds(params.ids, sim) : 0;
   const pitcher = params.pitcher && hasPitcher(sim, params.pitcher) ? params.pitcher : undefined;
   const seed = params.seed ?? DEFAULT_SEED;
   const games = params.games ?? GAME_OPTIONS[1]!;
@@ -66,6 +70,9 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
   const comparisonKey = JSON.stringify([snapshot, a, b, seed, games]);
   const [paired, setPaired] = useState<{ key: string; a: number[]; b: number[] } | null>(null);
   const [comparing, setComparing] = useState(false);
+  const [copy, setCopy] = useState<{ url: string; state: "copied" | "manual" } | null>(null);
+  const copyInput = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (copy?.state === "manual") { copyInput.current?.focus(); copyInput.current?.select(); } }, [copy]);
   const pairedResult = canCompare && paired?.key === comparisonKey ? paired : null;
   const stats = pairedResult ? summarizePairedRuns(pairedResult.a, pairedResult.b) : null;
   const distributions = pairedResult ? [pairedResult.a, pairedResult.b].map((runs) => integerHistogram(runs, HIST_CAP)) : [];
@@ -104,6 +111,7 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
     invalidate();
     setResult(null);
     setSearch(null);
+    setCopy(null);
     navigate({ ...params, team, ids, pitcher, seed: params.seed, ...patch, name: "lineup" }, { replace: true });
   };
 
@@ -146,6 +154,17 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
     } catch { /* The worker owns error feedback; cancelled work has no result. */ }
   };
 
+  const copyCompareUrl = async () => {
+    const url = new URL(routeToHash(params), window.location.href).href;
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("clipboard unavailable");
+      await navigator.clipboard.writeText(url);
+      setCopy({ url, state: "copied" });
+    } catch {
+      setCopy({ url, state: "manual" });
+    }
+  };
+
   const fresh = result && result.inputKey === inputKey;
   const runsPerGame = result ? mean(result.runs) : null;
   const name = (type: "batter" | "pitcher", id: string) => byId.get(`${type}:${id}`)?.name ?? id;
@@ -161,6 +180,11 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
       <section className="lineup-layout">
         <div className="card">
           <h2>排出打線</h2>
+          {unknownIds > 0 && (
+            <p className="notice lineup-unknown" role="status">
+              網址中有 {unknownIds} 個球員代碼找不到，已用{team}的預設打線補齊。
+            </p>
+          )}
           <p className="muted small lineup-hint">
             {params.ids?.length ? "" : `預設 9 棒是${team}打席數最多的 9 位打者。`}可以直接執行模擬，或換人、調棒次後再比較。
           </p>
@@ -344,29 +368,40 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
 
             {search && search.inputKey === inputKey && (
               <div className="search-result" data-testid="order-search">
-                <h3>建議棒次</h3>
-                {search.order.some((index, slot) => index !== slot) ? (
-                  <>
-                    <p>
-                      以另一組 {SEARCH_GAMES.toLocaleString()} 場未參與搜尋的亂數序列配對評估：原棒次平均每場 {search.baselineMean.toFixed(2)} 分、調整後 {search.bestMean.toFixed(2)} 分，配對差值 <strong>{formatSigned(search.delta, 2)}</strong> 分（95% 區間 {formatSigned(search.deltaLow, 2)} 到 {formatSigned(search.deltaHigh, 2)}）。
-                      {search.deltaLow <= 0 && search.deltaHigh >= 0 && " 區間包含 0，差異可能只是模擬雜訊。"}
-                      {search.deltaHigh < 0 && " 獨立評估顯示調整後得分較低，不建議依此結果調整。"}
-                    </p>
-                    <ol className="suggested">
-                      {search.order.map((index, slot) => (
-                        <li key={slot} className={index !== slot ? "moved" : undefined}>
-                          {name("batter", search.ids[index] as string)}
-                          {index !== slot && <span className="badge badge-accent">原第 {index + 1} 棒</span>}
-                        </li>
-                      ))}
-                    </ol>
-                    <button type="button" className="btn btn-primary" onClick={() => { focusNext.current = "run-simulate"; update({ ids: search.order.map((i) => search.ids[i] as string) }); }}>
-                      套用建議棒次
-                    </button>
-                  </>
-                ) : (
-                  <p>目前的棒次已是局部最佳：任何兩棒對調都沒有讓平均得分提高。</p>
-                )}
+                {(() => {
+                  const changed = search.order.some((index, slot) => index !== slot);
+                  const verdict = !changed || search.delta <= 0 ? "none" : search.deltaLow > 0 ? "clear" : "uncertain";
+                  return (
+                    <>
+                      <h3>{verdict === "none" ? "沒有找到明顯更好的棒次" : verdict === "clear" ? "建議棒次" : "可能更好的棒次（尚不確定）"}</h3>
+                      {changed ? (
+                        <p>
+                          以另一組 {SEARCH_GAMES.toLocaleString()} 場未參與搜尋的亂數序列配對評估：原棒次平均每場 {search.baselineMean.toFixed(2)} 分、調整後 {search.bestMean.toFixed(2)} 分，配對差值 <strong>{formatSigned(search.delta, 2)}</strong> 分（95% 區間 {formatSigned(search.deltaLow, 2)} 到 {formatSigned(search.deltaHigh, 2)}）。
+                          {search.deltaLow <= 0 && search.deltaHigh >= 0 && " 區間包含 0，差異可能只是模擬雜訊。"}
+                          {search.deltaHigh < 0 && " 獨立評估顯示調整後得分較低，不建議依此結果調整。"}
+                          {verdict === "none" && search.deltaHigh >= 0 && " 獨立評估沒有看到得分提高，維持原棒次即可。"}
+                        </p>
+                      ) : (
+                        <p>目前的棒次已是局部最佳：任何兩棒對調都沒有讓平均得分提高。</p>
+                      )}
+                      {verdict !== "none" && (
+                        <>
+                          <ol className="suggested">
+                            {search.order.map((index, slot) => (
+                              <li key={slot} className={index !== slot ? "moved" : undefined}>
+                                {name("batter", search.ids[index] as string)}
+                                {index !== slot && <span className="badge badge-accent">原第 {index + 1} 棒</span>}
+                              </li>
+                            ))}
+                          </ol>
+                          <button type="button" className={verdict === "clear" ? "btn btn-primary" : "btn"} onClick={() => { focusNext.current = "run-simulate"; update({ ids: search.order.map((i) => search.ids[i] as string) }); }}>
+                            {verdict === "clear" ? "套用建議棒次" : "仍要套用（改善可能只是雜訊）"}
+                          </button>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
                 <p className="muted small">共評估 {search.evaluations} 種棒次，每種搜尋 {SEARCH_GAMES.toLocaleString()} 場；這裡的平均得分來自獨立評估，因此和上方「模擬」按鈕的結果不會完全相同。</p>
               </div>
             )}
@@ -385,7 +420,7 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
             <button type="button" className="btn" onClick={() => savePair({ a: undefined, b: undefined })}>清除舊方案</button>
           </div>
         ) : <>
-          <div className="row">
+          <div className="row ab-actions">
             <button className="btn" type="button" onClick={() => savePair({ a: { ids, pitcher } })}>儲存為 A</button>
             <button className="btn" type="button" onClick={() => savePair({ b: { ids, pitcher } })}>儲存為 B</button>
             <button className="btn" type="button" disabled={!a} onClick={() => savePair({ b: a })}>複製 A 到 B</button>
@@ -408,25 +443,34 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
               </li>)}</ul>
             </details>}
           </div>}
-          <div className="row">
+          <div className="row ab-actions">
             <button className="btn" type="button" disabled={!canCompare || comparing || Boolean(job)} onClick={() => void compare()}>比較兩組打線</button>
             {comparing && <button className="btn" type="button" onClick={invalidate}>取消比較</button>}
-            {a && b && <a className="btn" href={routeToHash(params)}>比較分享網址</a>}
+            {a && b && <button className="btn" type="button" onClick={() => void copyCompareUrl()}>複製比較網址</button>}
+          </div>
+          <div role="status" className="copy-status">
+            {copy?.state === "copied" && <p>已複製比較網址。</p>}
+            {copy?.state === "manual" && <div className="field">
+              <label htmlFor="compare-url">無法自動複製，請手動複製這個網址</label>
+              <input ref={copyInput} id="compare-url" className="input" readOnly value={copy.url} onFocus={(e) => e.target.select()} />
+            </div>}
           </div>
           {comparing && <p role="status">正在模擬兩組打線</p>}
           {error && !comparing && <p role="status">{error}</p>}
-          {stats && pairedResult && <div data-testid="paired-lineup-result">
+          {stats && pairedResult && <div className="ab-result" data-testid="paired-lineup-result">
             <h3>每場得分差（B − A）</h3>
             <p><strong className="stat-value">{formatSigned(stats.delta, 2)} 分</strong></p>
-            <p>95% 配對模擬區間 {stats.low.toFixed(2)} 至 {stats.high.toFixed(2)} 分。
+            <p>95% 配對模擬區間 {formatSigned(stats.low, 2)} 至 {formatSigned(stats.high, 2)} 分。
               {stats.low <= 0 && stats.high >= 0 ? "區間包含 0，模擬中尚未看出明確差異。" : stats.low > 0 ? "方案 B 的模擬平均得分較高。" : "方案 A 的模擬平均得分較高。"}</p>
             <p className="muted">A 平均 {stats.a.toFixed(2)} 分 · B 平均 {stats.b.toFixed(2)} 分</p>
             <ChartFrame title="兩組方案的得分分布" summary="比較每場得分的模擬次數" table={<table>
               <thead><tr><th scope="col">得分</th><th scope="col">A</th><th scope="col">B</th></tr></thead>
               <tbody>{bins.map((bin, i) => <tr key={bin}><th scope="row">{bin}</th><td>{distributions[0]?.[i]}</td><td>{distributions[1]?.[i]}</td></tr>)}</tbody>
             </table>}>
-              <p>方案 A</p><Histogram counts={distributions[0]!} labels={bins} />
-              <p>方案 B</p><Histogram counts={distributions[1]!} labels={bins} />
+              <div className="ab-hists">
+                <div className="ab-hist"><p className="ab-hist-label">方案 A</p><Histogram counts={distributions[0]!} labels={bins} /></div>
+                <div className="ab-hist"><p className="ab-hist-label">方案 B</p><Histogram counts={distributions[1]!} labels={bins} /></div>
+              </div>
             </ChartFrame>
             <button className="btn" type="button" onClick={() => downloadText("cpbl-lineup-comparison.csv",
               toCsv(["snapshot", "seed", "game", "a", "b", "delta"], pairedResult.a.map((value, i) => ({

@@ -29,11 +29,11 @@ export function ErrorState({ error }: { error: Error }) {
   );
 }
 
-export function EmptyState({ title, children }: { title: string; children?: ReactNode }) {
+export function EmptyState({ title, kicker = "查無資料", children }: { title: string; kicker?: string; children?: ReactNode }) {
   return (
     <div className="state state-empty">
       <span className="state-kicker" aria-hidden="true">
-        查無資料
+        {kicker}
       </span>
       <strong className="state-title">{title}</strong>
       {children}

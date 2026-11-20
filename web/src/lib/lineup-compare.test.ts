@@ -3,6 +3,7 @@ import { addToComparison, comparisonCsv, comparisonJson, comparisonRows, MAX_COM
 import { downloadText } from "./csv";
 import {
   completeLineup,
+  unknownBatterIds,
   defaultLineup,
   extraBaseProbability,
   hasBatter,
@@ -63,6 +64,17 @@ describe("lineup helpers", () => {
     expect(ids[1]).toBe("b0"); // busiest remaining batter
     const full = defaultLineup(players, sim, "A");
     expect(completeLineup(full, players, sim)).toEqual(full);
+  });
+
+  it("fills short URL lineups from the selected team before the league", () => {
+    const team = defaultLineup(players, sim, "A");
+    const ids = completeLineup(["b1", "nope"], players, sim, team);
+    expect(ids).toHaveLength(LINEUP_SIZE);
+    expect(ids[0]).toBe("b1");
+    expect(ids.slice(1)).toEqual(team.slice(0, LINEUP_SIZE - 1));
+    expect(completeLineup(["x", "y", "z"], players, sim, team)).toEqual(team);
+    expect(unknownBatterIds(["x", "y", "x", "b1", "constructor"], sim)).toBe(3);
+    expect(unknownBatterIds(team, sim)).toBe(0);
   });
 
   it("applies the opposing pitcher through log5", () => {

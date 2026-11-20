@@ -423,6 +423,20 @@ tbody tr:hover > * {
   overflow-x: auto;
 }
 
+.scroll-wrap {
+  min-width: 0;
+}
+
+/* Visible cue that a wide table continues to the right. */
+.scroll-hint {
+  margin: var(--space-1, 4px) 0 0;
+  font-family: var(--font-meta);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  text-align: right;
+}
+
 /* ---- Controls ---- */
 .btn {
   display: inline-flex;
@@ -773,6 +787,13 @@ details.data-table summary:hover {
   th,
   td {
     padding: 6px var(--space-2);
+  }
+
+  /* Name links in table rows stay at least 24px tall to tap. */
+  tbody th a {
+    display: inline-block;
+    min-height: 24px;
+    line-height: 24px;
   }
 
   /* Charts are drawn ~520 units wide and shrink to the phone's width; larger

@@ -77,8 +77,12 @@ function Profile({ player, league, details }: { player: PlayerDetail; league: Le
           <a className="btn" href={routeToHash({ name: "compare", type: player.type, ids: [player.player_id, ...player.similar.slice(0, 2).map((s) => s.player_id)] })}>
             與相似球員比較
           </a>
-          {player.type === "batter" && (
+          {player.type === "batter" ? (
             <a className="btn btn-primary" href={routeToHash({ name: "lineup", team: player.team })}>
+              在打線實驗室模擬
+            </a>
+          ) : (
+            <a className="btn btn-primary" href={routeToHash({ name: "lineup", pitcher: player.player_id })}>
               在打線實驗室模擬
             </a>
           )}
