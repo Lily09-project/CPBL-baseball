@@ -150,6 +150,8 @@ test.describe("F6 比較與分享", () => {
     await expect(page.getByTestId("compare-grid").locator("article")).toHaveCount(2);
 
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "匯出 CSV" }).click()]);
+    // File names carry the snapshot's Taipei date, not the UTC snapshot stamp.
+    expect(download.suggestedFilename()).toBe("cpbl-compare-2026-09-30.csv");
     const csv = await readFile((await download.path())!, "utf-8");
     expect(csv.startsWith("﻿player_id,name,team")).toBe(true);
     expect(csv).toContain("郭天信");

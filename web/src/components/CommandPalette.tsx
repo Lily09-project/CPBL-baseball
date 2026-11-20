@@ -4,6 +4,8 @@ import { searchPlayers } from "../lib/search";
 import type { PlayerSummary } from "../lib/types";
 import "./CommandPalette.css";
 
+const MAX_RESULTS = 8;
+
 function usePlayersWhenOpened(open: boolean) {
   // The player index is ~200 KB, so it is fetched the first time the palette opens.
   const [requested, setRequested] = useState(open);
@@ -26,10 +28,12 @@ function PaletteDialog({ open, onClose, load }: { open: boolean; onClose: () => 
   const input = useRef<HTMLInputElement>(null);
   const listId = useId();
 
-  const results = useMemo<PlayerSummary[]>(
-    () => (players.status === "ready" && players.data ? searchPlayers(players.data, query, 8) : []),
+  const matches = useMemo<PlayerSummary[]>(
+    () => (players.status === "ready" && players.data ? searchPlayers(players.data, query, Number.POSITIVE_INFINITY) : []),
     [players, query],
   );
+  const results = matches.slice(0, MAX_RESULTS);
+  const hidden = matches.length - results.length;
 
   useEffect(() => {
     const node = dialog.current;
@@ -106,6 +110,7 @@ function PaletteDialog({ open, onClose, load }: { open: boolean; onClose: () => 
         {players.status === "loading" && <p className="palette-empty muted" role="status">正在載入球員資料…</p>}
         {players.status === "error" && <p className="palette-empty muted" role="alert">無法載入球員資料，請重新整理後再試。</p>}
         {players.status === "ready" && query && results.length === 0 && <p className="palette-empty muted">找不到符合「{query}」的球員。</p>}
+        {hidden > 0 && <p className="palette-empty muted" data-testid="palette-more">還有 {hidden} 筆，請輸入更多字。</p>}
         <p className="palette-hint muted">↑↓ 選擇・Enter 開啟・Esc 關閉</p>
       </div>
     </dialog>

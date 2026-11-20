@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { Gate } from "./States";
+import { EmptyState, Gate } from "./States";
 
 afterEach(cleanup);
 
@@ -25,5 +25,15 @@ describe("Gate", () => {
     render(<Gate<[number]> states={[{ status: "ready", data: 1 }]} heading="資料可信度">{(n) => <p>ready {n}</p>}</Gate>);
     expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
     expect(screen.getByText("ready 1")).toBeInTheDocument();
+  });
+});
+
+describe("EmptyState", () => {
+  it("defaults to the no-data kicker and accepts a custom one", () => {
+    const { rerender, container } = render(<EmptyState title="沒有資料" />);
+    expect(container.querySelector(".state-kicker")).toHaveTextContent("查無資料");
+    rerender(<EmptyState kicker="尚未選擇" title="還沒有選擇球員" />);
+    expect(container.querySelector(".state-kicker")).toHaveTextContent("尚未選擇");
+    expect(screen.getByText("還沒有選擇球員")).toBeInTheDocument();
   });
 });

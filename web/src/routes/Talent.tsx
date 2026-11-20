@@ -69,10 +69,11 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
   const ranked = pool
     .filter((p) => !Number.isNaN(value(p)))
     .sort((a, b) => (metric.higherIsBetter ? value(b) - value(a) : value(a) - value(b)) || b.trials - a.trials);
-  // Traps follow the team filter (they are about small samples, so they
-  // ignore the qualifier checkbox) and say which pool they come from.
+  // Traps follow the team and name filters (they are about small samples, so
+  // they ignore the qualifier checkbox) and say which pool they come from.
+  const name = query.trim();
   const traps = players
-    .filter((p) => p.type === type && (!team || p.team === team) && p.trials >= 10 && p.talent[metric.key]?.raw !== null)
+    .filter((p) => p.type === type && (!team || p.team === team) && (!name || p.name.includes(name)) && p.trials >= 10 && p.talent[metric.key]?.raw !== null)
     .map((p) => ({ p, gap: (p.talent[metric.key]?.raw ?? 0) - (p.talent[metric.key]?.mean ?? 0) }))
     .sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap))
     .slice(0, 5);
@@ -153,8 +154,11 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
         </div>
         <div className="card" data-testid="traps">
           <h2>小樣本陷阱</h2>
-          <p className="muted">{team || "全聯盟"}中，原始數據與收縮後估計差距最大的球員：他們的數字最容易誤導人。</p>
-          <ol className="traps">
+          <p className="muted">
+            {team || "全聯盟"}{name && `名字含「${name}」的球員`}中，原始數據與收縮後估計差距最大的球員：他們的數字最容易誤導人。
+          </p>
+          {traps.length === 0 && <p className="muted">沒有符合條件、且至少 10 {type === "batter" ? "打席" : "對戰打者"}的球員。</p>}
+          {traps.length > 0 && <ol className="traps">
             {traps.map(({ p, gap }) => (
               <li key={p.player_id}>
                 <a href={routeToHash({ name: "player", type, id: p.player_id })}>{p.name}</a>
@@ -167,7 +171,7 @@ function TalentBoard({ players, league }: { players: PlayerSummary[]; league: Le
                 </span>
               </li>
             ))}
-          </ol>
+          </ol>}
         </div>
       </section>
 
@@ -204,7 +208,7 @@ function TalentTable({ rows, metric, withRank = false }: { rows: PlayerSummary[]
         <tr>
           {withRank && <th scope="col" className="num">#</th>}
           <th scope="col">球員</th>
-          <th scope="col">球隊</th>
+          <th scope="col" className="team">球隊</th>
           <th scope="col" className="num">樣本</th>
           <th scope="col" className="num">原始</th>
           <th scope="col" className="num">收縮後</th>
@@ -220,6 +224,8 @@ function TalentTable({ rows, metric, withRank = false }: { rows: PlayerSummary[]
               <th scope="row">
                 <a href={routeToHash({ name: "player", type: p.type, id: p.player_id })}>{p.name}</a>
                 {!p.qualified && <span className="badge">小樣本</span>}
+                {/* Phones hide the team column so the estimate fits; the team moves under the name. */}
+                <span className="team-inline muted">{p.team}</span>
               </th>
               <td className="team">{p.team}</td>
               <td className="num">{p.trials}</td>

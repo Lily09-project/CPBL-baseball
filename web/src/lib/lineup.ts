@@ -17,14 +17,31 @@ export function defaultLineup(players: readonly PlayerSummary[], sim: SimInputs,
     .map((p) => p.player_id);
 }
 
-/** Fill missing slots with the league's busiest remaining batters. */
-export function completeLineup(ids: readonly string[], players: readonly PlayerSummary[], sim: SimInputs): string[] {
+/**
+ * Fill missing slots: first from `preferred` (normally the selected team's
+ * default lineup, so a short URL keeps the team the select shows), then with
+ * the league's busiest remaining batters.
+ */
+export function completeLineup(
+  ids: readonly string[],
+  players: readonly PlayerSummary[],
+  sim: SimInputs,
+  preferred: readonly string[] = [],
+): string[] {
   const chosen = ids.filter((id, i) => hasBatter(sim, id) && ids.indexOf(id) === i).slice(0, LINEUP_SIZE);
   if (chosen.length === LINEUP_SIZE) return chosen;
+  const fromPreferred = preferred.filter((id, i) => hasBatter(sim, id) && preferred.indexOf(id) === i && !chosen.includes(id));
+  const filled = [...chosen, ...fromPreferred].slice(0, LINEUP_SIZE);
+  if (filled.length === LINEUP_SIZE) return filled;
   const extras = players
-    .filter((p) => p.type === "batter" && hasBatter(sim, p.player_id) && !chosen.includes(p.player_id))
+    .filter((p) => p.type === "batter" && hasBatter(sim, p.player_id) && !filled.includes(p.player_id))
     .sort((a, b) => b.trials - a.trials || a.player_id.localeCompare(b.player_id));
-  return [...chosen, ...extras.slice(0, LINEUP_SIZE - chosen.length).map((p) => p.player_id)];
+  return [...filled, ...extras.slice(0, LINEUP_SIZE - filled.length).map((p) => p.player_id)];
+}
+
+/** How many distinct URL ids have no batter in the current snapshot. */
+export function unknownBatterIds(ids: readonly string[], sim: SimInputs): number {
+  return new Set(ids.filter((id) => !hasBatter(sim, id))).size;
 }
 
 export function matchupProbabilities(sim: SimInputs, batterId: string, pitcherId?: string): EventProbabilities {

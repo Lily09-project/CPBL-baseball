@@ -155,7 +155,8 @@ function SeasonTable({ league }: { league: LeagueData }) {
             <th scope="row">{t.team}</th>
             <td className="num">{t.simulation.current_wins}</td>
             <td className="num">{t.simulation.games_remaining}</td>
-            <td className="num">{t.simulation.strength.toFixed(3)}</td>
+            {/* Strength is the Pythagorean win% (stored with an extra digit); show the same rounded figure as the home standings. */}
+            <td className="num">{t.pythag_win_pct.toFixed(3)}</td>
             <td className="num">{t.simulation.projected_wins_mean.toFixed(1)}</td>
             <td className="num">
               {t.simulation.projected_wins_p10}–{t.simulation.projected_wins_p90}

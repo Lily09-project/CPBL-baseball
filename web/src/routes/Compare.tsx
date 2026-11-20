@@ -4,7 +4,7 @@ import { EmptyState, Gate } from "../components/States";
 import { addToComparison, comparisonCsv, comparisonJson, MAX_COMPARE, removeFromComparison } from "../lib/compare";
 import { downloadText } from "../lib/csv";
 import { playerDetailsFile } from "../lib/data";
-import { formatMetric } from "../lib/format";
+import { formatDate, formatMetric } from "../lib/format";
 import { routeToHash } from "../lib/router";
 import type { LeagueData, PlayerDetail, PlayerType, Provenance } from "../lib/types";
 import "./Compare.css";
@@ -18,7 +18,8 @@ function CompareView({ details, league, provenance, type, ids }: { details: Reco
     .filter((p) => p.type === type && p.qualified && !ids.includes(p.player_id))
     .sort((a, b) => a.team.localeCompare(b.team, "zh-Hant") || b.trials - a.trials);
   const go = (next: string[], nextType: PlayerType = type) => navigate({ name: "compare", type: nextType, ids: next }, { replace: true });
-  const stamp = provenance.snapshot_id.slice(0, 15);
+  // File names carry the snapshot's Taipei calendar date, the date shown everywhere else.
+  const stamp = formatDate(provenance.generated_at);
 
   return (
     <div className="stack">
@@ -65,7 +66,7 @@ function CompareView({ details, league, provenance, type, ids }: { details: Reco
         </p>
       )}
       {players.length === 0 ? (
-        <EmptyState title="還沒有選擇球員">
+        <EmptyState kicker="尚未選擇" title="還沒有選擇球員">
           <p>從上方選單加入球員，或在球員檔案按「與相似球員比較」。</p>
         </EmptyState>
       ) : (

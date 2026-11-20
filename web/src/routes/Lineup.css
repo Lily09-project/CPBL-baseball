@@ -186,6 +186,10 @@
   font-size: var(--step-1);
 }
 
+.search-result > .btn + p {
+  margin-top: var(--space-3);
+}
+
 .suggested {
   display: grid;
   gap: 0;
@@ -280,5 +284,63 @@
 
   .result-kpis .stat-value {
     font-size: 1.9rem;
+  }
+}
+
+/* ---- A/B scenarios ---- */
+.lineup-unknown {
+  margin: 0 0 var(--space-3);
+}
+
+.ab-actions {
+  margin-block: var(--space-4);
+}
+
+.copy-status:empty {
+  display: none;
+}
+
+.copy-status .input {
+  width: min(100%, 48em);
+}
+
+.ab-result {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 2px solid var(--rule);
+}
+
+.ab-result > * {
+  margin: 0;
+}
+
+.ab-result > .btn {
+  justify-self: start;
+}
+
+/* Two histograms side by side, each about as wide as the single-run chart. */
+.ab-hists {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-7);
+  max-width: 1160px;
+}
+
+.ab-hist {
+  margin: 0;
+  min-width: 0;
+  max-width: 560px;
+}
+
+.ab-hist-label {
+  margin: 0 0 var(--space-2);
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .ab-hists {
+    grid-template-columns: 1fr;
   }
 }
