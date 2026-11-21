@@ -73,7 +73,7 @@ function Profile({ player, league, details }: { player: PlayerDetail; league: Le
             <span className="badge">軌跡：{TREND_LABEL[trajectory.trend]}</span>
           </div>
         </div>
-        <div className="row">
+        <div className="row player-actions">
           <a className="btn" href={routeToHash({ name: "compare", type: player.type, ids: [player.player_id, ...player.similar.slice(0, 2).map((s) => s.player_id)] })}>
             與相似球員比較
           </a>

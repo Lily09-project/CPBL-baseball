@@ -190,7 +190,10 @@ tbody tr:hover > * {
   left: var(--space-4);
   top: -100px;
   z-index: 100;
-  padding: var(--space-2) var(--space-4);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-4);
   background: var(--ink);
   color: var(--bg);
 }
@@ -789,11 +792,12 @@ details.data-table summary:hover {
     padding: 6px var(--space-2);
   }
 
-  /* Name links in table rows stay at least 24px tall to tap. */
+  /* Name links in table rows are a full 44px tap target. The row grows to
+     contain it, so the targets of neighbouring rows never overlap. */
   tbody th a {
-    display: inline-block;
-    min-height: 24px;
-    line-height: 24px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 
   /* Charts are drawn ~520 units wide and shrink to the phone's width; larger

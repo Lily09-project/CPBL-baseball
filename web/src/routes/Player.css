@@ -136,3 +136,11 @@
   font-size: 1.125rem;
   font-variant-numeric: lining-nums tabular-nums;
 }
+
+/* On phones the two actions share one width so they read as a pair. */
+@media (max-width: 640px) {
+  .player-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
