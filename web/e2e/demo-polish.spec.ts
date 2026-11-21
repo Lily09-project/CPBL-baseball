@@ -80,7 +80,7 @@ test("on phones the talent table keeps the estimate columns on screen", async ({
   const width = page.viewportSize()!.width;
   expect(header!.x + header!.width).toBeLessThanOrEqual(width);
   const link = await table.locator("tbody th a").first().boundingBox();
-  expect(link!.height).toBeGreaterThanOrEqual(24);
+  expect(link!.height).toBeGreaterThanOrEqual(44);
 });
 
 test("a pitcher's page links to the lineup lab with that pitcher selected", async ({ page }) => {
