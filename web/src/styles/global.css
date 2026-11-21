@@ -792,13 +792,12 @@ details.data-table summary:hover {
     padding: 6px var(--space-2);
   }
 
-  /* Name links in table rows are a full 44px tap target; the negative margin
-     lets the target extend into the cell padding so row height is unchanged. */
+  /* Name links in table rows are a full 44px tap target. The row grows to
+     contain it, so the targets of neighbouring rows never overlap. */
   tbody th a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    margin-block: -10px;
   }
 
   /* Charts are drawn ~520 units wide and shrink to the phone's width; larger
