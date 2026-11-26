@@ -12,3 +12,12 @@ describe("malformed percent-encoded routes", () => {
     expect(parseRoute("#/player/batter/%E7%8E%8B")).toMatchObject({ name: "player", id: "王" });
   });
 });
+
+describe("query string splitting", () => {
+  it("keeps everything after the first question mark in the query", () => {
+    expect(parseRoute("#/talent?q=a?b")).toMatchObject({ name: "talent", q: "a?b" });
+  });
+  it("treats a route without a query as having none", () => {
+    expect(parseRoute("#/talent")).toMatchObject({ name: "talent" });
+  });
+});

@@ -10,7 +10,7 @@
 }
 
 .palette::backdrop {
-  background: rgb(10 10 8 / 45%);
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
 }
 
 .palette-body {

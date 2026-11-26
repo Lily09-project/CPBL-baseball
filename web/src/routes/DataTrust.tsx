@@ -3,6 +3,7 @@ import { LoaderContext, useDataset, useDocumentTitle } from "../app/hooks";
 import { ChartFrame, Histogram } from "../components/charts";
 import { ScrollRegion } from "../components/ScrollRegion";
 import { Gate } from "../components/States";
+import { IntegrityError } from "../lib/data";
 import { DATA_FROZEN, FROZEN_REASON } from "../lib/dataPolicy";
 import { formatDate, formatDateTime } from "../lib/format";
 import { MODEL_CARD_URL, safeExternalUrl } from "../lib/links";
@@ -18,7 +19,7 @@ const FILES: (keyof DataFiles)[] = [
   "provenance.json",
 ];
 
-type Check = { file: string; status: "pending" | "ok" | "failed"; hash?: string };
+type Check = { file: string; status: "pending" | "ok" | "failed"; mismatch?: boolean; hash?: string };
 
 function useIntegrityChecks(): { manifest: Manifest | null; checks: Check[] } {
   const loader = useContext(LoaderContext);
@@ -27,11 +28,11 @@ function useIntegrityChecks(): { manifest: Manifest | null; checks: Check[] } {
   useEffect(() => {
     if (!loader) return;
     let alive = true;
-    loader.manifest().then((m) => alive && setManifest(m));
+    loader.manifest().then((m) => alive && setManifest(m), () => undefined);
     FILES.forEach((file, i) => {
       loader.load(file).then(
         () => alive && setChecks((prev) => prev.map((c, j) => (j === i ? { ...c, status: "ok" } : c))),
-        () => alive && setChecks((prev) => prev.map((c, j) => (j === i ? { ...c, status: "failed" } : c))),
+        (error: unknown) => alive && setChecks((prev) => prev.map((c, j) => (j === i ? { ...c, status: "failed", mismatch: error instanceof IntegrityError } : c))),
       );
     });
     return () => {
@@ -102,7 +103,7 @@ function Trust({ provenance, league, sim }: { provenance: Provenance; league: Le
                     {c.file}
                   </th>
                   <td>
-                    <span className={`badge check-${c.status}`}>{c.status === "ok" ? "✓ 相符" : c.status === "failed" ? "✕ 不符" : "驗證中"}</span>
+                    <span className={`badge check-${c.status}`}>{c.status === "ok" ? "✓ 相符" : c.status === "failed" ? (c.mismatch ? "✕ 不符" : "✕ 驗證失敗") : "驗證中"}</span>
                   </td>
                   <td className="mono hash">{c.hash ?? "—"}</td>
                 </tr>

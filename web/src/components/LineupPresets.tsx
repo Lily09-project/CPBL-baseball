@@ -83,7 +83,11 @@ export function LineupPresets({ snapshot, current, isValid, onLoad }: {
               <button className="btn" type="button" disabled={!usable} aria-label={`載入 ${preset.name}`}
                 onClick={() => { onLoad(preset); setMessage(`已載入「${preset.name}」到上方編輯區。`); }}>載入</button>
               <button className="btn" type="button" aria-label={`移除 ${preset.name}`}
-                onClick={() => save(readPresets().filter((item) => item.name !== preset.name), `已移除「${preset.name}」。`)}>移除</button>
+                onClick={() => {
+                  // This row is about to disappear; keep keyboard focus inside the section.
+                  document.getElementById(nameId)?.focus();
+                  save(readPresets().filter((item) => item.name !== preset.name), `已移除「${preset.name}」。`);
+                }}>移除</button>
             </div>
           </li>;
         })}

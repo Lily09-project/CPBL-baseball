@@ -41,7 +41,7 @@ function CompareView({ details, league, provenance, type, ids }: { details: Reco
         </fieldset>
         <div className="field">
           <label htmlFor="add-player">加入球員</label>
-          <select id="add-player" className="input" value="" onChange={(e) => e.target.value && go(addToComparison(ids, e.target.value))} disabled={candidates.length === 0}>
+          <select id="add-player" className="input" value="" onChange={(e) => e.target.value && go(addToComparison(players.map((p) => p.player_id), e.target.value))} disabled={candidates.length === 0}>
             <option value="">{players.length >= MAX_COMPARE ? `已達 ${MAX_COMPARE} 人（加入會取代最早的）` : "選擇球員…"}</option>
             {candidates.map((p) => (
               <option key={p.player_id} value={p.player_id}>
