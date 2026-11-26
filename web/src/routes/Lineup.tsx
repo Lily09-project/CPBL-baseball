@@ -338,7 +338,7 @@ function LineupLab({ players, sim, league, snapshot }: { players: PlayerSummary[
                 </div>
                 <ChartFrame
                   title={`每場得分分布（${result.games.toLocaleString()} 場）`}
-                  summary={`中位數 ${quantile(result.runs, 0.5)} 分，80% 的比賽介於 ${quantile(result.runs, 0.1)} 到 ${quantile(result.runs, 0.9)} 分`}
+                  summary={`中位數 ${runsAt(result.runs, 0.5)} 分，80% 的比賽介於 ${runsAt(result.runs, 0.1)} 到 ${runsAt(result.runs, 0.9)} 分`}
                   table={
                     <table>
                       <thead>

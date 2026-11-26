@@ -20,7 +20,9 @@ const list = (value: string | null) => (value ? value.split(",").map((v) => v.tr
 
 export function parseRoute(hash: string): Route {
   const raw = hash.replace(/^#/, "") || "/";
-  const [path = "/", query = ""] = raw.split("?");
+  const queryAt = raw.indexOf("?");
+  const path = queryAt < 0 ? raw : raw.slice(0, queryAt);
+  const query = queryAt < 0 ? "" : raw.slice(queryAt + 1);
   const params = new URLSearchParams(query);
   let parts: string[];
   try {

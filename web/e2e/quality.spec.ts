@@ -106,9 +106,10 @@ test.describe("Q4/Q5 navigation, keyboard and accessibility", () => {
     for (const route of ["/", "/season", "/data", "/player/batter/0000005549"]) {
       await openRoute(page, route);
       const figures = page.locator("figure.chart-frame");
-      const count = await figures.count();
-      expect(count, `charts on ${route}`).toBeGreaterThan(0);
-      await expect(page.locator("figure.chart-frame details table")).toHaveCount(count);
+      const tables = page.locator("figure.chart-frame details table");
+      await expect(figures.first(), `charts on ${route}`).toBeAttached();
+      // Charts can finish rendering after the first one appears; compare once the counts settle.
+      await expect.poll(async () => (await figures.count()) - (await tables.count()), { message: `tables per chart on ${route}` }).toBe(0);
     }
   });
 

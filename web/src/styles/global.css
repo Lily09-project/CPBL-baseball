@@ -616,6 +616,15 @@ tbody tr:hover > * {
 }
 
 /* "View as table" toggle with a drawn +/− marker (flex hides the native one). */
+/* Plain disclosure toggles keep the native marker but get a 44px tap target. */
+details:not(.data-table) > summary {
+  display: list-item;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding-block: 10px;
+  cursor: pointer;
+}
+
 details.data-table summary {
   display: flex;
   align-items: center;
