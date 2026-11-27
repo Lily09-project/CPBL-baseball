@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { LoaderContext, useDocumentTitle, useRoute } from "./app/hooks";
+import { RouteBoundary } from "./components/RouteBoundary";
 import { Shell } from "./components/Shell";
 import { EmptyState, ErrorState, Loading } from "./components/States";
 import { createLoader, DeploymentChangedError, type Loader } from "./lib/data";
@@ -70,20 +71,22 @@ export default function App({ loader }: { loader?: Loader }) {
   return (
     <LoaderContext.Provider value={value}>
       <Shell>
-        <Suspense
-          fallback={
-            <div className="page">
-              <Loading label="頁面載入中" />
-            </div>
-          }
-        >
-          {deploymentChanged ? (
-            <div className="page">
-              <ErrorState error={new DeploymentChangedError()} />
-              <button type="button" className="btn" onClick={() => window.location.reload()}>重新整理</button>
-            </div>
-          ) : <Routes route={route} />}
-        </Suspense>
+        <RouteBoundary routeKey={key}>
+          <Suspense
+            fallback={
+              <div className="page">
+                <Loading label="頁面載入中" />
+              </div>
+            }
+          >
+            {deploymentChanged ? (
+              <div className="page">
+                <ErrorState error={new DeploymentChangedError()} />
+                <button type="button" className="btn" onClick={() => window.location.reload()}>重新整理</button>
+              </div>
+            ) : <Routes route={route} />}
+          </Suspense>
+        </RouteBoundary>
       </Shell>
     </LoaderContext.Provider>
   );
