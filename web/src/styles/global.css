@@ -823,3 +823,16 @@ details.data-table summary:hover {
     font-size: 16px;
   }
 }
+
+/* ---- Line icons (components/Icon.tsx): decorative, coloured by the text ---- */
+.icon {
+  display: inline-block;
+  flex: none;
+  vertical-align: -0.2em;
+}
+
+.eyebrow .icon,
+.stat-label .icon {
+  margin-right: 6px;
+  vertical-align: -3px;
+}

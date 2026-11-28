@@ -1,6 +1,7 @@
 import { useDataset, useDocumentTitle } from "../app/hooks";
 import { ChartFrame, DivergingBars } from "../components/chartFrame";
 import { ScrollRegion } from "../components/ScrollRegion";
+import { Icon, type IconName } from "../components/Icon";
 import { ErrorState, Loading } from "../components/States";
 import { formatDate, formatDateTime, formatPercent, formatSigned } from "../lib/format";
 import { leagueHeadline } from "../lib/insights";
@@ -10,7 +11,7 @@ import type { LeagueData, Provenance } from "../lib/types";
 import "./Home.css";
 
 /** The inside pages, told as the front page's secondary stories. */
-function stories(league: LeagueData, provenance: Provenance) {
+function stories(league: LeagueData, provenance: Provenance): { href: string; step: string; section: string; title: string; body: string; tag: string; icon: IconName }[] {
   return [
     {
       href: routeToHash({ name: "talent", type: "batter" }),
@@ -19,6 +20,7 @@ function stories(league: LeagueData, provenance: Provenance) {
       title: "真實實力估計",
       body: "用 Empirical Bayes 把小樣本的運氣成分收縮回聯盟平均，附 80% 可信區間，揪出被數字騙到的「小樣本陷阱」。",
       tag: "統計推論",
+      icon: "scout",
     },
     {
       href: routeToHash({ name: "lineup" }),
@@ -27,6 +29,7 @@ function stories(league: LeagueData, provenance: Provenance) {
       title: "打線實驗室",
       body: "挑 9 名打者對上任一投手，在瀏覽器裡用壘包－出局數馬可夫鏈模擬上千場比賽，並自動搜尋更好的棒次。",
       tag: "Monte Carlo",
+      icon: "diamond",
     },
     {
       href: routeToHash({ name: "season" }),
@@ -35,6 +38,7 @@ function stories(league: LeagueData, provenance: Provenance) {
       title: "季末戰績模擬",
       body: `從快照當時的戰績出發，以畢氏期望勝率與 log5 對戰機率模擬剩餘賽程 ${league.simulations.toLocaleString()} 次，量化每隊的最終勝場區間與拿下半季第一的機率。`,
       tag: "情境模擬",
+      icon: "trophy",
     },
     {
       href: routeToHash({ name: "data" }),
@@ -43,6 +47,7 @@ function stories(league: LeagueData, provenance: Provenance) {
       title: "可驗證的資料",
       body: `每個資料檔都以 SHA-256 在瀏覽器端驗證，${provenance.snapshots.length} 份官方快照的時間軸與品質檢查全部公開。`,
       tag: "資料工程",
+      icon: "shield",
     },
   ];
 }
@@ -170,27 +175,27 @@ function FrontPage({ league, provenance }: { league: LeagueData; provenance: Pro
 
       <section aria-label="聯盟重點" className="kpis">
         <div className="kpi">
-          <span className="stat-label">聯盟平均每場得分</span>
+          <span className="stat-label"><Icon name="ball" size={15} />聯盟平均每場得分</span>
           <span className="stat-value">{league.runs_per_game.toFixed(2)}</span>
           <span className="muted small">截至 {formatDate(provenance.generated_at)} 的半季戰績</span>
         </div>
         {leader && (
           <div className="kpi">
-            <span className="stat-label">半季第一機率最高</span>
+            <span className="stat-label"><Icon name="trophy" size={15} />半季第一機率最高</span>
             <span className="stat-value">{formatPercent(leader.simulation.first_place_probability)}</span>
             <span className="muted small">{leader.team}</span>
           </div>
         )}
         {luckiest && (
           <div className="kpi">
-            <span className="stat-label">運氣最好（比期望多贏）</span>
+            <span className="stat-label"><Icon name="up" size={15} />運氣最好（比期望多贏）</span>
             <span className="stat-value">{formatSigned(luckiest.luck_wins)}</span>
             <span className="muted small">{luckiest.team}</span>
           </div>
         )}
         {unluckiest && (
           <div className="kpi">
-            <span className="stat-label">運氣最差（比期望少贏）</span>
+            <span className="stat-label"><Icon name="down" size={15} />運氣最差（比期望少贏）</span>
             <span className="stat-value">{formatSigned(unluckiest.luck_wins)}</span>
             <span className="muted small">{unluckiest.team}</span>
           </div>
@@ -206,6 +211,7 @@ function FrontPage({ league, provenance }: { league: LeagueData; provenance: Pro
           {stories(league, provenance).map((s) => (
             <li key={s.title}>
               <a className="story" href={s.href}>
+                <Icon name={s.icon} size={30} className="story-icon" />
                 <span className="story-kicker">
                   <span className="story-step" aria-hidden="true">
                     {s.step}
@@ -225,7 +231,7 @@ function FrontPage({ league, provenance }: { league: LeagueData; provenance: Pro
 
       <section className="front-chart" aria-labelledby="luck-title">
         <div className="front-chart-copy">
-          <p className="eyebrow">數據圖解</p>
+          <p className="eyebrow"><Icon name="chart" size={16} />數據圖解</p>
           <h2 id="luck-title">誰的戰績比得失分好看？</h2>
           <p className="muted">
             長條是每隊「實際勝場 − 畢氏期望勝場」。綠色向右代表比得失分應有的戰績多贏（運氣好），黑色向左代表少贏；這種差距通常會隨賽季進行回歸。
@@ -282,9 +288,11 @@ export default function Home() {
           <p className="lede">用中職公開數據回答三個問題：誰的好成績只是運氣？棒次怎麼排最會得分？從快照當時的戰績推演，誰最可能拿下半季第一？</p>
           <div className="row">
             <a className="btn btn-primary" href={routeToHash({ name: "lineup" })}>
+              <Icon name="diamond" size={18} />
               開始模擬打線
             </a>
             <a className="btn" href={routeToHash({ name: "talent", type: "batter" })}>
+              <Icon name="scout" size={18} />
               查看真實實力排行
             </a>
           </div>

@@ -39,3 +39,13 @@ test("the qualified-only check box keeps its label on one line on wide screens",
   const box = await label.boundingBox();
   expect(box!.height).toBeLessThan(48);
 });
+
+test("icons decorate the front page without changing what assistive tech reads", async ({ page }) => {
+  await openRoute(page, "/");
+  const icons = page.locator("svg.icon");
+  expect(await icons.count()).toBeGreaterThanOrEqual(10);
+  for (const icon of await icons.all()) await expect(icon).toHaveAttribute("aria-hidden", "true");
+  await expect(page.getByRole("button", { name: "搜尋球員" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "開始模擬打線" })).toBeVisible();
+  await expect(page.locator(".story-icon")).toHaveCount(4);
+});

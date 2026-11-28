@@ -9,6 +9,7 @@ import { routeToHash } from "../lib/router";
 import type { LeagueData, PlayerDetail, PlayerType } from "../lib/types";
 import { TALENT_METRICS } from "./Talent";
 import "./Player.css";
+import { Icon } from "../components/Icon";
 
 const TREND_LABEL = { improving: "上升", declining: "下滑", steady: "持平", insufficient: "資料不足" } as const;
 
@@ -75,14 +76,17 @@ function Profile({ player, league, details }: { player: PlayerDetail; league: Le
         </div>
         <div className="row player-actions">
           <a className="btn" href={routeToHash({ name: "compare", type: player.type, ids: [player.player_id, ...player.similar.slice(0, 2).map((s) => s.player_id)] })}>
+            <Icon name="compare" size={18} />
             與相似球員比較
           </a>
           {player.type === "batter" ? (
             <a className="btn btn-primary" href={routeToHash({ name: "lineup", team: player.team })}>
+              <Icon name="diamond" size={18} />
               在打線實驗室模擬
             </a>
           ) : (
             <a className="btn btn-primary" href={routeToHash({ name: "lineup", pitcher: player.player_id })}>
+              <Icon name="diamond" size={18} />
               在打線實驗室模擬
             </a>
           )}

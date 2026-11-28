@@ -7,6 +7,7 @@ import { formatMetric } from "../lib/format";
 import { routeToHash } from "../lib/router";
 import type { LeagueData, PlayerSummary, PlayerType } from "../lib/types";
 import "./Talent.css";
+import { Icon } from "../components/Icon";
 
 export interface TalentMetric {
   key: string;
@@ -251,7 +252,7 @@ export default function Talent() {
   return (
     <div className="page stack">
       <header>
-        <span className="eyebrow">實驗 01・Empirical Bayes</span>
+        <span className="eyebrow"><Icon name="scout" size={16} />實驗 01・Empirical Bayes</span>
         <h1>真實實力估計</h1>
         <p className="lede">
           {pitcher ? "投 30 個打者就有 35% 三振率，是實力還是運氣？" : "40 個打席打出 .450 的上壘率，是實力還是運氣？"}我們用全聯盟的分布估計先驗，把每位球員的原始數據收縮成更可信的「真實實力」，並附上 80% 可信區間。
