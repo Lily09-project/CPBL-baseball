@@ -4,6 +4,8 @@ test("the other pages' code is fetched while idle, so the first menu click needs
   const season = page.waitForRequest(/assets\/Season-[^/]+\.js/);
   await openRoute(page, "/");
   await (await season).response();
+  // The page counts as loaded once its shared chunks and CSS have arrived too.
+  await page.waitForLoadState("networkidle");
   // Watch the whole switch: the 頁面載入中 placeholder should never be drawn.
   await page.evaluate(() => {
     const w = window as unknown as { sawPlaceholder: boolean };
@@ -48,4 +50,16 @@ test("icons decorate the front page without changing what assistive tech reads",
   await expect(page.getByRole("button", { name: "搜尋球員" })).toBeVisible();
   await expect(page.getByRole("link", { name: "開始模擬打線" })).toBeVisible();
   await expect(page.locator(".story-icon")).toHaveCount(4);
+});
+
+test("on phones, player-name links in lists are full 44px tap targets", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 1440) > 640, "phone layout only");
+  await openRoute(page, "/talent?type=batter");
+  const trap = page.getByTestId("traps").locator("a").first();
+  await expect(trap).toBeVisible();
+  expect((await trap.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+
+  await trap.click();
+  const similar = page.getByTestId("similar-players").locator(".similar-head a").first();
+  if ((await similar.count()) > 0) expect((await similar.boundingBox())!.height).toBeGreaterThanOrEqual(44);
 });
