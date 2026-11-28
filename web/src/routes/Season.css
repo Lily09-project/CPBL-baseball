@@ -60,6 +60,22 @@
   background: var(--ink);
 }
 
+/* A team that never finished first in any simulation: no sliver of bar (2px
+   would read as "a little"), and the row steps back so the race stands out. */
+.prob-out .prob-track span {
+  display: none;
+}
+
+.prob-out .prob-rank,
+.prob-out .prob-team,
+.prob-out .prob-value {
+  color: var(--muted);
+}
+
+.prob-out .prob-team {
+  font-weight: 400;
+}
+
 .prob-value {
   font-family: var(--font-serif);
   font-size: 1.25rem;

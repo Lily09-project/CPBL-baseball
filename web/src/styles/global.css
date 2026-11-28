@@ -729,9 +729,16 @@ details.data-table summary:hover {
 }
 
 .check input {
+  flex: none;
   width: 20px;
   height: 20px;
   accent-color: var(--accent);
+}
+
+/* In a filter grid the check box spans the row, so its label never breaks
+   mid-phrase under a narrow column (只看達比較門檻的球員（50 打席）). */
+.controls > .check {
+  grid-column: 1 / -1;
 }
 
 /* ---- Method note: a boxed sidebar (lineup lab, data trust) ---- */
