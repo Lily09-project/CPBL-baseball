@@ -45,7 +45,7 @@ function SeasonView({ league, provenance }: { league: LeagueData; provenance: Pr
         )}
         <ul className="prob-list" data-testid="title-odds">
           {teams.map((t, rank) => (
-            <li key={t.team}>
+            <li key={t.team} className={t.simulation.first_place_probability === 0 ? "prob-out" : undefined}>
               <span className="prob-rank" aria-hidden="true">
                 {rank + 1}
               </span>
