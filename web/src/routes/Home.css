@@ -9,12 +9,21 @@
 .banner {
   display: grid;
   gap: var(--space-4) var(--space-7);
-  padding-bottom: var(--space-5);
+  padding: var(--space-6);
+  border-top: 3px solid var(--kicker);
   border-bottom: 1px solid var(--rule);
+  background:
+    linear-gradient(105deg, var(--paper) 32%, transparent 100%),
+    repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--kicker) 5%, var(--paper)) 0 28px,
+      color-mix(in srgb, var(--kicker) 9%, var(--paper)) 28px 56px
+    );
 }
 
 .banner .eyebrow {
   margin: 0 0 var(--space-2);
+  color: var(--kicker);
 }
 
 .banner h1 {
@@ -199,7 +208,8 @@
   align-items: baseline;
   gap: var(--space-1) var(--space-3);
   margin: 0;
-  padding: var(--space-2) 0;
+  padding: var(--space-2) var(--space-3);
+  background: color-mix(in srgb, var(--kicker) 7%, var(--paper));
   font-size: var(--display-sm);
   line-height: var(--leading-display-sm);
 }
@@ -225,6 +235,10 @@
   font-weight: 700;
 }
 
+.box-score tbody tr:nth-child(even) {
+  background: var(--box-fill);
+}
+
 .box-note {
   text-wrap: pretty;
   margin: var(--space-3) 0 0;
@@ -235,9 +249,10 @@
 /* ---- Numbers strip ---- */
 .kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-top: var(--space-6);
-  border-block: 4px solid var(--rule);
+  border-block: 3px solid var(--rule);
+  background: var(--box-fill);
 }
 
 .kpi {
@@ -245,16 +260,16 @@
   align-content: start;
   gap: var(--space-1);
   min-width: 0;
-  padding: var(--space-4) var(--space-4) var(--space-4) 0;
+  padding: var(--space-4);
 }
 
 .kpi + .kpi {
-  padding-left: var(--space-4);
   border-left: 1px solid var(--rule-hair);
 }
 
 .kpi .stat-value {
   font-size: clamp(2.1rem, 1.5rem + 1.5vw, 2.9rem);
+  color: var(--kicker);
 }
 
 /* ---- Secondary stories: four columns with column rules ---- */
@@ -409,7 +424,7 @@
   }
 
   .banner {
-    padding-bottom: var(--space-4);
+    padding: var(--space-4);
   }
 
   .banner h1 {
@@ -450,12 +465,11 @@
 
   .kpi,
   .kpi + .kpi {
-    padding: var(--space-3) var(--space-3) var(--space-3) 0;
+    padding: var(--space-3);
     border-left: 0;
   }
 
   .kpi:nth-child(2n) {
-    padding-left: var(--space-3);
     border-left: 1px solid var(--rule-hair);
   }
 
@@ -492,7 +506,6 @@
   }
 
   .kpi:nth-child(2n + 1) {
-    padding-left: 0;
     border-left: 0;
   }
 
