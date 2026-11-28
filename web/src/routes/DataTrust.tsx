@@ -9,6 +9,7 @@ import { formatDate, formatDateTime } from "../lib/format";
 import { MODEL_CARD_URL, safeExternalUrl } from "../lib/links";
 import type { DataFiles, LeagueData, Manifest, Provenance, SimInputs } from "../lib/types";
 import "./DataTrust.css";
+import { Icon } from "../components/Icon";
 
 const FILES: (keyof DataFiles)[] = [
   "league.json",
@@ -49,7 +50,7 @@ function Trust({ provenance, league, sim }: { provenance: Provenance; league: Le
   return (
     <div className="stack">
       <header>
-        <span className="eyebrow">資料工程</span>
+        <span className="eyebrow"><Icon name="shield" size={16} />資料工程</span>
         <h1>資料可信度</h1>
         <p className="lede">這個網站的每一個數字都能追溯到 CPBL 官方頁面的某一份快照，並在你的瀏覽器裡重新驗證。</p>
       </header>

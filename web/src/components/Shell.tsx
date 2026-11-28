@@ -6,6 +6,7 @@ import { MODEL_CARD_URL, REPO_URL } from "../lib/links";
 import { routeToHash, type Route } from "../lib/router";
 import { CommandPalette } from "./CommandPalette";
 import "./Shell.css";
+import { Icon } from "./Icon";
 
 const NAV: { route: Route; label: string; match: Route["name"][] }[] = [
   { route: { name: "home" }, label: "聯盟脈動", match: ["home"] },
@@ -68,7 +69,7 @@ export function Shell({ children }: { children: ReactNode }) {
           </a>
           <div className="site-tools">
             <button type="button" className="btn tool-search" onClick={() => setPaletteOpen(true)} aria-keyshortcuts="Control+K Meta+K /">
-              <span aria-hidden="true">⌕</span> <span className="tool-search-text">搜尋球員</span> <kbd aria-hidden="true">{SHORTCUT_HINT}</kbd>
+              <Icon name="search" size={17} /> <span className="tool-search-text">搜尋球員</span> <kbd aria-hidden="true">{SHORTCUT_HINT}</kbd>
             </button>
           </div>
           <nav aria-label="主要頁面" className="site-nav">

@@ -8,6 +8,7 @@ import { formatPercent } from "../lib/format";
 import { leagueHeadline, rankByFirstPlace } from "../lib/insights";
 import type { LeagueData, Provenance } from "../lib/types";
 import "./Season.css";
+import { Icon } from "../components/Icon";
 
 function SeasonView({ league, provenance }: { league: LeagueData; provenance: Provenance }) {
   const teams = rankByFirstPlace(league.teams);
@@ -20,7 +21,7 @@ function SeasonView({ league, provenance }: { league: LeagueData; provenance: Pr
   return (
     <div className="stack">
       <header className="spread-head">
-        <span className="eyebrow">實驗 03・情境模擬</span>
+        <span className="eyebrow"><Icon name="trophy" size={16} />實驗 03・情境模擬</span>
         <h1>季末戰績模擬</h1>
         <p className="lede">
           以每隊的畢氏期望勝率作為真實強度，用 log5 計算每場對戰勝率，從快照當時的戰績出發，把剩下的比賽模擬 {league.simulations.toLocaleString()} 次，看看誰最可能拿下這個半季。

@@ -8,6 +8,7 @@ import { formatDate, formatMetric } from "../lib/format";
 import { routeToHash } from "../lib/router";
 import type { LeagueData, PlayerDetail, PlayerType, Provenance } from "../lib/types";
 import "./Compare.css";
+import { Icon } from "../components/Icon";
 
 function CompareView({ details, league, provenance, type, ids }: { details: Record<string, PlayerDetail>; league: LeagueData; provenance: Provenance; type: PlayerType; ids: string[] }) {
   const [, navigate] = useRoute();
@@ -24,7 +25,7 @@ function CompareView({ details, league, provenance, type, ids }: { details: Reco
   return (
     <div className="stack">
       <header>
-        <span className="eyebrow">比較</span>
+        <span className="eyebrow"><Icon name="compare" size={16} />比較</span>
         <h1>球員並列比較</h1>
         <p className="lede">最多 {MAX_COMPARE} 名同類型球員並排檢視百分位與真實實力；網址會保存選擇，可以直接分享。</p>
       </header>

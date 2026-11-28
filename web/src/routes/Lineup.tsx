@@ -24,6 +24,7 @@ import type { LeagueData, PlayerSummary, Provenance, SimInputs } from "../lib/ty
 import { useSimWorker } from "../workers/useSimWorker";
 import { LineupPresets } from "../components/LineupPresets";
 import "./Lineup.css";
+import { Icon } from "../components/Icon";
 
 const GAME_OPTIONS = [1000, 5000, 20000];
 const DEFAULT_SEED = 2026;
@@ -505,7 +506,7 @@ export default function Lineup() {
   return (
     <div className="page stack">
       <header className="spread-head">
-        <span className="eyebrow">實驗 02・Monte Carlo</span>
+        <span className="eyebrow"><Icon name="diamond" size={16} />實驗 02・Monte Carlo</span>
         <h1>打線實驗室</h1>
         <p className="lede">
           排出你的 9 棒、指定對手投手，瀏覽器會在背景執行緒用壘包－出局數馬可夫鏈模擬整場比賽，告訴你這套打線平均能得幾分，以及換棒次值不值得。
