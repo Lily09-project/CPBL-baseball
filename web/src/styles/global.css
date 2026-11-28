@@ -808,9 +808,12 @@ details.data-table summary:hover {
     padding: 6px var(--space-2);
   }
 
-  /* Name links in table rows are a full 44px tap target. The row grows to
-     contain it, so the targets of neighbouring rows never overlap. */
-  tbody th a {
+  /* Player-name links (table rows, the small-sample list, similar players)
+     are a full 44px tap target. Their row grows to contain it, so the targets
+     of neighbouring rows never overlap. */
+  tbody th a,
+  .traps a,
+  .similar-head a {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
